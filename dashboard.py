@@ -447,7 +447,7 @@ elif menu_choice == "📅 Schedule Settings":
             )
         
         with col2:
-            distribution_mode = st.select box(
+            distribution_mode = st.selectbox(
                 "Distribution Mode",
                 options=["shared", "unique"],
                 index=0 if global_settings.get("distribution_mode") == "shared" else 1,
