@@ -161,10 +161,19 @@ def fetch_random_new_post() -> Optional[Dict[str, Any]]:
             seen.add(link)
             _write_seen_posts(seen)
 
+            title = latest.get("title", "")
             image_url = _extract_image(latest)
+            
+            # Use advanced image strategy if no image found
+            if not image_url:
+                try:
+                    from image_generator import get_article_image
+                    image_url = get_article_image(title, link)
+                except Exception as e:
+                    print(f"⚠️ Image generation failed: {e}")
 
             return {
-                "title": latest.get("title", ""),
+                "title": title,
                 "link": link,
                 "summary": latest.get("summary", ""),
                 "published": latest.get("published", ""),
