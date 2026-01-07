@@ -1,10 +1,10 @@
 services:
-  # Background Worker - Telegram Bot (runs 24/7)
-  - type: worker
-    name: robobot-worker
+  # Combined Web Service - Bot + Dashboard + Image Server (all in one)
+  - type: web
+    name: robovai-creator
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
+    startCommand: bash start.sh
     envVars:
       - key: TELEGRAM_TOKEN
         sync: false
@@ -18,33 +18,22 @@ services:
         sync: false
       - key: DASHBOARD_PASSWORD
         sync: false
-
-  # Web Service - Image Server
-  - type: web
-    name: robobot-images
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn static_server:app --host 0.0.0.0 --port $PORT
-    envVars:
       - key: IMAGE_BASE_URL
+        value: https://robovai-creator.onrender.com
+      - key: DISCORD_WEBHOOK_URL
         sync: false
-
-  # Web Service - Streamlit Dashboard
-  - type: web
-    name: robobot-dashboard
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: streamlit run dashboard.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true
-    envVars:
-      - key: TELEGRAM_TOKEN
+      - key: FACEBOOK_PAGE_ACCESS_TOKEN
         sync: false
-      - key: ADMIN_USER_ID
+      - key: FACEBOOK_PAGE_ID
         sync: false
-      - key: CHANNEL_ID
+      - key: BLOGGER_BLOG_ID
         sync: false
-      - key: GROUP_ID
+      - key: BLOGGER_ACCESS_TOKEN
         sync: false
-      - key: GROQ_API_KEY
+      - key: BLOGGER_REFRESH_TOKEN
         sync: false
-      - key: DASHBOARD_PASSWORD
+      - key: BLOGGER_CLIENT_ID
         sync: false
+      - key: BLOGGER_CLIENT_SECRET
+        sync: false
+      - key: DEVTO_API_KEY
