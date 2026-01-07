@@ -1,0 +1,40 @@
+services:
+  # Background Worker - Telegram Bot (runs 24/7)
+  - type: worker
+    name: robobot-worker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: ADMIN_USER_ID
+        sync: false
+      - key: CHANNEL_ID
+        sync: false
+      - key: GROUP_ID
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: DASHBOARD_PASSWORD
+        sync: false
+
+  # Web Service - Streamlit Dashboard
+  - type: web
+    name: robobot-dashboard
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run dashboard.py --server.port=$PORT --server.address=0.0.0.0 --server.headless=true
+    envVars:
+      - key: TELEGRAM_TOKEN
+        sync: false
+      - key: ADMIN_USER_ID
+        sync: false
+      - key: CHANNEL_ID
+        sync: false
+      - key: GROUP_ID
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: DASHBOARD_PASSWORD
+        sync: false
