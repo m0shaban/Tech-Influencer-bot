@@ -65,7 +65,7 @@
       "priority": 8
     },
     "devto": {
-      "enabled": false,
+      "enabled": true,
       "publish_mode": "delayed",
       "delay_minutes": 40,
       "custom_prompt": "اكتب مقال تقني للمطورين على Dev.to. استخدم code snippets والأمثلة العملية. ركز على الـ how-to والشروحات التفصيلية.",

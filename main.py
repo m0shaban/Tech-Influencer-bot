@@ -235,7 +235,8 @@ async def fetch_and_publish(
         )
 
         any_success = any(
-            isinstance(v, dict) and (v.get("status") in ["success", "scheduled"] or v.get("success"))
+            isinstance(v, dict)
+            and (v.get("status") in ["success", "scheduled"] or v.get("success"))
             for v in results.values()
         )
         if not any_success:
@@ -292,7 +293,7 @@ async def admin_platform_status(
 
         # Build status message
         message = "🌐 **Platform Status**\n\n"
-        
+
         platforms = {
             "telegram": "📱 Telegram",
             "discord": "💬 Discord",
@@ -327,7 +328,9 @@ async def admin_test_platforms(
         await update.message.reply_text("❌ غير مصرح")
         return
 
-    test_caption = f"🧪 Test from RoboBot\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    test_caption = (
+        f"🧪 Test from RoboBot\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    )
     test_link = "https://github.com/m0shaban/Tech-Influencer-bot"
 
     await update.message.reply_text("⏳ Testing all platforms...")
@@ -346,7 +349,11 @@ async def admin_test_platforms(
         # Build results message
         message = "🧪 **Test Results**\n\n"
         for platform, result in results.items():
-            status_emoji = "✅" if result.get("status") == "success" or result.get("success") else "❌"
+            status_emoji = (
+                "✅"
+                if result.get("status") == "success" or result.get("success")
+                else "❌"
+            )
             platform_name = platform.capitalize()
             message += f"{status_emoji} {platform_name}\n"
 
@@ -739,6 +746,16 @@ async def post_init(app: Application) -> None:
             BotCommand("test_discord", "Admin: test Discord"),
         ]
     )
+    
+    # Start background scheduler task
+    print("🕐 Starting background publishing scheduler...")
+    try:
+        from scheduled_publisher_task import start_scheduler_task
+        scheduler_task = start_scheduler_task()
+        app.create_task(scheduler_task.run())
+        print("✅ Scheduler task started successfully")
+    except Exception as e:
+        print(f"⚠️ Failed to start scheduler: {e}")
 
 
 def main() -> None:
@@ -824,12 +841,6 @@ def main() -> None:
         fallbacks=[],
     )
     app.add_handler(broadcast_conv)
-
-    # Start background scheduler task
-    print("🕐 Starting background publishing scheduler...")
-    from scheduled_publisher_task import start_scheduler_task
-    scheduler_task = start_scheduler_task()
-    app.create_task(scheduler_task.run())
 
     print("🚀 RoboVAI Bot running. Press Ctrl+C to stop.")
     app.run_polling(drop_pending_updates=True)
