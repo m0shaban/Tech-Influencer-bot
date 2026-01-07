@@ -26,6 +26,9 @@ from telegram.ext import (
 
 load_dotenv()
 
+# Import scheduling task
+from scheduled_publisher_task import start_scheduler_task
+
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_DIR / "config.json"
 SEEN_POSTS_PATH = BASE_DIR / "data" / "seen_posts.json"
@@ -217,20 +220,22 @@ async def fetch_and_publish(
             return base[: limit - 1] + ellipsis
         return base
 
-    # Multi-platform publish (Telegram + optional Discord/others)
+    # Multi-platform publish with scheduling support
     try:
         from multi_platform_publisher import MultiPlatformPublisher
 
-        publisher = MultiPlatformPublisher()
+        # Enable scheduler and reports
+        publisher = MultiPlatformPublisher(use_scheduler=True)
         results = await publisher.publish(
             caption=caption,
             link=link or None,
             image_url=image_url or None,
             telegram_context=context,
+            send_reports=True,  # Enable real-time reports to admin
         )
 
         any_success = any(
-            isinstance(v, dict) and v.get("status") == "success"
+            isinstance(v, dict) and (v.get("status") in ["success", "scheduled"] or v.get("success"))
             for v in results.values()
         )
         if not any_success:
@@ -819,6 +824,12 @@ def main() -> None:
         fallbacks=[],
     )
     app.add_handler(broadcast_conv)
+
+    # Start background scheduler task
+    print("🕐 Starting background publishing scheduler...")
+    from scheduled_publisher_task import start_scheduler_task
+    scheduler_task = start_scheduler_task()
+    app.create_task(scheduler_task.run())
 
     print("🚀 RoboVAI Bot running. Press Ctrl+C to stop.")
     app.run_polling(drop_pending_updates=True)

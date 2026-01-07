@@ -166,10 +166,11 @@ with st.sidebar:
                 "🧠 AI Brain Surgery",
                 "🔗 Feed Manager",
                 "🌐 Platform Status",
+                "� Schedule Settings",
                 "📋 Live Terminal",
                 "📢 Manual Broadcast",
             ],
-            icons=["house", "cpu", "link", "globe", "terminal", "megaphone"],
+            icons=["house", "cpu", "link", "globe", "calendar", "terminal", "megaphone"],
             menu_icon="list",
             default_index=0,
         )
@@ -179,7 +180,10 @@ with st.sidebar:
             (
                 "🏠 The Cockpit",
                 "🧠 AI Brain Surgery",
-                "🔗 Feed Manager",                "🌐 Platform Status",                "📜 Live Terminal",
+                "🔗 Feed Manager",
+                "🌐 Platform Status",
+                "📅 Schedule Settings",
+                "📋 Live Terminal",
                 "📢 Manual Broadcast",
             ),
         )
@@ -410,8 +414,160 @@ elif menu_choice == "🌐 Platform Status":
         st.error(f"❌ Error loading platform status: {exc}")
 
 
+# ------------- Schedule Settings -------------
+elif menu_choice == "📅 Schedule Settings":
+    st.title("📅 Schedule Settings")
+    st.caption("Configure publishing schedule and platform-specific settings")
+
+    try:
+        import json
+        from pathlib import Path
+        
+        config_path = Path(__file__).parent / "platform_config.json"
+        
+        # Load platform config
+        if config_path.exists():
+            with open(config_path, 'r', encoding='utf-8') as f:
+                platform_config = json.load(f)
+        else:
+            st.error("❌ platform_config.json not found")
+            st.stop()
+        
+        # Global settings
+        st.subheader("⚙️ Global Settings")
+        
+        global_settings = platform_config.get("global_settings", {})
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            enable_reports = st.checkbox(
+                "Enable Admin Reports",
+                value=global_settings.get("enable_reports", True),
+                help="Send real-time reports to admin via Telegram"
+            )
+        
+        with col2:
+            distribution_mode = st.select box(
+                "Distribution Mode",
+                options=["shared", "unique"],
+                index=0 if global_settings.get("distribution_mode") == "shared" else 1,
+                help="shared: same content to all platforms | unique: different content per platform"
+            )
+        
+        global_settings["enable_reports"] = enable_reports
+        global_settings["distribution_mode"] = distribution_mode
+        
+        st.markdown("---")
+        
+        # Platform-specific settings
+        st.subheader("📱 Platform Settings")
+        
+        platforms_data = platform_config.get("platforms", {})
+        
+        for platform_key in ["telegram", "discord", "blogger", "facebook", "linkedin", "twitter", "reddit", "medium"]:
+            if platform_key not in platforms_data:
+                continue
+                
+            platform_info = platforms_data[platform_key]
+            
+            with st.expander(f"{'✅' if platform_info.get('enabled') else '❌'} {platform_key.upper()}", expanded=False):
+                col1, col2, col3 = st.columns([1, 1, 1])
+                
+                with col1:
+                    enabled = st.checkbox(
+                        "Enabled",
+                        value=platform_info.get("enabled", False),
+                        key=f"{platform_key}_enabled"
+                    )
+                
+                with col2:
+                    publish_mode = st.selectbox(
+                        "Publish Mode",
+                        options=["immediate", "delayed"],
+                        index=0 if platform_info.get("publish_mode") == "immediate" else 1,
+                        key=f"{platform_key}_mode"
+                    )
+                
+                with col3:
+                    delay_minutes = st.number_input(
+                        "Delay (minutes)",
+                        min_value=0,
+                        max_value=120,
+                        value=platform_info.get("delay_minutes", 0),
+                        step=5,
+                        key=f"{platform_key}_delay",
+                        disabled=(publish_mode == "immediate")
+                    )
+                
+                custom_prompt = st.text_area(
+                    "Custom AI Prompt",
+                    value=platform_info.get("custom_prompt", ""),
+                    height=100,
+                    key=f"{platform_key}_prompt",
+                    help="Platform-specific instructions for AI content generation"
+                )
+                
+                # Update values
+                platform_info["enabled"] = enabled
+                platform_info["publish_mode"] = publish_mode
+                platform_info["delay_minutes"] = delay_minutes if publish_mode == "delayed" else 0
+                platform_info["custom_prompt"] = custom_prompt
+        
+        st.markdown("---")
+        
+        # Save button
+        if st.button("💾 Save Schedule Settings", type="primary", use_container_width=True):
+            platform_config["global_settings"] = global_settings
+            platform_config["platforms"] = platforms_data
+            
+            try:
+                with open(config_path, 'w', encoding='utf-8') as f:
+                    json.dump(platform_config, f, ensure_ascii=False, indent=2)
+                st.success("✅ Settings saved successfully!")
+                st.balloons()
+            except Exception as e:
+                st.error(f"❌ Failed to save: {e}")
+        
+        # Quick presets
+        st.markdown("---")
+        st.subheader("⚡ Quick Presets")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("🚀 Instant All", use_container_width=True):
+                for platform_key in platforms_data:
+                    platforms_data[platform_key]["publish_mode"] = "immediate"
+                    platforms_data[platform_key]["delay_minutes"] = 0
+                st.success("Set all platforms to immediate mode")
+                st.experimental_rerun()
+        
+        with col2:
+            if st.button("⏱️ Staggered 5min", use_container_width=True):
+                delays = [0, 5, 10, 15, 20, 25, 30, 35]
+                for i, platform_key in enumerate(platforms_data):
+                    if i < len(delays):
+                        platforms_data[platform_key]["publish_mode"] = "delayed"
+                        platforms_data[platform_key]["delay_minutes"] = delays[i]
+                st.success("Set staggered 5-minute delays")
+                st.experimental_rerun()
+        
+        with col3:
+            if st.button("🕐 Staggered 10min", use_container_width=True):
+                delays = [0, 10, 20, 30, 40, 50, 60, 70]
+                for i, platform_key in enumerate(platforms_data):
+                    if i < len(delays):
+                        platforms_data[platform_key]["publish_mode"] = "delayed"
+                        platforms_data[platform_key]["delay_minutes"] = delays[i]
+                st.success("Set staggered 10-minute delays")
+                st.experimental_rerun()
+
+    except Exception as exc:
+        st.error(f"❌ Error: {exc}")
+
+
 # ------------- Live Terminal -------------
-elif menu_choice == "📜 Live Terminal":
+elif menu_choice == "📋 Live Terminal":
     st.title("Live Terminal")
     st.caption("Tail 50 lines from bot.log")
 

@@ -1,0 +1,96 @@
+{
+  "platforms": {
+    "telegram": {
+      "enabled": true,
+      "publish_mode": "immediate",
+      "delay_minutes": 0,
+      "custom_prompt": "اكتب بأسلوب سريع ومباشر مناسب لقناة تليجرام. استخدم إيموجي واجعل المحتوى جذاب وسهل القراءة.",
+      "max_length": 1024,
+      "priority": 1
+    },
+    "discord": {
+      "enabled": true,
+      "publish_mode": "delayed",
+      "delay_minutes": 5,
+      "custom_prompt": "اكتب بأسلوب تقني مناسب لمجتمع Discord. ركز على التفاصيل التقنية واستخدم markdown formatting.",
+      "max_length": 1900,
+      "priority": 2
+    },
+    "blogger": {
+      "enabled": true,
+      "publish_mode": "delayed",
+      "delay_minutes": 10,
+      "custom_prompt": "اكتب مقال تفصيلي وشامل مناسب لمدونة Blogger. استخدم عناوين فرعية وفقرات منظمة. اجعله SEO-friendly.",
+      "max_length": 5000,
+      "priority": 3
+    },
+    "facebook": {
+      "enabled": true,
+      "publish_mode": "delayed",
+      "delay_minutes": 15,
+      "custom_prompt": "اكتب منشور تفاعلي يشجع على التعليقات والمشاركة. استخدم أسلوب ودود وسؤال في النهاية.",
+      "max_length": 2000,
+      "priority": 4
+    },
+    "linkedin": {
+      "enabled": false,
+      "publish_mode": "delayed",
+      "delay_minutes": 20,
+      "custom_prompt": "اكتب بأسلوب احترافي مناسب لـ LinkedIn. ركز على القيمة المهنية والرؤى الاستراتيجية.",
+      "max_length": 3000,
+      "priority": 5
+    },
+    "twitter": {
+      "enabled": false,
+      "publish_mode": "delayed",
+      "delay_minutes": 25,
+      "custom_prompt": "اكتب تغريدة قصيرة ومؤثرة. استخدم هاشتاجات ذكية واجعلها قابلة لإعادة التغريد.",
+      "max_length": 280,
+      "priority": 6
+    },
+    "reddit": {
+      "enabled": false,
+      "publish_mode": "delayed",
+      "delay_minutes": 30,
+      "custom_prompt": "اكتب بأسلوب مباشر وصادق مناسب لـ Reddit. ركز على المحتوى وتجنب الترويج المباشر.",
+      "max_length": 2500,
+      "priority": 7
+    },
+    "medium": {
+      "enabled": false,
+      "publish_mode": "delayed",
+      "delay_minutes": 35,
+      "custom_prompt": "اكتب مقال عميق وتحليلي مناسب لـ Medium. استخدم storytelling والأمثلة الواقعية.",
+      "max_length": 8000,
+      "priority": 8
+    }
+  },
+  "global_settings": {
+    "distribution_mode": "shared",
+    "enable_reports": true,
+    "report_to_admin": true,
+    "min_interval_between_posts": 60,
+    "max_posts_per_hour": 5,
+    "retry_on_failure": true,
+    "retry_attempts": 3,
+    "retry_delay_minutes": 5
+  },
+  "schedule_presets": {
+    "instant_all": {
+      "description": "نشر فوري على جميع المنصات",
+      "apply_to_all": {"publish_mode": "immediate", "delay_minutes": 0}
+    },
+    "staggered_5min": {
+      "description": "توزيع كل 5 دقائق",
+      "delays": [0, 5, 10, 15, 20, 25, 30, 35]
+    },
+    "staggered_10min": {
+      "description": "توزيع كل 10 دقائق",
+      "delays": [0, 10, 20, 30, 40, 50, 60, 70]
+    },
+    "peak_hours": {
+      "description": "أوقات الذروة (9 صباحاً، 12 ظهراً، 6 مساءً)",
+      "hours": [9, 12, 18]
+    }
+  }
+}

@@ -1,10 +1,12 @@
 """
 Multi-Platform Publisher
-Unified interface for publishing to multiple platforms
+Unified interface for publishing to multiple platforms with scheduling support
 """
 
 from typing import Any, Dict, Optional, Literal
 import os
+import time
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,8 +26,22 @@ PlatformType = Literal[
 class MultiPlatformPublisher:
     """Publish content to multiple platforms from a single interface"""
 
-    def __init__(self):
+    def __init__(self, use_scheduler: bool = False):
         self.enabled_platforms = self._get_enabled_platforms()
+        self.use_scheduler = use_scheduler
+        self.scheduler = None
+        self.reporter = None
+
+        if use_scheduler:
+            try:
+                from publishing_scheduler import PublishingScheduler
+                from publishing_reporter import get_reporter
+
+                self.scheduler = PublishingScheduler()
+                self.reporter = get_reporter()
+            except Exception as e:
+                print(f"Failed to initialize scheduler: {e}")
+                self.use_scheduler = False
 
     def _get_enabled_platforms(self) -> list[PlatformType]:
         """Detect which platforms are configured"""
@@ -90,9 +106,10 @@ class MultiPlatformPublisher:
         image_url: Optional[str] = None,
         platforms: Optional[list[PlatformType]] = None,
         telegram_context: Optional[Any] = None,
+        send_reports: bool = True,
     ) -> Dict[str, Any]:
         """
-        Publish content to multiple platforms
+        Publish content to multiple platforms with optional scheduling
 
         Args:
             caption: Post text content
@@ -100,15 +117,56 @@ class MultiPlatformPublisher:
             image_url: Optional image URL
             platforms: List of platforms to publish to (None = all enabled)
             telegram_context: Telegram bot context (required for Telegram)
+            send_reports: Whether to send progress reports to admin
 
         Returns:
             Dict with results per platform
         """
+        start_time = time.time()
         target_platforms = platforms or self.enabled_platforms
         results = {}
 
+        # Send start report
+        if send_reports and self.reporter:
+            await self.reporter.report_post_start(
+                total_platforms=len(target_platforms),
+                caption_preview=caption,
+            )
+
         for platform in target_platforms:
             try:
+                # Check if we should delay this platform
+                if self.scheduler and self.use_scheduler:
+                    config = self.scheduler.get_platform_config(platform)
+                    if (
+                        config
+                        and config.publish_mode == "delayed"
+                        and config.delay_minutes > 0
+                    ):
+                        # Schedule for later
+                        scheduled_post = self.scheduler.schedule_post(
+                            platform=platform,
+                            caption=caption,
+                            link=link,
+                            image_url=image_url,
+                        )
+
+                        results[platform] = {
+                            "status": "scheduled",
+                            "scheduled_time": scheduled_post.scheduled_time.isoformat(),
+                            "delay_minutes": config.delay_minutes,
+                        }
+
+                        # Send schedule report
+                        if send_reports and self.reporter:
+                            await self.reporter.report_scheduled_post(
+                                platform=platform,
+                                scheduled_time=scheduled_post.scheduled_time,
+                            )
+
+                        continue
+
+                # Publish immediately
                 if platform == "telegram":
                     result = await self._publish_telegram(
                         caption, link, image_url, telegram_context
@@ -143,8 +201,46 @@ class MultiPlatformPublisher:
                     result = self._publish_facebook(caption, link, image_url)
                     results["facebook"] = result
 
+                # Send success report
+                if send_reports and self.reporter:
+                    post_url = result.get("url") if isinstance(result, dict) else None
+                    if result.get("status") == "success" or result.get("success"):
+                        await self.reporter.report_platform_success(
+                            platform=platform,
+                            post_url=post_url,
+                        )
+                    else:
+                        error_msg = result.get("error") or result.get("message", "Unknown error")
+                        await self.reporter.report_platform_failure(
+                            platform=platform,
+                            error=error_msg,
+                        )
+
             except Exception as e:
                 results[platform] = {"status": "error", "error": str(e)}
+                
+                # Send failure report
+                if send_reports and self.reporter:
+                    await self.reporter.report_platform_failure(
+                        platform=platform,
+                        error=str(e),
+                    )
+
+        # Send completion report
+        if send_reports and self.reporter:
+            successful = sum(
+                1 for r in results.values()
+                if isinstance(r, dict) and (r.get("status") in ["success", "scheduled"] or r.get("success"))
+            )
+            failed = len(results) - successful
+            duration = time.time() - start_time
+            
+            await self.reporter.report_post_complete(
+                successful=successful,
+                failed=failed,
+                total=len(results),
+                duration_seconds=duration,
+            )
 
         return results
 
@@ -392,9 +488,7 @@ class MultiPlatformPublisher:
             status["reddit"] = False
 
         # Facebook
-        if os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN") and os.getenv(
-            "FACEBOOK_PAGE_ID"
-        ):
+        if os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN") and os.getenv("FACEBOOK_PAGE_ID"):
             try:
                 from facebook_publisher import FacebookPublisher
 
