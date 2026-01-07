@@ -3,6 +3,7 @@
 ## ✅ Pre-Deployment Checklist
 
 ### Files Ready:
+
 - ✅ `render.yaml` - Service configuration
 - ✅ `requirements.txt` - Python dependencies
 - ✅ `.gitignore` - Security (excludes .env)
@@ -60,6 +61,7 @@ git push -u origin main
 Render will automatically detect `render.yaml` and show you:
 
 **Services to be created:**
+
 - ✅ **robobot-worker** (Background Worker) - Telegram Bot
 - ✅ **robobot-dashboard** (Web Service) - Streamlit Dashboard
 
@@ -80,14 +82,14 @@ DASHBOARD_PASSWORD=your_secure_password
 
 **How to get these values:**
 
-| Variable | Where to Find |
-|----------|---------------|
-| `TELEGRAM_TOKEN` | @BotFather on Telegram |
-| `ADMIN_USER_ID` | @userinfobot on Telegram (send /start) |
-| `CHANNEL_ID` | Your channel username (e.g., @nextlevelegypt) |
-| `GROUP_ID` | Group chat ID (use @userinfobot in the group) |
-| `GROQ_API_KEY` | https://console.groq.com/keys |
-| `DASHBOARD_PASSWORD` | Create a strong password |
+| Variable             | Where to Find                                 |
+| -------------------- | --------------------------------------------- |
+| `TELEGRAM_TOKEN`     | @BotFather on Telegram                        |
+| `ADMIN_USER_ID`      | @userinfobot on Telegram (send /start)        |
+| `CHANNEL_ID`         | Your channel username (e.g., @nextlevelegypt) |
+| `GROUP_ID`           | Group chat ID (use @userinfobot in the group) |
+| `GROQ_API_KEY`       | https://console.groq.com/keys                 |
+| `DASHBOARD_PASSWORD` | Create a strong password                      |
 
 ### 2.5 Review & Deploy
 
@@ -104,10 +106,12 @@ DASHBOARD_PASSWORD=your_secure_password
 In Render Dashboard, you should see:
 
 **robobot-worker** (Background Worker)
+
 - Status: ✅ **Live**
 - Logs: Should show "Bot started" message
 
 **robobot-dashboard** (Web Service)
+
 - Status: ✅ **Live**
 - URL: `https://robobot-dashboard.onrender.com` (or similar)
 
@@ -152,12 +156,14 @@ Now your dashboard will wake up automatically when pinged!
 ### 4.2 Monitor Logs
 
 **For Worker (Telegram Bot):**
+
 1. Go to Render Dashboard
 2. Click **robobot-worker**
 3. Click **"Logs"** tab
 4. Watch for successful posts: `Published: https://...`
 
 **For Dashboard:**
+
 1. Click **robobot-dashboard**
 2. Click **"Logs"** tab
 3. Look for: `You can now view your Streamlit app`
@@ -169,6 +175,7 @@ Now your dashboard will wake up automatically when pinged!
 ### Problem: "Worker keeps crashing"
 
 **Solution:**
+
 1. Check Logs for error messages
 2. Common issues:
    - Missing environment variables
@@ -178,6 +185,7 @@ Now your dashboard will wake up automatically when pinged!
 ### Problem: "Dashboard shows 404"
 
 **Solution:**
+
 1. Wait 2-3 minutes after first deploy
 2. Check if build completed successfully
 3. Verify `startCommand` in render.yaml
@@ -185,6 +193,7 @@ Now your dashboard will wake up automatically when pinged!
 ### Problem: "Bot not responding in Telegram"
 
 **Solution:**
+
 1. Check Worker logs
 2. Verify TELEGRAM_TOKEN is correct
 3. Make sure webhook is not enabled elsewhere
@@ -193,6 +202,7 @@ Now your dashboard will wake up automatically when pinged!
 ### Problem: "Out of memory (free tier limit)"
 
 **Solution:**
+
 1. Free tier has 512MB RAM limit
 2. If needed, reduce `DEFAULT_MAX_TOKENS` in `ai_processor.py`:
    ```python
@@ -204,6 +214,7 @@ Now your dashboard will wake up automatically when pinged!
 ## 📊 Free Tier Limits
 
 ### Render.com Free Tier:
+
 - ✅ **750 hours/month** for Web Services
 - ✅ **Unlimited hours** for Background Workers (like your bot!)
 - ✅ **512MB RAM** per service
@@ -211,6 +222,7 @@ Now your dashboard will wake up automatically when pinged!
 - ✅ **Auto-deploys** on every Git push
 
 ### Pro Tips:
+
 1. **Worker (Bot) runs 24/7** - no sleep! ✅
 2. **Dashboard sleeps** but wakes up fast when accessed
 3. Use UptimeRobot to keep dashboard alive (optional)
@@ -235,11 +247,13 @@ Now your dashboard will wake up automatically when pinged!
 ## 🆘 Getting Help
 
 ### Check Logs First:
+
 - Render Dashboard → Your Service → Logs tab
 
 ### Common Log Messages:
 
 **✅ Success:**
+
 ```
 Bot started
 Published: https://...
@@ -247,6 +261,7 @@ System Ready to Launch
 ```
 
 **❌ Errors:**
+
 ```
 Missing GROQ_API_KEY → Add in environment variables
 Telegram error 401 → Check TELEGRAM_TOKEN
@@ -256,6 +271,7 @@ json_validate_failed → Groq API issue, will retry
 ### Health Check:
 
 After deployment, you can run health check from Render Shell:
+
 1. Go to Service → Shell
 2. Run: `python health_check.py`
 
@@ -264,16 +280,19 @@ After deployment, you can run health check from Render Shell:
 ## 🎯 Next Steps After Deployment
 
 ### 1. Monitor Performance
+
 - Check logs daily for the first week
 - Verify posts are publishing correctly
 - Watch for any errors
 
 ### 2. Customize Content
+
 - Use Dashboard to adjust system prompt
 - Add/remove RSS feeds
 - Change posting frequency (in code)
 
 ### 3. Scale (Optional)
+
 - Upgrade to paid tier for more RAM/hours
 - Add more channels
 - Implement analytics

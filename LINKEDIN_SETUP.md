@@ -1,6 +1,7 @@
 # 🔗 LinkedIn Integration Guide
 
 ## Overview
+
 RoboVAI now supports cross-posting to LinkedIn! Publish your tech content to both Telegram and LinkedIn simultaneously.
 
 ---
@@ -27,6 +28,7 @@ RoboVAI now supports cross-posting to LinkedIn! Publish your tech content to bot
 ### Step 3: Generate Access Token
 
 #### Option A: Quick Test (2-hour token)
+
 1. Go to **Auth** tab
 2. Copy your **Client ID** and **Client Secret**
 3. Use LinkedIn's OAuth 2.0 Playground:
@@ -35,6 +37,7 @@ RoboVAI now supports cross-posting to LinkedIn! Publish your tech content to bot
 5. Copy the **Access Token**
 
 #### Option B: Production (60-day token)
+
 ```python
 # Run this script to get a long-lived token
 python scripts/linkedin_auth.py
@@ -71,6 +74,7 @@ python linkedin_publisher.py
 ## 📊 Usage
 
 ### In Config (config.json)
+
 ```json
 {
   "platforms": ["telegram", "linkedin"],
@@ -81,17 +85,20 @@ python linkedin_publisher.py
 ### Via Admin Commands
 
 **Enable LinkedIn:**
+
 ```
 /setplatform linkedin on
 ```
 
 **Publish to both:**
+
 ```
 ⚡ Force Fetch
 (will publish to both Telegram + LinkedIn automatically)
 ```
 
 **LinkedIn only:**
+
 ```
 /publishlinkedin
 ```
@@ -101,6 +108,7 @@ python linkedin_publisher.py
 ## 🎨 Content Formatting
 
 ### Automatic Adjustments for LinkedIn:
+
 - ✅ Professional tone maintained
 - ✅ 3000 character limit enforced
 - ✅ Link previews auto-generated
@@ -110,6 +118,7 @@ python linkedin_publisher.py
 ### Example Transformation:
 
 **Telegram Post:**
+
 ```
 🔥 تخيل إن الكود اللي بتكتبه في يوم.. بقى يخلص في ثانية
 
@@ -120,6 +129,7 @@ Google عملت نقلة نوعية في Gemini...
 ```
 
 **LinkedIn Post (auto-converted):**
+
 ```
 🚀 Major breakthrough in AI development
 
@@ -171,6 +181,7 @@ await publisher.publish(
 ## 📈 Analytics (Coming Soon)
 
 Track performance across platforms:
+
 - LinkedIn impressions
 - Engagement rate comparison
 - Best-performing content per platform
@@ -181,33 +192,41 @@ Track performance across platforms:
 ## 🆘 Troubleshooting
 
 ### "Access token expired"
+
 **Solution:** Regenerate token (LinkedIn tokens expire after 60 days)
+
 ```bash
 python scripts/linkedin_auth.py
 ```
 
 ### "Invalid URN"
+
 **Solution:** Re-fetch your Person URN
+
 ```bash
 python -c "from linkedin_publisher import LinkedInPublisher; p = LinkedInPublisher(); print(p._get_person_urn())"
 ```
 
 ### "Rate limit exceeded"
+
 **Solution:** LinkedIn free tier limits:
+
 - 100 posts/day
 - Wait 1 minute between posts
-(RoboVAI handles this automatically)
+  (RoboVAI handles this automatically)
 
 ---
 
 ## 💰 LinkedIn API Limits
 
 ### Free Tier:
+
 - ✅ 100 posts/day
 - ✅ Personal profiles only
 - ✅ Basic analytics
 
 ### LinkedIn Marketing API (Paid):
+
 - 🚀 Unlimited posts
 - 🚀 Company pages
 - 🚀 Advanced analytics
@@ -219,16 +238,19 @@ python -c "from linkedin_publisher import LinkedInPublisher; p = LinkedInPublish
 ## 🎯 Best Practices
 
 ### 1. Content Strategy
+
 - **Telegram**: Egyptian Arabic, casual tone, emojis
 - **LinkedIn**: Professional English, industry insights
 - **Both**: Valuable tech content, actionable tips
 
 ### 2. Posting Frequency
+
 - **Telegram**: 50-100 posts/day ✅
 - **LinkedIn**: 5-10 posts/day (quality > quantity)
 - **RoboVAI**: Auto-throttles to respect limits
 
 ### 3. Engagement
+
 - LinkedIn posts get 2-3x more engagement than Telegram
 - Use LinkedIn for career tips, case studies
 - Use Telegram for breaking news, quick updates
@@ -238,6 +260,7 @@ python -c "from linkedin_publisher import LinkedInPublisher; p = LinkedInPublish
 ## 📞 Support
 
 Issues with LinkedIn integration?
+
 - GitHub Issues: https://github.com/m0shaban/Tech-Influencer-bot/issues
 - Tag: `linkedin` `integration`
 

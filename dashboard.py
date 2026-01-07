@@ -165,10 +165,11 @@ with st.sidebar:
                 "🏠 The Cockpit",
                 "🧠 AI Brain Surgery",
                 "🔗 Feed Manager",
-                "📜 Live Terminal",
+                "🌐 Platform Status",
+                "📋 Live Terminal",
                 "📢 Manual Broadcast",
             ],
-            icons=["house", "cpu", "link", "terminal", "megaphone"],
+            icons=["house", "cpu", "link", "globe", "terminal", "megaphone"],
             menu_icon="list",
             default_index=0,
         )
@@ -178,8 +179,7 @@ with st.sidebar:
             (
                 "🏠 The Cockpit",
                 "🧠 AI Brain Surgery",
-                "🔗 Feed Manager",
-                "📜 Live Terminal",
+                "🔗 Feed Manager",                "🌐 Platform Status",                "📜 Live Terminal",
                 "📢 Manual Broadcast",
             ),
         )
@@ -302,6 +302,112 @@ elif menu_choice == "🔗 Feed Manager":
         save_config(config)
         st.success(f"Loaded {len(feeds_from_code)} feeds from code")
         st.experimental_rerun()
+
+
+# ------------- Platform Status -------------
+elif menu_choice == "🌐 Platform Status":
+    st.title("🌐 Platform Status")
+    st.caption("Monitor all connected social media platforms")
+
+    try:
+        from multi_platform_publisher import MultiPlatformPublisher
+
+        publisher = MultiPlatformPublisher()
+        status = publisher.get_platform_status()
+
+        # Platform configurations
+        platforms_info = {
+            "telegram": {
+                "name": "📱 Telegram",
+                "color": "blue",
+                "config": ["TELEGRAM_TOKEN", "CHANNEL_ID"],
+            },
+            "discord": {
+                "name": "💬 Discord",
+                "color": "purple",
+                "config": ["DISCORD_WEBHOOK_URL"],
+            },
+            "blogger": {
+                "name": "📝 Blogger",
+                "color": "orange",
+                "config": ["BLOGGER_BLOG_ID", "BLOGGER_ACCESS_TOKEN"],
+            },
+            "facebook": {
+                "name": "👥 Facebook",
+                "color": "blue",
+                "config": ["FACEBOOK_PAGE_ACCESS_TOKEN", "FACEBOOK_PAGE_ID"],
+            },
+            "linkedin": {
+                "name": "💼 LinkedIn",
+                "color": "blue",
+                "config": ["LINKEDIN_ACCESS_TOKEN"],
+            },
+            "twitter": {
+                "name": "🐦 Twitter/X",
+                "color": "blue",
+                "config": [
+                    "TWITTER_API_KEY",
+                    "TWITTER_API_SECRET",
+                    "TWITTER_ACCESS_TOKEN",
+                ],
+            },
+            "reddit": {
+                "name": "🔴 Reddit",
+                "color": "orange",
+                "config": [
+                    "REDDIT_CLIENT_ID",
+                    "REDDIT_CLIENT_SECRET",
+                    "REDDIT_USERNAME",
+                ],
+            },
+            "medium": {
+                "name": "📖 Medium",
+                "color": "green",
+                "config": ["MEDIUM_INTEGRATION_TOKEN", "MEDIUM_USER_ID"],
+            },
+        }
+
+        # Summary metrics
+        active_count = sum(1 for v in status.values() if v)
+        total_count = len(status)
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("✅ Active Platforms", active_count)
+        col2.metric("🔴 Inactive Platforms", total_count - active_count)
+        col3.metric("📊 Success Rate", f"{(active_count/total_count*100):.0f}%")
+
+        st.markdown("---")
+
+        # Platform cards
+        for platform_key, platform_info in platforms_info.items():
+            if platform_key in status:
+                is_active = status[platform_key]
+                status_emoji = "✅" if is_active else "❌"
+                status_text = "Connected" if is_active else "Not Configured"
+
+                with st.expander(
+                    f"{status_emoji} {platform_info['name']} - {status_text}",
+                    expanded=False,
+                ):
+                    if is_active:
+                        st.success(f"✅ {platform_info['name']} is ready to publish")
+                    else:
+                        st.warning(f"⚠️ {platform_info['name']} is not configured")
+                        st.caption("Required environment variables:")
+                        for var in platform_info["config"]:
+                            st.code(var, language="bash")
+
+        st.markdown("---")
+
+        # Test button
+        if st.button("🧪 Test All Platforms", type="primary", use_container_width=True):
+            st.info("🔄 Testing platforms... (check bot logs for results)")
+            st.caption(
+                "Use Telegram bot command '🧪 Test Platforms' for full testing"
+            )
+
+    except Exception as exc:
+        st.error(f"❌ Error loading platform status: {exc}")
 
 
 # ------------- Live Terminal -------------

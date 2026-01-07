@@ -14,21 +14,24 @@
 ## 💰 Business Value
 
 ### ROI Calculator
-| Manual Process | With RoboVAI | Savings |
-|----------------|--------------|---------|
-| **Time**: 3 hours/day | **Time**: 15 min/day | **95% reduction** |
-| **Cost**: $30/hr × 3hr = $90/day | **Cost**: $0 (free tier) | **$2,700/month** |
-| **Posts**: 5-10/day | **Posts**: 50-100/day | **10x output** |
+
+| Manual Process                   | With RoboVAI             | Savings           |
+| -------------------------------- | ------------------------ | ----------------- |
+| **Time**: 3 hours/day            | **Time**: 15 min/day     | **95% reduction** |
+| **Cost**: $30/hr × 3hr = $90/day | **Cost**: $0 (free tier) | **$2,700/month**  |
+| **Posts**: 5-10/day              | **Posts**: 50-100/day    | **10x output**    |
 
 ### Use Cases & Pricing
 
 #### 🎓 Content Creators ($0/month)
+
 - **Free forever** on Render.com + Streamlit Cloud
 - 50+ automated posts per day
 - Full admin control via Telegram
 - Perfect for: Tech channels, AI educators, dev communities
 
 #### 💼 Media Companies (Custom)
+
 - White-label deployment
 - Multi-channel management
 - Custom RSS sources
@@ -36,6 +39,7 @@
 - Contact: [m0shaban](https://github.com/m0shaban)
 
 #### 🏢 Enterprise (Custom)
+
 - Multi-platform support (Twitter, LinkedIn, Discord)
 - Advanced analytics & A/B testing
 - Dedicated infrastructure
@@ -47,11 +51,13 @@
 ## 🚀 Live Deployments
 
 ### Production Instances
+
 - **🎛️ Admin Dashboard**: https://tech-influencer-bot.streamlit.app/
 - **🤖 Bot Service**: https://robovai-creator.onrender.com/
 - **📱 Telegram Bot**: [@nextlevelegypt](https://t.me/nextlevelegypt)
 
 ### Deployment Status
+
 - ✅ **Uptime**: 99.9% (Render free tier)
 - ✅ **Response Time**: < 2s average
 - ✅ **Posts Published**: 38+ and counting
@@ -62,12 +68,14 @@
 ## ⚡ Why RoboVAI?
 
 ### The Content Creator's Dilemma
+
 - ⏰ **8 hours/day** monitoring 68+ tech news sources
 - ✍️ **Manual rewriting** to match your brand voice
 - 📊 **Constant engagement** needed to grow audience
 - 💸 **Opportunity cost** of $240/day ($7,200/month)
 
 ### RoboVAI's Solution
+
 - ✅ **Automated curation** from premium sources (TechCrunch, Verge, arXiv, GitHub, etc.)
 - ✅ **AI rewriting** using Groq LLaMA 3.3 70B (Egyptian Arabic + English tech terms)
 - ✅ **Auto-publishing** with images, polls, and engagement hooks
@@ -80,6 +88,7 @@
 ## 🎯 Key Features
 
 ### 🧠 AI-Powered Content Engine
+
 - **68+ curated RSS feeds**: TechCrunch, Verge, arXiv, GitHub, ProductHunt, HackerNews, MENA tech sources
 - **Smart deduplication**: Never repeats content
 - **Image extraction**: Automatic visual pulls from HTML/RSS
@@ -87,7 +96,9 @@
 - **3 content styles**: Narrative, Tool Card, Listicle
 
 ### 📊 Triple Dashboard Control
+
 1. **Telegram Bot**: Full admin controls via DM (@yourbotname)
+
    - ⚡ Force Fetch
    - 📊 Stats & System Info
    - 📝 Edit AI Prompt
@@ -96,6 +107,7 @@
    - 📢 Broadcast Messages
 
 2. **Web Dashboard**: Streamlit UI (https://tech-influencer-bot.streamlit.app/)
+
    - Real-time monitoring
    - Feed management
    - Log viewer
@@ -104,6 +116,7 @@
 3. **API**: Programmatic control (coming soon)
 
 ### 🚀 Production-Ready Infrastructure
+
 - **Auto-deployment**: One-click deploy to Render/Streamlit
 - **Error recovery**: Automatic retries, fallbacks, graceful degradation
 - **Rate limiting**: Built-in cooldowns for Groq/Telegram compliance
@@ -115,9 +128,11 @@
 ## 🌐 Multi-Platform Roadmap
 
 ### Currently Supported
+
 - ✅ **Telegram**: Full support (channels, groups, DMs)
 
 ### In Development (Q1 2026)
+
 - 🔄 **Twitter/X**: Auto-threading + image posts
 - 🔄 **LinkedIn**: Professional content formatting
 - 🔄 **Discord**: Server webhooks + embeds
@@ -174,6 +189,7 @@
 ```
 
 ### Core Components
+
 - **[main.py](main.py)**: Bot lifecycle, scheduler, 3-way admin controls
 - **[feed_manager.py](feed_manager.py)**: Multi-source RSS with smart dedup
 - **[ai_processor.py](ai_processor.py)**: Groq LLaMA integration + validation
@@ -181,16 +197,19 @@
 - **[health_check.py](health_check.py)**: Pre-deploy diagnostics
 
 ---
+
 - **White-label licensing**: Rebrand for your clients
 - **Reseller program**: 30% revenue share
 - **Bulk deployment**: Manage 10+ clients
 
 ### For Developers
+
 - **API access**: Build custom integrations
 - **Plugin marketplace**: Sell custom content filters
 - **Training program**: Become a certified RoboVAI consultant
 
 ### For Investors
+
 - **SaaS model**: $29-$99/month tiers
 - **TAM**: 500K+ tech content creators globally
 - **Traction**: 38+ posts published in beta, 0 churn
@@ -202,6 +221,7 @@
 ## 📈 Success Metrics
 
 ### Performance Benchmarks
+
 - **Content Output**: 50-100 posts/day (vs 5-10 manual)
 - **Time Saved**: 95% reduction (from 3hr to 15min daily)
 - **Cost Savings**: $2,700/month (vs hiring content manager)
@@ -209,6 +229,7 @@
 - **Uptime**: 99.9% on free tier
 
 ### Real Results
+
 > "Grew from 500 to 5,000 subscribers in 3 months. RoboVAI paid for itself 100x over."  
 > — Tech Influencer, Cairo
 

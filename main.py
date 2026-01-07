@@ -117,6 +117,7 @@ def get_admin_keyboard() -> ReplyKeyboardMarkup:
             ["📢 Broadcast", "🛑 Status Toggle"],
             ["📝 Edit Prompt", "📡 Feeds"],
             ["📋 Logs", "ℹ️ System Info"],
+            ["🌐 Platform Status", "🧪 Test Platforms"],
         ],
         resize_keyboard=True,
         is_persistent=True,
@@ -216,22 +217,137 @@ async def fetch_and_publish(
             return base[: limit - 1] + ellipsis
         return base
 
-    text = _compose_text(caption, link, bool(image_url))
+    # Multi-platform publish (Telegram + optional Discord/others)
+    try:
+        from multi_platform_publisher import MultiPlatformPublisher
 
-    # Try sending with image first; if it fails, fallback to text-only
-    if image_url:
-        try:
-            await context.bot.send_photo(
-                chat_id=CHANNEL_ID, photo=image_url, caption=text
-            )
-        except Exception as e:
-            # Fallback: send as text if image fails
-            await context.bot.send_message(chat_id=CHANNEL_ID, text=text)
-    else:
-        await context.bot.send_message(chat_id=CHANNEL_ID, text=text)
+        publisher = MultiPlatformPublisher()
+        results = await publisher.publish(
+            caption=caption,
+            link=link or None,
+            image_url=image_url or None,
+            telegram_context=context,
+        )
 
-    _log(f"Published: {link}")
-    return {"status": "published", "title": title}
+        any_success = any(
+            isinstance(v, dict) and v.get("status") == "success"
+            for v in results.values()
+        )
+        if not any_success:
+            return {"status": "error", "error": f"Publish failed: {results}"}
+
+        _log(f"Published: {link} | results={results}")
+        return {"status": "published", "title": title}
+    except Exception as exc:  # noqa: BLE001
+        return {"status": "error", "error": f"Publish error: {exc}"}
+
+
+async def admin_test_discord(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    if not update.message or not update.effective_user:
+        return
+    if update.effective_user.id != ADMIN_USER_ID:
+        await update.message.reply_text("❌ غير مصرح")
+        return
+
+    if not os.getenv("DISCORD_WEBHOOK_URL"):
+        await update.message.reply_text("❌ DISCORD_WEBHOOK_URL مش موجود في .env")
+        return
+
+    try:
+        from discord_publisher import DiscordPublisher
+
+        publisher = DiscordPublisher()
+        publisher.publish(
+            caption=f"Test from RoboBot ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})",
+            link=None,
+            image_url=None,
+        )
+        await update.message.reply_text("✅ تم إرسال رسالة اختبار على Discord")
+    except Exception as exc:  # noqa: BLE001
+        await update.message.reply_text(f"❌ فشل اختبار Discord: {exc}")
+
+
+async def admin_platform_status(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Show status of all configured platforms"""
+    if not update.message or not update.effective_user:
+        return
+    if update.effective_user.id != ADMIN_USER_ID:
+        await update.message.reply_text("❌ غير مصرح")
+        return
+
+    try:
+        from multi_platform_publisher import MultiPlatformPublisher
+
+        publisher = MultiPlatformPublisher()
+        status = publisher.get_platform_status()
+
+        # Build status message
+        message = "🌐 **Platform Status**\n\n"
+        
+        platforms = {
+            "telegram": "📱 Telegram",
+            "discord": "💬 Discord",
+            "blogger": "📝 Blogger",
+            "facebook": "👥 Facebook",
+            "linkedin": "💼 LinkedIn",
+            "twitter": "🐦 Twitter/X",
+            "reddit": "🔴 Reddit",
+            "medium": "📖 Medium",
+        }
+
+        for key, name in platforms.items():
+            if key in status:
+                emoji = "✅" if status[key] else "❌"
+                message += f"{emoji} {name}\n"
+
+        enabled_count = sum(1 for v in status.values() if v)
+        message += f"\n**Active:** {enabled_count}/{len(status)} platforms"
+
+        await update.message.reply_text(message, parse_mode="Markdown")
+    except Exception as exc:  # noqa: BLE001
+        await update.message.reply_text(f"❌ Error: {exc}")
+
+
+async def admin_test_platforms(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Send test messages to all configured platforms"""
+    if not update.message or not update.effective_user:
+        return
+    if update.effective_user.id != ADMIN_USER_ID:
+        await update.message.reply_text("❌ غير مصرح")
+        return
+
+    test_caption = f"🧪 Test from RoboBot\n{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    test_link = "https://github.com/m0shaban/Tech-Influencer-bot"
+
+    await update.message.reply_text("⏳ Testing all platforms...")
+
+    try:
+        from multi_platform_publisher import MultiPlatformPublisher
+
+        publisher = MultiPlatformPublisher()
+        results = await publisher.publish(
+            caption=test_caption,
+            link=test_link,
+            image_url=None,
+            telegram_context=context,
+        )
+
+        # Build results message
+        message = "🧪 **Test Results**\n\n"
+        for platform, result in results.items():
+            status_emoji = "✅" if result.get("status") == "success" or result.get("success") else "❌"
+            platform_name = platform.capitalize()
+            message += f"{status_emoji} {platform_name}\n"
+
+        await update.message.reply_text(message, parse_mode="Markdown")
+    except Exception as exc:  # noqa: BLE001
+        await update.message.reply_text(f"❌ Test failed: {exc}")
 
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -323,16 +439,20 @@ async def admin_view_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await update.message.reply_text(
         f"📝 **Current System Prompt:**\n\n{preview}\n\n"
         "Send /setprompt <your_new_prompt> to update.",
-        parse_mode="Markdown"
+        parse_mode="Markdown",
     )
 
 
 async def admin_set_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not context.args:
-        await update.message.reply_text(
-            "Usage: /setprompt <your new prompt text>\n\n"
-            "Or reply to this with multi-line text."
-        ) if update.message else None
+        (
+            await update.message.reply_text(
+                "Usage: /setprompt <your new prompt text>\n\n"
+                "Or reply to this with multi-line text."
+            )
+            if update.message
+            else None
+        )
         return
     new_prompt = " ".join(context.args)
     cfg = _load_config()
@@ -347,7 +467,9 @@ async def admin_list_feeds(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     cfg = _load_config()
     feeds = cfg.get("feeds", [])
     if not feeds:
-        await update.message.reply_text("📡 No custom feeds. Using defaults from feeds_config.py")
+        await update.message.reply_text(
+            "📡 No custom feeds. Using defaults from feeds_config.py"
+        )
         return
     text = f"📡 **Active Feeds** ({len(feeds)}):\n\n"
     for i, feed in enumerate(feeds[:20], 1):  # Show first 20
@@ -359,13 +481,19 @@ async def admin_list_feeds(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 async def admin_add_feed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not context.args:
-        await update.message.reply_text(
-            "Usage: /addfeed <RSS_URL>\n\nExample:\n/addfeed https://example.com/feed.xml"
-        ) if update.message else None
+        (
+            await update.message.reply_text(
+                "Usage: /addfeed <RSS_URL>\n\nExample:\n/addfeed https://example.com/feed.xml"
+            )
+            if update.message
+            else None
+        )
         return
     new_feed = context.args[0].strip()
     if not new_feed.startswith(("http://", "https://")):
-        await update.message.reply_text("❌ Invalid URL. Must start with http:// or https://")
+        await update.message.reply_text(
+            "❌ Invalid URL. Must start with http:// or https://"
+        )
         return
     cfg = _load_config()
     feeds = cfg.get("feeds", [])
@@ -380,17 +508,21 @@ async def admin_add_feed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 async def admin_remove_feed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not context.args:
-        await update.message.reply_text(
-            "Usage: /removefeed <URL_or_index>\n\n"
-            "Example:\n/removefeed 5\nor\n/removefeed https://example.com/feed.xml"
-        ) if update.message else None
+        (
+            await update.message.reply_text(
+                "Usage: /removefeed <URL_or_index>\n\n"
+                "Example:\n/removefeed 5\nor\n/removefeed https://example.com/feed.xml"
+            )
+            if update.message
+            else None
+        )
         return
     cfg = _load_config()
     feeds = cfg.get("feeds", [])
     if not feeds:
         await update.message.reply_text("❌ No custom feeds to remove.")
         return
-    
+
     target = " ".join(context.args)
     # Try as index first
     if target.isdigit():
@@ -408,8 +540,10 @@ async def admin_remove_feed(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         _save_config(cfg)
         await update.message.reply_text(f"✅ Removed: {target[:50]}...")
         return
-    
-    await update.message.reply_text("❌ Feed not found. Use /feeds to see current list.")
+
+    await update.message.reply_text(
+        "❌ Feed not found. Use /feeds to see current list."
+    )
 
 
 async def admin_view_logs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -418,7 +552,7 @@ async def admin_view_logs(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if not LOG_PATH.exists():
         await update.message.reply_text("📋 No logs yet.")
         return
-    
+
     try:
         with LOG_PATH.open("r", encoding="utf-8", errors="ignore") as f:
             lines = f.readlines()
@@ -426,7 +560,9 @@ async def admin_view_logs(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         log_text = "".join(last_lines)
         if len(log_text) > 4000:
             log_text = "..." + log_text[-4000:]
-        await update.message.reply_text(f"📋 **Recent Logs:**\n\n```\n{log_text}\n```", parse_mode="Markdown")
+        await update.message.reply_text(
+            f"📋 **Recent Logs:**\n\n```\n{log_text}\n```", parse_mode="Markdown"
+        )
     except Exception as e:
         await update.message.reply_text(f"❌ Error reading logs: {e}")
 
@@ -434,21 +570,22 @@ async def admin_view_logs(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 async def admin_system_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message:
         return
-    
+
     cfg = _load_config()
     status = cfg.get("status", "unknown")
     model = cfg.get("model", "llama-3.3-70b-versatile")
     feeds_count = len(cfg.get("feeds", []))
-    
+
     seen_count = 0
     if SEEN_POSTS_PATH.exists():
         try:
             import json
+
             data = json.loads(SEEN_POSTS_PATH.read_text(encoding="utf-8"))
             seen_count = len(data) if isinstance(data, list) else 0
         except:
             pass
-    
+
     info = (
         f"ℹ️ **System Info**\n\n"
         f"Status: {status} {'🟢' if status == 'active' else '🔴'}\n"
@@ -459,7 +596,7 @@ async def admin_system_info(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         f"Group: {GROUP_ID or 'N/A'}\n\n"
         f"Use the buttons below to manage the bot."
     )
-    
+
     await update.message.reply_text(info, parse_mode="Markdown")
 
 
@@ -594,6 +731,7 @@ async def post_init(app: Application) -> None:
             BotCommand("start", "Start the bot"),
             BotCommand("help", "How to use"),
             BotCommand("contact", "Contact Support"),
+            BotCommand("test_discord", "Admin: test Discord"),
         ]
     )
 
@@ -610,7 +748,7 @@ def main() -> None:
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CommandHandler("contact", cmd_contact))
-    
+
     # Admin commands
     app.add_handler(CommandHandler("setprompt", admin_set_prompt))
     app.add_handler(CommandHandler("addfeed", admin_add_feed))
@@ -618,6 +756,7 @@ def main() -> None:
     app.add_handler(CommandHandler("feeds", admin_list_feeds))
     app.add_handler(CommandHandler("logs", admin_view_logs))
     app.add_handler(CommandHandler("info", admin_system_info))
+    app.add_handler(CommandHandler("test_discord", admin_test_discord))
 
     admin_filter = filters.User(user_id=ADMIN_USER_ID)
 
@@ -641,18 +780,24 @@ def main() -> None:
         )
     )
     app.add_handler(
-        MessageHandler(
-            admin_filter & filters.Regex(r"^📡 Feeds$"), admin_list_feeds
-        )
+        MessageHandler(admin_filter & filters.Regex(r"^📡 Feeds$"), admin_list_feeds)
     )
     app.add_handler(
-        MessageHandler(
-            admin_filter & filters.Regex(r"^📋 Logs$"), admin_view_logs
-        )
+        MessageHandler(admin_filter & filters.Regex(r"^📋 Logs$"), admin_view_logs)
     )
     app.add_handler(
         MessageHandler(
             admin_filter & filters.Regex(r"^ℹ️ System Info$"), admin_system_info
+        )
+    )
+    app.add_handler(
+        MessageHandler(
+            admin_filter & filters.Regex(r"^🌐 Platform Status$"), admin_platform_status
+        )
+    )
+    app.add_handler(
+        MessageHandler(
+            admin_filter & filters.Regex(r"^🧪 Test Platforms$"), admin_test_platforms
         )
     )
 

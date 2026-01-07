@@ -26,7 +26,7 @@ EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD python health_check.py || exit 1
+    CMD python health_check.py || exit 1
 
 # Start both bot and dashboard
 CMD ["sh", "-c", "python main.py & streamlit run dashboard.py --server.port=8080 --server.address=0.0.0.0 --server.headless=true"]

@@ -1,7 +1,7 @@
 name: Keep Bot Alive
 on:
   schedule:
-    - cron: '0 */6 * * *'  # كل 6 ساعات
+    - cron: '0 */6 * * *' # كل 6 ساعات
   workflow_dispatch:
 
 jobs:
