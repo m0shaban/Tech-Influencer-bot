@@ -19,6 +19,16 @@ services:
       - key: DASHBOARD_PASSWORD
         sync: false
 
+  # Web Service - Image Server
+  - type: web
+    name: robobot-images
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn static_server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: IMAGE_BASE_URL
+        sync: false
+
   # Web Service - Streamlit Dashboard
   - type: web
     name: robobot-dashboard

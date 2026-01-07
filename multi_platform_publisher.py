@@ -107,6 +107,7 @@ class MultiPlatformPublisher:
         caption: str,
         link: Optional[str] = None,
         image_url: Optional[str] = None,
+        image_local_path: Optional[str] = None,
         platforms: Optional[list[PlatformType]] = None,
         platform_payloads: Optional[Dict[PlatformType, Dict[str, Any]]] = None,
         telegram_context: Optional[Any] = None,
@@ -118,7 +119,8 @@ class MultiPlatformPublisher:
         Args:
             caption: Post text content
             link: Optional source URL
-            image_url: Optional image URL
+            image_url: Optional image URL (public, for non-Telegram platforms)
+            image_local_path: Optional local image path (for Telegram only)
             platforms: List of platforms to publish to (None = all enabled)
             telegram_context: Telegram bot context (required for Telegram)
             send_reports: Whether to send progress reports to admin
@@ -153,14 +155,16 @@ class MultiPlatformPublisher:
                     else ""
                 )
 
-                # Image handling: local paths are OK for Telegram only; others need URLs.
+                # Image handling: Use local path for Telegram, public URL for others
                 image_for_platform = image_url
-                if image_url:
-                    is_url = isinstance(image_url, str) and image_url.lower().startswith("http")
-                    is_file = isinstance(image_url, str) and Path(image_url).exists()
-                    if platform != "telegram" and not is_url:
-                        image_for_platform = None
-                    if platform == "telegram" and not (is_url or is_file):
+                if platform == "telegram" and image_local_path:
+                    # Telegram can use local paths
+                    image_for_platform = image_local_path
+                elif platform != "telegram":
+                    # Other platforms need public URLs only
+                    if image_url and image_url.lower().startswith("http"):
+                        image_for_platform = image_url
+                    else:
                         image_for_platform = None
 
                 # Check if we should delay this platform

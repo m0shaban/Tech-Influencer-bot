@@ -8,7 +8,7 @@ import os
 import secrets
 import time
 from pathlib import Path
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Dict
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 import requests
@@ -559,7 +559,7 @@ class OGImageGenerator:
         """Load available background images"""
         return list(self.brands_dir.glob("*.png"))
     
-    def generate_og_image(self, headline: str) -> Path:
+    def generate_og_image(self, headline: str) -> Dict[str, Optional[str]]:
         """
         Generate unique OG image with random design template
         
@@ -567,7 +567,7 @@ class OGImageGenerator:
             headline: Article headline
             
         Returns:
-            Path to generated image
+            Dict with 'local_path' (for Telegram) and 'public_url' (for other platforms)
         """
         try:
             if not self.backgrounds:
@@ -590,14 +590,24 @@ class OGImageGenerator:
             output_path = self.generated_dir / filename
             image.save(output_path, quality=95)
             
+            # Build public URL if IMAGE_BASE_URL is set
+            base_url = os.getenv("IMAGE_BASE_URL", "").rstrip("/")
+            public_url = f"{base_url}/og/{filename}" if base_url else None
+            
             print(f"✅ Generated: {output_path}")
-            return output_path
+            if public_url:
+                print(f"🌐 Public URL: {public_url}")
+            
+            return {
+                "local_path": str(output_path),
+                "public_url": public_url
+            }
             
         except Exception as e:
             print(f"❌ Error: {e}")
             import traceback
             traceback.print_exc()
-            return None
+            return {"local_path": None, "public_url": None}
 
 
 class ImageFetcher:
@@ -625,8 +635,13 @@ class ImageStrategy:
     def get_image(self, 
                   headline: str,
                   article_url: Optional[str] = None,
-                  fallback_to_og: bool = True) -> Optional[str]:
-        """Get image with fallback strategy"""
+                  fallback_to_og: bool = True) -> Optional[Dict[str, Optional[str]]]:
+        """Get image with fallback strategy
+        
+        Returns:
+            Dict with 'local_path' (for Telegram) and 'public_url' (for other platforms)
+            or None if all strategies fail
+        """
         
         # Strategy 1: Extract from article
         if article_url:
@@ -634,7 +649,8 @@ class ImageStrategy:
             image_data = self._extract_from_article(article_url)
             if image_data:
                 print("✅ Got image from article")
-                return image_data
+                # External URLs work for all platforms
+                return {"local_path": image_data, "public_url": image_data}
         
         # Strategy 2: AI generation (optional)
         if os.getenv("HUGGINGFACE_API_KEY"):
@@ -642,14 +658,15 @@ class ImageStrategy:
             image_data = self._generate_with_ai(headline)
             if image_data:
                 print("✅ Generated with AI")
-                return image_data
+                # AI generated files need both local and public URLs
+                return {"local_path": image_data, "public_url": None}
         
         # Strategy 3: OG Image (always available)
         if fallback_to_og:
             print("🎨 Strategy 3: OG Image...")
-            image_path = self.og_generator.generate_og_image(headline)
-            if image_path:
-                return str(image_path)
+            image_result = self.og_generator.generate_og_image(headline)
+            if image_result and image_result.get("local_path"):
+                return image_result
         
         return None
     
@@ -703,8 +720,13 @@ def get_image_strategy() -> ImageStrategy:
     return _strategy
 
 
-def get_article_image(headline: str, article_url: Optional[str] = None) -> Optional[str]:
-    """Main function to get image for article"""
+def get_article_image(headline: str, article_url: Optional[str] = None) -> Optional[Dict[str, Optional[str]]]:
+    """Main function to get image for article
+    
+    Returns:
+        Dict with 'local_path' (for Telegram) and 'public_url' (for other platforms)
+        or None if all strategies fail
+    """
     strategy = get_image_strategy()
     return strategy.get_image(headline, article_url)
 

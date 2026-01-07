@@ -210,6 +210,7 @@ async def fetch_and_publish(
     link = str(post.get("link", "") or "").strip()
     title = str(post.get("title", "") or "").strip()
     image_url = post.get("image")
+    image_local_path = post.get("image_local_path")
 
     def _compose_text(c: str, l: str, has_photo: bool) -> str:
         base = (
@@ -245,6 +246,7 @@ async def fetch_and_publish(
             caption=caption,
             link=link or None,
             image_url=image_url or None,
+            image_local_path=image_local_path or None,
             platform_payloads=payloads,
             telegram_context=context,
             send_reports=True,  # Enable real-time reports to admin
