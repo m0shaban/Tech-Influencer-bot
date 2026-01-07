@@ -20,6 +20,7 @@ PlatformType = Literal[
     "blogger",
     "reddit",
     "facebook",
+    "devto",
 ]
 
 
@@ -201,6 +202,10 @@ class MultiPlatformPublisher:
                     result = self._publish_facebook(caption, link, image_url)
                     results["facebook"] = result
 
+                elif platform == "devto":
+                    result = self._publish_devto(caption, link, image_url)
+                    results["devto"] = result
+
                 # Send success report
                 if send_reports and self.reporter:
                     post_url = result.get("url") if isinstance(result, dict) else None
@@ -210,7 +215,9 @@ class MultiPlatformPublisher:
                             post_url=post_url,
                         )
                     else:
-                        error_msg = result.get("error") or result.get("message", "Unknown error")
+                        error_msg = result.get("error") or result.get(
+                            "message", "Unknown error"
+                        )
                         await self.reporter.report_platform_failure(
                             platform=platform,
                             error=error_msg,
@@ -218,7 +225,7 @@ class MultiPlatformPublisher:
 
             except Exception as e:
                 results[platform] = {"status": "error", "error": str(e)}
-                
+
                 # Send failure report
                 if send_reports and self.reporter:
                     await self.reporter.report_platform_failure(
@@ -229,12 +236,14 @@ class MultiPlatformPublisher:
         # Send completion report
         if send_reports and self.reporter:
             successful = sum(
-                1 for r in results.values()
-                if isinstance(r, dict) and (r.get("status") in ["success", "scheduled"] or r.get("success"))
+                1
+                for r in results.values()
+                if isinstance(r, dict)
+                and (r.get("status") in ["success", "scheduled"] or r.get("success"))
             )
             failed = len(results) - successful
             duration = time.time() - start_time
-            
+
             await self.reporter.report_post_complete(
                 successful=successful,
                 failed=failed,
@@ -393,7 +402,16 @@ class MultiPlatformPublisher:
         else:
             # Text-only post
             return publisher.publish_text(message=caption)
+    def _publish_devto(self, caption: str, link: str, image_url: str):
+        """Publish to Dev.to"""
+        from devto_publisher import DevtoPublisher
 
+        publisher = DevtoPublisher()
+        return publisher.publish(
+            caption=caption,
+            link=link,
+            image_url=image_url,
+        )
     def get_platform_status(self) -> Dict[str, bool]:
         """Check which platforms are configured and ready"""
         status = {}
@@ -499,5 +517,17 @@ class MultiPlatformPublisher:
                 status["facebook"] = False
         else:
             status["facebook"] = False
+
+        # Dev.to
+        if os.getenv("DEVTO_API_KEY"):
+            try:
+                from devto_publisher import DevtoPublisher
+
+                publisher = DevtoPublisher()
+                status["devto"] = publisher.is_configured()
+            except Exception:
+                status["devto"] = False
+        else:
+            status["devto"] = False
 
         return status

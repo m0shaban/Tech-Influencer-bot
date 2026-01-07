@@ -464,7 +464,7 @@ elif menu_choice == "📅 Schedule Settings":
         
         platforms_data = platform_config.get("platforms", {})
         
-        for platform_key in ["telegram", "discord", "blogger", "facebook", "linkedin", "twitter", "reddit", "medium"]:
+        for platform_key in ["telegram", "discord", "blogger", "facebook", "linkedin", "twitter", "reddit", "medium", "devto"]:
             if platform_key not in platforms_data:
                 continue
                 

@@ -63,6 +63,14 @@
       "custom_prompt": "اكتب مقال عميق وتحليلي مناسب لـ Medium. استخدم storytelling والأمثلة الواقعية.",
       "max_length": 8000,
       "priority": 8
+    },
+    "devto": {
+      "enabled": false,
+      "publish_mode": "delayed",
+      "delay_minutes": 40,
+      "custom_prompt": "اكتب مقال تقني للمطورين على Dev.to. استخدم code snippets والأمثلة العملية. ركز على الـ how-to والشروحات التفصيلية.",
+      "max_length": 25000,
+      "priority": 9
     }
   },
   "global_settings": {
@@ -78,7 +86,7 @@
   "schedule_presets": {
     "instant_all": {
       "description": "نشر فوري على جميع المنصات",
-      "apply_to_all": {"publish_mode": "immediate", "delay_minutes": 0}
+      "apply_to_all": { "publish_mode": "immediate", "delay_minutes": 0 }
     },
     "staggered_5min": {
       "description": "توزيع كل 5 دقائق",
