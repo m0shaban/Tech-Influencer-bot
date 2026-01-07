@@ -26,7 +26,7 @@ class ArabicFontManager:
 
     _cache: dict[tuple[int, bool], ImageFont.ImageFont] = {}
     _picked_name: Optional[str] = None
-    
+
     @staticmethod
     def _project_font_paths() -> List[Path]:
         candidates: List[Path] = []
@@ -69,8 +69,14 @@ class ArabicFontManager:
             ("C:\\Windows\\Fonts\\segoeui.ttf", "Segoe UI"),
             ("C:\\Windows\\Fonts\\arialbd.ttf", "Arial Bold"),
             ("C:\\Windows\\Fonts\\arial.ttf", "Arial"),
-            ("/usr/share/fonts/truetype/noto/NotoSansArabic-Bold.ttf", "Noto Sans Arabic Bold"),
-            ("/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf", "Noto Sans Arabic"),
+            (
+                "/usr/share/fonts/truetype/noto/NotoSansArabic-Bold.ttf",
+                "Noto Sans Arabic Bold",
+            ),
+            (
+                "/usr/share/fonts/truetype/noto/NotoSansArabic-Regular.ttf",
+                "Noto Sans Arabic",
+            ),
             ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "DejaVu Sans"),
             ("/System/Library/Fonts/Supplemental/Arial Unicode.ttf", "Arial Unicode"),
         ]
@@ -109,14 +115,14 @@ class ArabicFontManager:
         font = ImageFont.load_default()
         ArabicFontManager._cache[cache_key] = font
         return font
-    
+
     @staticmethod
     def reshape_arabic(text: str) -> str:
         """Reshape Arabic text for proper display"""
         try:
             import arabic_reshaper
             from bidi.algorithm import get_display
-            
+
             reshaped = arabic_reshaper.reshape(text)
             display = get_display(reshaped)
             return display
@@ -126,15 +132,17 @@ class ArabicFontManager:
 
 class DesignTemplate:
     """Base class for design templates"""
-    
-    def __init__(self, width: int = 1200, height: int = 630, seed: Optional[int] = None):
+
+    def __init__(
+        self, width: int = 1200, height: int = 630, seed: Optional[int] = None
+    ):
         self.width = width
         self.height = height
         self.image = None
         self.draw = None
         self.seed = seed if seed is not None else secrets.randbelow(1_000_000_000)
         self.rng = random.Random(self.seed)
-    
+
     def create_image(self, headline: str, bg_path: Path) -> Image.Image:
         """Create image - to be overridden by subclasses"""
         raise NotImplementedError
@@ -168,34 +176,33 @@ class DesignTemplate:
             )
         self.image = Image.alpha_composite(base, overlay).convert("RGB")
         self.draw = ImageDraw.Draw(self.image)
-    
+
     def _add_gradient_overlay(self, color: Tuple[int, int, int], alpha: float = 0.3):
         """Add semi-transparent gradient overlay"""
         # Ensure image is correct size
         if self.image.size != (self.width, self.height):
-            self.image = self.image.resize((self.width, self.height), Image.Resampling.LANCZOS)
-        
-        overlay = Image.new('RGBA', (self.width, self.height), (0, 0, 0, 0))
+            self.image = self.image.resize(
+                (self.width, self.height), Image.Resampling.LANCZOS
+            )
+
+        overlay = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
         overlay_draw = ImageDraw.Draw(overlay)
-        
+
         for y in range(self.height):
             intensity = int(255 * (1 - (y / self.height)) * alpha)
-            overlay_draw.line(
-                [(0, y), (self.width, y)],
-                fill=(*color, intensity)
-            )
-        
-        self.image = Image.alpha_composite(
-            self.image.convert('RGBA'), overlay
-        ).convert('RGB')
+            overlay_draw.line([(0, y), (self.width, y)], fill=(*color, intensity))
+
+        self.image = Image.alpha_composite(self.image.convert("RGBA"), overlay).convert(
+            "RGB"
+        )
         self.draw = ImageDraw.Draw(self.image)
-    
+
     def _wrap_text(self, text: str, max_width: int, font) -> List[str]:
         """Wrap text to fit width"""
         words = text.split()
         lines = []
         current_line = []
-        
+
         for word in words:
             test_line = " ".join(current_line + [word])
             try:
@@ -203,7 +210,7 @@ class DesignTemplate:
                 text_width = bbox[2] - bbox[0]
             except:
                 text_width = len(test_line) * 8
-            
+
             if text_width > max_width:
                 if current_line:
                     lines.append(" ".join(current_line))
@@ -212,13 +219,15 @@ class DesignTemplate:
                     lines.append(word)
             else:
                 current_line.append(word)
-        
+
         if current_line:
             lines.append(" ".join(current_line))
-        
+
         return lines[:4]
 
-    def _fit_text(self, text: str, max_width: int, max_height: int, start_size: int, min_size: int) -> tuple[ImageFont.ImageFont, List[str], int]:
+    def _fit_text(
+        self, text: str, max_width: int, max_height: int, start_size: int, min_size: int
+    ) -> tuple[ImageFont.ImageFont, List[str], int]:
         """Find a font size that fits inside a box."""
         display_text = ArabicFontManager.reshape_arabic(text)
         for size in range(start_size, min_size - 1, -2):
@@ -275,15 +284,15 @@ class EmojiFontManager:
 
 class MinimalistTemplate(DesignTemplate):
     """Clean, minimal design with accent bar"""
-    
+
     def create_image(self, headline: str, bg_path: Path) -> Image.Image:
         self.image = self._load_background_cover(bg_path)
         self.draw = ImageDraw.Draw(self.image)
-        
+
         # Add subtle overlays for legibility
         self._add_gradient_overlay((0, 0, 0), alpha=0.28)
         self._add_vignette(0.28)
-        
+
         # Accent bar (random placement)
         bar_color = self.rng.choice([(59, 130, 246), (168, 85, 247), (14, 165, 233)])
         if self.rng.random() < 0.5:
@@ -300,17 +309,23 @@ class MinimalistTemplate(DesignTemplate):
             r = self.rng.choice([1, 1, 2])
             a = self.rng.randrange(18, 40)
             self.draw.ellipse([(x - r, y - r), (x + r, y + r)], fill=(255, 255, 255, a))
-        
+
         self._draw_headline(headline)
         return self.image
-    
+
     def _draw_headline(self, headline: str):
         padding_x = 70
         box_margin_y = 80
         max_w = self.width - (padding_x * 2)
         max_h = self.height - (box_margin_y * 2)
 
-        font, wrapped, _ = self._fit_text(headline, max_w, int(max_h * 0.72), start_size=int(self.width * 0.07), min_size=34)
+        font, wrapped, _ = self._fit_text(
+            headline,
+            max_w,
+            int(max_h * 0.72),
+            start_size=int(self.width * 0.07),
+            min_size=34,
+        )
 
         # Draw translucent text panel
         panel = Image.new("RGBA", (self.width, self.height), (0, 0, 0, 0))
@@ -322,13 +337,21 @@ class MinimalistTemplate(DesignTemplate):
         y1 = (self.height - panel_h) // 2
         y2 = y1 + panel_h
         pd.rounded_rectangle([(x1, y1), (x2, y2)], radius=28, fill=(0, 0, 0, 120))
-        self.image = Image.alpha_composite(self.image.convert("RGBA"), panel).convert("RGB")
+        self.image = Image.alpha_composite(self.image.convert("RGBA"), panel).convert(
+            "RGB"
+        )
         self.draw = ImageDraw.Draw(self.image)
 
         y_pos = y1 + 40
         line_gap = int(font.size * 0.22)
         for line in wrapped:
-            self.draw.text((self.width - padding_x, y_pos), line, fill=(255, 255, 255), font=font, anchor="rt")
+            self.draw.text(
+                (self.width - padding_x, y_pos),
+                line,
+                fill=(255, 255, 255),
+                font=font,
+                anchor="rt",
+            )
             try:
                 bbox = self.draw.textbbox((0, 0), line, font=font)
                 line_h = bbox[3] - bbox[1]
@@ -339,21 +362,23 @@ class MinimalistTemplate(DesignTemplate):
 
 class GradientTemplate(DesignTemplate):
     """Bold design with gradient and emoji decorations"""
-    
+
     def create_image(self, headline: str, bg_path: Path) -> Image.Image:
         self.image = self._load_background_cover(bg_path)
         self.draw = ImageDraw.Draw(self.image)
-        
+
         # Add colorful gradient overlay (random palette)
-        palette = self.rng.choice([
-            (59, 130, 246),   # blue
-            (168, 85, 247),   # purple
-            (14, 165, 233),   # sky
-            (245, 158, 11),   # amber
-        ])
+        palette = self.rng.choice(
+            [
+                (59, 130, 246),  # blue
+                (168, 85, 247),  # purple
+                (14, 165, 233),  # sky
+                (245, 158, 11),  # amber
+            ]
+        )
         self._add_gradient_overlay(palette, alpha=0.45)
         self._add_vignette(0.30)
-        
+
         # Add emoji decorations
         self._add_emoji_decorations()
 
@@ -364,18 +389,22 @@ class GradientTemplate(DesignTemplate):
             x2 = x1 + self.rng.randrange(260, 520)
             y2 = y1 + self.rng.randrange(-60, 60)
             w = self.rng.randrange(2, 6)
-            self.draw.line([(x1, y1), (x2, y2)], fill=(255, 255, 255, self.rng.randrange(30, 70)), width=w)
-        
+            self.draw.line(
+                [(x1, y1), (x2, y2)],
+                fill=(255, 255, 255, self.rng.randrange(30, 70)),
+                width=w,
+            )
+
         self._draw_headline(headline)
         return self.image
-    
+
     def _add_emoji_decorations(self):
         """Add emoji elements to the image"""
         emoji_font = EmojiFontManager.get_font(int(self.width * 0.085))
-        
+
         # Tech-related emojis
-        emojis = ['🤖', '💡', '⚡', '🚀', '🔧', '🎯', '💻', '🌟']
-        
+        emojis = ["🤖", "💡", "⚡", "🚀", "🔧", "🎯", "💻", "🌟"]
+
         # Add emoji in corners (randomized)
         positions = [
             (55, 55),
@@ -388,22 +417,45 @@ class GradientTemplate(DesignTemplate):
         for pos, emoji in zip(self.rng.sample(positions, 3), picks):
             try:
                 # subtle shadow
-                self.draw.text((pos[0] + 2, pos[1] + 2), emoji, font=emoji_font, fill=(0, 0, 0, 140))
+                self.draw.text(
+                    (pos[0] + 2, pos[1] + 2),
+                    emoji,
+                    font=emoji_font,
+                    fill=(0, 0, 0, 140),
+                )
                 self.draw.text(pos, emoji, font=emoji_font, fill=(255, 255, 255, 235))
             except:
                 pass
-    
+
     def _draw_headline(self, headline: str):
         padding = 70
         max_w = self.width - (padding * 2)
-        font, wrapped, _ = self._fit_text(headline, max_w, int(self.height * 0.55), start_size=int(self.width * 0.074), min_size=32)
+        font, wrapped, _ = self._fit_text(
+            headline,
+            max_w,
+            int(self.height * 0.55),
+            start_size=int(self.width * 0.074),
+            min_size=32,
+        )
 
         y_pos = int(self.height * 0.30)
         line_gap = int(font.size * 0.24)
         for line in wrapped:
             # stronger shadow for contrast
-            self.draw.text((self.width - padding + 3, y_pos + 3), line, fill=(0, 0, 0, 190), font=font, anchor="rt")
-            self.draw.text((self.width - padding, y_pos), line, fill=(255, 255, 255), font=font, anchor="rt")
+            self.draw.text(
+                (self.width - padding + 3, y_pos + 3),
+                line,
+                fill=(0, 0, 0, 190),
+                font=font,
+                anchor="rt",
+            )
+            self.draw.text(
+                (self.width - padding, y_pos),
+                line,
+                fill=(255, 255, 255),
+                font=font,
+                anchor="rt",
+            )
             try:
                 bbox = self.draw.textbbox((0, 0), line, font=font)
                 line_h = bbox[3] - bbox[1]
@@ -414,36 +466,48 @@ class GradientTemplate(DesignTemplate):
 
 class ModernTemplate(DesignTemplate):
     """Modern design with geometric shapes"""
-    
+
     def create_image(self, headline: str, bg_path: Path) -> Image.Image:
         self.image = self._load_background_cover(bg_path)
         self.draw = ImageDraw.Draw(self.image)
-        
+
         # Add dark overlay
         self._add_gradient_overlay((20, 20, 40), alpha=0.36)
         self._add_vignette(0.32)
-        
+
         # Add geometric decorations
         self._add_geometric_shapes()
-        
+
         self._draw_headline(headline)
         return self.image
-    
+
     def _add_geometric_shapes(self):
         """Add modern geometric shapes"""
         line_color = self.rng.choice([(59, 130, 246), (168, 85, 247), (14, 165, 233)])
         alt_color = self.rng.choice([(236, 72, 153), (34, 197, 94), (245, 158, 11)])
 
         # Accent bars
-        self.draw.rectangle([(0, self.height // 3), (self.rng.randrange(160, 320), self.height // 3 + 5)], fill=line_color)
         self.draw.rectangle(
-            [(self.width - self.rng.randrange(160, 320), self.height * 2 // 3), (self.width, self.height * 2 // 3 + 5)],
+            [
+                (0, self.height // 3),
+                (self.rng.randrange(160, 320), self.height // 3 + 5),
+            ],
+            fill=line_color,
+        )
+        self.draw.rectangle(
+            [
+                (self.width - self.rng.randrange(160, 320), self.height * 2 // 3),
+                (self.width, self.height * 2 // 3 + 5),
+            ],
             fill=alt_color,
         )
 
         # Diagonal corner accent
         corner = self.rng.randrange(120, 190)
-        self.draw.polygon([(self.width, 0), (self.width - corner, 0), (self.width, corner)], fill=line_color)
+        self.draw.polygon(
+            [(self.width, 0), (self.width - corner, 0), (self.width, corner)],
+            fill=line_color,
+        )
 
         # Random polygons
         for _ in range(4):
@@ -451,18 +515,38 @@ class ModernTemplate(DesignTemplate):
             cy = self.rng.randrange(80, self.height - 80)
             s = self.rng.randrange(22, 55)
             poly = [(cx - s, cy), (cx, cy - s), (cx + s, cy), (cx, cy + s)]
-            self.draw.polygon(poly, outline=(255, 255, 255, self.rng.randrange(40, 90)), width=2)
-    
+            self.draw.polygon(
+                poly, outline=(255, 255, 255, self.rng.randrange(40, 90)), width=2
+            )
+
     def _draw_headline(self, headline: str):
         padding = 85
         max_w = self.width - (padding * 2)
-        font, wrapped, _ = self._fit_text(headline, max_w, int(self.height * 0.60), start_size=int(self.width * 0.07), min_size=32)
+        font, wrapped, _ = self._fit_text(
+            headline,
+            max_w,
+            int(self.height * 0.60),
+            start_size=int(self.width * 0.07),
+            min_size=32,
+        )
 
         y_pos = int(self.height * 0.30)
         line_gap = int(font.size * 0.22)
         for line in wrapped:
-            self.draw.text((self.width - padding + 3, y_pos + 3), line, fill=(0, 0, 0, 175), font=font, anchor="rt")
-            self.draw.text((self.width - padding, y_pos), line, fill=(255, 255, 255), font=font, anchor="rt")
+            self.draw.text(
+                (self.width - padding + 3, y_pos + 3),
+                line,
+                fill=(0, 0, 0, 175),
+                font=font,
+                anchor="rt",
+            )
+            self.draw.text(
+                (self.width - padding, y_pos),
+                line,
+                fill=(255, 255, 255),
+                font=font,
+                anchor="rt",
+            )
             try:
                 bbox = self.draw.textbbox((0, 0), line, font=font)
                 line_h = bbox[3] - bbox[1]
@@ -473,63 +557,90 @@ class ModernTemplate(DesignTemplate):
 
 class NeonTemplate(DesignTemplate):
     """Neon/vibrant design with bold colors"""
-    
+
     def create_image(self, headline: str, bg_path: Path) -> Image.Image:
         self.image = self._load_background_cover(bg_path)
         self.draw = ImageDraw.Draw(self.image)
-        
+
         # Add dark overlay
         self._add_gradient_overlay((10, 10, 30), alpha=0.45)
         self._add_vignette(0.35)
-        
+
         # Add neon elements
         self._add_neon_elements()
-        
+
         self._draw_headline(headline)
         return self.image
-    
+
     def _add_neon_elements(self):
         """Add neon-style decorative elements"""
         neon_color = self.rng.choice([(255, 0, 127), (0, 255, 200), (59, 130, 246)])
         neon2 = self.rng.choice([(0, 255, 200), (168, 85, 247), (245, 158, 11)])
-        
+
         # Neon lines
         w1 = self.rng.randrange(240, 380)
         self.draw.rectangle([(0, 0), (w1, 4)], fill=neon_color)
         w2 = self.rng.randrange(240, 380)
-        self.draw.rectangle([(self.width - w2, self.height - 4), (self.width, self.height)], fill=neon2)
-        
+        self.draw.rectangle(
+            [(self.width - w2, self.height - 4), (self.width, self.height)], fill=neon2
+        )
+
         # Corner circles
         circle_size = 40
         self.draw.ellipse(
-            [(self.width - circle_size - 20, 20),
-             (self.width - 20, circle_size + 20)],
+            [(self.width - circle_size - 20, 20), (self.width - 20, circle_size + 20)],
             outline=neon_color,
-            width=3
+            width=3,
         )
 
         # Neon emoji stamp
-        emoji = self.rng.choice(['🤖', '⚡', '🚀', '💻', '🎯'])
+        emoji = self.rng.choice(["🤖", "⚡", "🚀", "💻", "🎯"])
         efont = EmojiFontManager.get_font(int(self.width * 0.075))
         pos = (35, self.height - 140)
         try:
-            self.draw.text((pos[0] + 3, pos[1] + 3), emoji, font=efont, fill=(0, 0, 0, 170))
+            self.draw.text(
+                (pos[0] + 3, pos[1] + 3), emoji, font=efont, fill=(0, 0, 0, 170)
+            )
             self.draw.text(pos, emoji, font=efont, fill=(255, 255, 255, 235))
         except Exception:
             pass
-    
+
     def _draw_headline(self, headline: str):
         padding = 70
         max_w = self.width - (padding * 2)
-        font, wrapped, _ = self._fit_text(headline, max_w, int(self.height * 0.58), start_size=int(self.width * 0.076), min_size=32)
+        font, wrapped, _ = self._fit_text(
+            headline,
+            max_w,
+            int(self.height * 0.58),
+            start_size=int(self.width * 0.076),
+            min_size=32,
+        )
 
         y_pos = int(self.height * 0.30)
         line_gap = int(font.size * 0.22)
         glow = self.rng.choice([(255, 0, 127), (0, 255, 200), (168, 85, 247)])
         for line in wrapped:
-            self.draw.text((self.width - padding + 4, y_pos + 4), line, fill=(*glow, 210), font=font, anchor="rt")
-            self.draw.text((self.width - padding + 2, y_pos + 2), line, fill=(0, 0, 0, 190), font=font, anchor="rt")
-            self.draw.text((self.width - padding, y_pos), line, fill=(255, 255, 255), font=font, anchor="rt")
+            self.draw.text(
+                (self.width - padding + 4, y_pos + 4),
+                line,
+                fill=(*glow, 210),
+                font=font,
+                anchor="rt",
+            )
+            self.draw.text(
+                (self.width - padding + 2, y_pos + 2),
+                line,
+                fill=(0, 0, 0, 190),
+                font=font,
+                anchor="rt",
+            )
+            self.draw.text(
+                (self.width - padding, y_pos),
+                line,
+                fill=(255, 255, 255),
+                font=font,
+                anchor="rt",
+            )
             try:
                 bbox = self.draw.textbbox((0, 0), line, font=font)
                 line_h = bbox[3] - bbox[1]
@@ -540,79 +651,92 @@ class NeonTemplate(DesignTemplate):
 
 class OGImageGenerator:
     """Generate branded OG images with multiple design templates"""
-    
+
     def __init__(self):
         self.brands_dir = IMAGES_DIR / "brand_backgrounds"
         self.generated_dir = IMAGES_DIR / "generated"
         self.brands_dir.mkdir(exist_ok=True)
         self.generated_dir.mkdir(exist_ok=True)
-        
+
         self.backgrounds = self._load_backgrounds()
-        self.templates = [MinimalistTemplate, GradientTemplate, ModernTemplate, NeonTemplate]
-        
+        self.templates = [
+            MinimalistTemplate,
+            GradientTemplate,
+            ModernTemplate,
+            NeonTemplate,
+        ]
+
         if self.backgrounds:
             print(f"✅ Loaded {len(self.backgrounds)} background images")
         else:
             print("⚠️ No background images found")
-    
+
     def _load_backgrounds(self) -> list:
         """Load available background images"""
         return list(self.brands_dir.glob("*.png"))
-    
+
     def generate_og_image(self, headline: str) -> Dict[str, Optional[str]]:
         """
         Generate unique OG image with random design template
-        
+
         Args:
             headline: Article headline
-            
+
         Returns:
             Dict with 'local_path' (for Telegram) and 'public_url' (for other platforms)
         """
         try:
             if not self.backgrounds:
                 raise Exception("No background images available")
-            
+
             # Select random background and template
             bg_path = random.choice(self.backgrounds)
             template_class = random.choice(self.templates)
             template = template_class(seed=secrets.randbelow(1_000_000_000))
-            
+
             print(f"🎨 Design: {template_class.__name__}")
-            
+
             # Create image
             image = template.create_image(headline, bg_path)
-            
+
             # Save image
             stamp = int(time.time() * 1000)
             rand = secrets.token_hex(3)
             filename = f"og_{stamp}_{rand}.png"
             output_path = self.generated_dir / filename
             image.save(output_path, quality=95)
-            
-            # Build public URL if IMAGE_BASE_URL is set
-            base_url = os.getenv("IMAGE_BASE_URL", "").rstrip("/")
-            public_url = f"{base_url}/og/{filename}" if base_url else None
-            
+
+            public_url = None
+            # Prefer Cloudflare R2 (production-grade public URL)
+            try:
+                from r2_uploader import upload_image_if_configured
+
+                public_url = upload_image_if_configured(str(output_path), filename)
+            except Exception as exc:
+                print(f"⚠️ R2 upload failed: {exc}")
+
+            # Fallback: Build public URL if IMAGE_BASE_URL is set (when using a static image server)
+            if not public_url:
+                base_url = os.getenv("IMAGE_BASE_URL", "").rstrip("/")
+                public_url = f"{base_url}/og/{filename}" if base_url else None
+
             print(f"✅ Generated: {output_path}")
             if public_url:
                 print(f"🌐 Public URL: {public_url}")
-            
-            return {
-                "local_path": str(output_path),
-                "public_url": public_url
-            }
-            
+
+            return {"local_path": str(output_path), "public_url": public_url}
+
         except Exception as e:
             print(f"❌ Error: {e}")
             import traceback
+
             traceback.print_exc()
             return {"local_path": None, "public_url": None}
 
 
 class ImageFetcher:
     """Fetch images from URLs"""
-    
+
     @staticmethod
     def fetch_from_url(url: str, timeout: int = 5) -> Optional[bytes]:
         """Fetch image from URL"""
@@ -627,22 +751,24 @@ class ImageFetcher:
 
 class ImageStrategy:
     """Multi-strategy image handling with fallbacks"""
-    
+
     def __init__(self):
         self.og_generator = OGImageGenerator()
         self.fetcher = ImageFetcher()
-    
-    def get_image(self, 
-                  headline: str,
-                  article_url: Optional[str] = None,
-                  fallback_to_og: bool = True) -> Optional[Dict[str, Optional[str]]]:
+
+    def get_image(
+        self,
+        headline: str,
+        article_url: Optional[str] = None,
+        fallback_to_og: bool = True,
+    ) -> Optional[Dict[str, Optional[str]]]:
         """Get image with fallback strategy
-        
+
         Returns:
             Dict with 'local_path' (for Telegram) and 'public_url' (for other platforms)
             or None if all strategies fail
         """
-        
+
         # Strategy 1: Extract from article
         if article_url:
             print(f"🖼️ Strategy 1: Extracting image...")
@@ -651,7 +777,7 @@ class ImageStrategy:
                 print("✅ Got image from article")
                 # External URLs work for all platforms
                 return {"local_path": image_data, "public_url": image_data}
-        
+
         # Strategy 2: AI generation (optional)
         if os.getenv("HUGGINGFACE_API_KEY"):
             print("🤖 Strategy 2: AI generation...")
@@ -660,51 +786,53 @@ class ImageStrategy:
                 print("✅ Generated with AI")
                 # AI generated files need both local and public URLs
                 return {"local_path": image_data, "public_url": None}
-        
+
         # Strategy 3: OG Image (always available)
         if fallback_to_og:
             print("🎨 Strategy 3: OG Image...")
             image_result = self.og_generator.generate_og_image(headline)
             if image_result and image_result.get("local_path"):
                 return image_result
-        
+
         return None
-    
+
     def _extract_from_article(self, url: str) -> Optional[str]:
         """Extract image from article"""
         try:
             from feed_manager import extract_image_from_url
+
             return extract_image_from_url(url)
         except Exception as e:
             print(f"⚠️ Failed: {e}")
             return None
-    
+
     def _generate_with_ai(self, headline: str) -> Optional[str]:
         """Generate image with Hugging Face"""
         try:
             api_key = os.getenv("HUGGINGFACE_API_KEY")
             if not api_key:
                 return None
-            
+
             import requests as req
+
             headers = {"Authorization": f"Bearer {api_key}"}
             api_url = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-3"
-            
+
             response = req.post(
                 api_url,
                 headers=headers,
                 json={"inputs": f"Professional tech news: {headline[:100]}"},
-                timeout=30
+                timeout=30,
             )
-            
+
             if response.status_code == 200:
                 image_path = Path("/tmp") / f"ai_gen_{hash(headline)}.png"
-                with open(image_path, 'wb') as f:
+                with open(image_path, "wb") as f:
                     f.write(response.content)
                 return str(image_path)
         except Exception as e:
             print(f"⚠️ AI failed: {e}")
-        
+
         return None
 
 
@@ -720,9 +848,11 @@ def get_image_strategy() -> ImageStrategy:
     return _strategy
 
 
-def get_article_image(headline: str, article_url: Optional[str] = None) -> Optional[Dict[str, Optional[str]]]:
+def get_article_image(
+    headline: str, article_url: Optional[str] = None
+) -> Optional[Dict[str, Optional[str]]]:
     """Main function to get image for article
-    
+
     Returns:
         Dict with 'local_path' (for Telegram) and 'public_url' (for other platforms)
         or None if all strategies fail
@@ -734,9 +864,9 @@ def get_article_image(headline: str, article_url: Optional[str] = None) -> Optio
 # Test function
 if __name__ == "__main__":
     print("🎨 Advanced Image Generator Test\n")
-    
+
     gen = get_image_strategy()
-    
+
     test_headlines = [
         "جوجل تطلق أداة ذكاء اصطناعي جديدة تغير كل شيء! 🚀",
         "OpenAI تعلن عن اكتشاف عظيم في المعالجة الطبيعية 💡",
@@ -744,7 +874,7 @@ if __name__ == "__main__":
         "أمازون تطلق منصة سحابية جديدة تنافس Google و AWS ⚡",
         "مايكروسوفت تدمج الذكاء الاصطناعي في كل منتجاتها 🤖",
     ]
-    
+
     for headline in test_headlines:
         print(f"\n📝 {headline[:50]}...")
         image_path = gen.get_image(headline, fallback_to_og=True)

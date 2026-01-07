@@ -1,0 +1,72 @@
+import os
+from pathlib import Path
+from typing import Optional
+
+
+def _env(name: str) -> str:
+    return str(os.getenv(name, "") or "").strip()
+
+
+def r2_is_configured() -> bool:
+    return all(
+        [
+            _env("R2_ACCESS_KEY_ID"),
+            _env("R2_SECRET_ACCESS_KEY"),
+            _env("R2_ENDPOINT_URL"),
+            _env("R2_BUCKET"),
+            _env("R2_PUBLIC_BASE_URL"),
+        ]
+    )
+
+
+def upload_file_to_r2(local_path: str, key: str, content_type: Optional[str] = None) -> str:
+    """Upload a local file to Cloudflare R2 (S3-compatible) and return its public URL.
+
+    Requires env vars:
+      - R2_ACCESS_KEY_ID
+      - R2_SECRET_ACCESS_KEY
+      - R2_ENDPOINT_URL (e.g. https://<accountid>.r2.cloudflarestorage.com)
+      - R2_BUCKET
+      - R2_PUBLIC_BASE_URL (e.g. https://pub-xxxx.r2.dev or a custom domain)
+
+    Optional:
+      - R2_PREFIX (folder prefix inside the bucket)
+    """
+    if not r2_is_configured():
+        raise RuntimeError("R2 is not configured")
+
+    from boto3.session import Session
+
+    file_path = Path(local_path)
+    if not file_path.exists():
+        raise FileNotFoundError(local_path)
+
+    session = Session(
+        aws_access_key_id=_env("R2_ACCESS_KEY_ID"),
+        aws_secret_access_key=_env("R2_SECRET_ACCESS_KEY"),
+    )
+    s3 = session.client(
+        "s3",
+        endpoint_url=_env("R2_ENDPOINT_URL"),
+        region_name="auto",
+    )
+
+    extra_args = {}
+    if content_type:
+        extra_args["ContentType"] = content_type
+
+    bucket = _env("R2_BUCKET")
+    s3.upload_file(str(file_path), bucket, key, ExtraArgs=extra_args or None)
+
+    public_base = _env("R2_PUBLIC_BASE_URL").rstrip("/")
+    return f"{public_base}/{key.lstrip('/')}"
+
+
+def upload_image_if_configured(local_path: str, filename: str) -> Optional[str]:
+    """Best-effort uploader. Returns public URL if uploaded, else None."""
+    if not r2_is_configured():
+        return None
+
+    prefix = _env("R2_PREFIX").strip("/")
+    key = f"{prefix}/{filename}" if prefix else filename
+    return upload_file_to_r2(local_path=local_path, key=key, content_type="image/png")

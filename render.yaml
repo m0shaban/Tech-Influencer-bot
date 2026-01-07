@@ -1,10 +1,11 @@
 services:
-  # Combined Web Service - Bot + Dashboard + Image Server (all in one)
-  - type: web
-    name: robovai-creator
+  # Worker Service - Telegram Bot (polling)
+  # NOTE: For zero Telegram conflicts, keep exactly ONE worker instance running.
+  - type: worker
+    name: robovai-worker
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: bash start.sh
+    startCommand: python main.py
     envVars:
       - key: TELEGRAM_TOKEN
         sync: false
@@ -16,10 +17,6 @@ services:
         sync: false
       - key: GROQ_API_KEY
         sync: false
-      - key: DASHBOARD_PASSWORD
-        sync: false
-      - key: IMAGE_BASE_URL
-        value: https://robovai-creator.onrender.com
       - key: DISCORD_WEBHOOK_URL
         sync: false
       - key: FACEBOOK_PAGE_ACCESS_TOKEN
@@ -37,3 +34,22 @@ services:
       - key: BLOGGER_CLIENT_SECRET
         sync: false
       - key: DEVTO_API_KEY
+        sync: false
+
+      # Cloudflare R2 (recommended for cross-platform public image URLs)
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_ENDPOINT_URL
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: R2_PUBLIC_BASE_URL
+        sync: false
+      - key: R2_PREFIX
+        sync: false
+
+      # Optional fallback if you also run a static image server elsewhere
+      - key: IMAGE_BASE_URL
+        sync: false
