@@ -153,6 +153,16 @@ class MultiPlatformPublisher:
                     else ""
                 )
 
+                # Image handling: local paths are OK for Telegram only; others need URLs.
+                image_for_platform = image_url
+                if image_url:
+                    is_url = isinstance(image_url, str) and image_url.lower().startswith("http")
+                    is_file = isinstance(image_url, str) and Path(image_url).exists()
+                    if platform != "telegram" and not is_url:
+                        image_for_platform = None
+                    if platform == "telegram" and not (is_url or is_file):
+                        image_for_platform = None
+
                 # Check if we should delay this platform
                 if self.scheduler and self.use_scheduler:
                     config = self.scheduler.get_platform_config(platform)
@@ -166,7 +176,7 @@ class MultiPlatformPublisher:
                             platform=platform,
                             caption=caption_for_platform,
                             link=link,
-                            image_url=image_url,
+                            image_url=image_for_platform,
                         )
 
                         results[platform] = {
@@ -187,48 +197,48 @@ class MultiPlatformPublisher:
                 # Publish immediately
                 if platform == "telegram":
                     result = await self._publish_telegram(
-                        caption_for_platform, link, image_url, telegram_context
+                        caption_for_platform, link, image_for_platform, telegram_context
                     )
                     results["telegram"] = result
 
                 elif platform == "linkedin":
-                    result = self._publish_linkedin(caption_for_platform, link, image_url)
+                    result = self._publish_linkedin(caption_for_platform, link, image_for_platform)
                     results["linkedin"] = result
 
                 elif platform == "discord":
-                    result = self._publish_discord(caption_for_platform, link, image_url)
+                    result = self._publish_discord(caption_for_platform, link, image_for_platform)
                     results["discord"] = result
 
                 elif platform == "medium":
-                    result = self._publish_medium(caption_for_platform, link, image_url)
+                    result = self._publish_medium(caption_for_platform, link, image_for_platform)
                     results["medium"] = result
 
                 elif platform == "twitter":
-                    result = self._publish_twitter(caption_for_platform, link, image_url)
+                    result = self._publish_twitter(caption_for_platform, link, image_for_platform)
                     results["twitter"] = result
 
                 elif platform == "blogger":
                     result = self._publish_blogger(
                         caption_for_platform,
                         link,
-                        image_url,
+                        image_for_platform,
                         title_override=title_for_platform or None,
                     )
                     results["blogger"] = result
 
                 elif platform == "reddit":
-                    result = self._publish_reddit(caption_for_platform, link, image_url)
+                    result = self._publish_reddit(caption_for_platform, link, image_for_platform)
                     results["reddit"] = result
 
                 elif platform == "facebook":
-                    result = self._publish_facebook(caption_for_platform, link, image_url)
+                    result = self._publish_facebook(caption_for_platform, link, image_for_platform)
                     results["facebook"] = result
 
                 elif platform == "devto":
                     result = self._publish_devto(
                         caption_for_platform,
                         link,
-                        image_url,
+                        image_for_platform,
                         title_override=title_for_platform or None,
                     )
                     results["devto"] = result
