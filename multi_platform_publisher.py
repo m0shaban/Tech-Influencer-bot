@@ -96,7 +96,9 @@ class MultiPlatformPublisher:
         if os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN") and os.getenv("FACEBOOK_PAGE_ID"):
             platforms.append("facebook")
 
-        return platforms
+        # Dev.to (requires API key)
+        if os.getenv("DEVTO_API_KEY"):
+            platforms.append("devto")
 
         return platforms
 

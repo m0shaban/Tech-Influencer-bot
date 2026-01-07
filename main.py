@@ -747,16 +747,17 @@ async def post_init(app: Application) -> None:
         ]
     )
     
-    # Start background scheduler task
-    print("🕐 Starting background publishing scheduler...")
+    # Start background scheduler task (will start when bot starts)
+    print("🕐 Background scheduler will start with bot...")
     try:
         from scheduled_publisher_task import start_scheduler_task
+        import asyncio
         scheduler_task = start_scheduler_task()
-        app.create_task(scheduler_task.run())
-        print("✅ Scheduler task started successfully")
+        # Create task in the running loop
+        asyncio.create_task(scheduler_task.run())
+        print("✅ Scheduler task queued successfully")
     except Exception as e:
         print(f"⚠️ Failed to start scheduler: {e}")
-
 
 def main() -> None:
     if not TELEGRAM_TOKEN:
@@ -839,6 +840,7 @@ def main() -> None:
             CONFIRM: [CallbackQueryHandler(broadcast_confirm, pattern=r"^bcast:")],
         },
         fallbacks=[],
+        per_message=False,
     )
     app.add_handler(broadcast_conv)
 
