@@ -26,14 +26,18 @@ class DevtoPublisher:
     def _prepare_content(
         self,
         caption: str,
+        title_override: Optional[str] = None,
         link: Optional[str] = None,
         max_length: int = 25000
     ) -> Dict[str, Any]:
         """Prepare article content for Dev.to"""
         
-        # Extract title from first line or use default
-        lines = caption.strip().split('\n')
-        title = lines[0].replace('#', '').strip()[:100]
+        # Extract title from override / first line / default
+        if title_override and title_override.strip():
+            title = title_override.strip()[:100]
+        else:
+            lines = caption.strip().split('\n')
+            title = lines[0].replace('#', '').strip()[:100] if lines else ""
         
         if not title:
             title = "مقال تقني جديد من RoboVAI"
@@ -71,6 +75,7 @@ class DevtoPublisher:
     def publish(
         self,
         caption: str,
+        title: Optional[str] = None,
         link: Optional[str] = None,
         image_url: Optional[str] = None,
         max_length: int = 25000
@@ -96,7 +101,7 @@ class DevtoPublisher:
         
         try:
             # Prepare article data
-            article_data = self._prepare_content(caption, link, max_length)
+            article_data = self._prepare_content(caption, title, link, max_length)
             
             # Add cover image if provided
             if image_url:

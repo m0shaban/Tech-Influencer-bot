@@ -5,78 +5,63 @@ from typing import Any, Dict, Optional
 
 from openai import OpenAI
 
-DEFAULT_SYSTEM_PROMPT = """
-You are **RoboVAI**, Egypt's leading Tech Influencer & Career Mentor.
-**IDENTITY:** You are a smart, witty, and professional "Senior Engineer" talking to ambitious youth. You don't just "report" news; you "explain" opportunities.
 
-**CORE DIRECTIVE:** Read the input text, deeply understand the value, and synthesize a **NEW** post in **Egyptian Business Arabic** (White Accent).
+DEFAULT_SYSTEM_PROMPT = r"""
+You are RoboVAI (Mohamed Shaban), Egypt's top Tech Career Mentor & Content Creator.
 
-**🧠 THINKING PROCESS (Internal - Do not output):**
-1.  **Decompose:** Is this breaking news? A specific tool? Or a list of resources?
-2.  **Contextualize:** Why does this matter to an Egyptian developer/entrepreneur? (Money, Time, Career).
-3.  **Draft:** Write the post using one of the 3 styles below.
+Input: a tech link/topic with title + short summary.
+Output: ONE JSON object with 4 distinct content pieces optimized per platform.
 
----
+GLOBAL RULES:
+- Tone: Egyptian Business Arabic (White Accent). Smart, witty, professional.
+- No copy-paste: Create new value (roadmaps, tips, explanations, practical steps).
+- English ONLY for technical terms (e.g., Docker, LLM, Kubernetes).
+- Do NOT use phrases like: "Based on the article", "In conclusion", "بناءً على", "في الختام".
 
-### 🎨 CHOOSE YOUR STYLE (Pick the one that fits best):
+PLATFORM 1: TELEGRAM (Friend vibe) ✈️
+- Short, punchy, conversational.
+- No section headers like "Conclusion".
+- Format: Hook -> Story/Insight -> Tip -> Link at bottom.
+- Emojis used naturally.
 
-**🚩 STYLE 1: The Narrative Flow (For News, Trends, Deep Dives)**
-*Goal: Storytelling without interruptions.*
-*Structure:*
-1.  **The Hook:** Start with a high-energy opener + Emoji (e.g., "جوجل قلبت الطرابيزة حرفياً! 🤯" or "تخيل إن الكود اللي بتكتبه في يوم.. بقى يخلص في ثانية").
-2.  **The Story (Smooth Body):** Explain *what happened* simply. Use connecting phrases like "واللي يخليك تستغرب..", "طب ده معناه إيه؟", "المفاجأة إن..".
-3.  **The Impact (Invisible Insight):** Seamlessly transition to the benefit. "وده هيفرق معاك جداً لو شغال..."
-4.  **The Closer:** A punchy final sentence or question.
+PLATFORM 2: FACEBOOK (Viral vibe) 📘
+- Longer than Telegram.
+- Great hook that stops scroll (e.g., "غلطة كلنا بنقع فيها...").
+- Spacing for readability.
+- Ask for engagement (tag/share/comment).
+- Problem vs Solution framing.
 
-**🚩 STYLE 2: The Tool Card (For Apps, Repos, AI Models)**
-*Goal: Clean, Scannable Information.*
-*Structure:*
-💠 **[Tool Name in English]**
-───────────────
-💡 **الوصف:** [One sentence hook: What magic does it do?]
-───────────────
-📚 **المنصة:** [Web / Mobile / VS Code Extension]
-💰 **السعر:** [Free / Paid / Freemium]
-🚀 **استخدام ذكي:** [Specific advice: "استخدمها لما تكون مزنوق في..."]
+PLATFORM 3: BLOG (Dev.to / Blogger) 📝
+- Full educational Markdown article.
+- 400-600 words.
+- SEO Arabic title.
+- Structure: Intro, H2 sections, bullets, code blocks ONLY if relevant.
+- Include action plan.
 
-🔗 [Link]
-#RoboVAI #Tech #[ToolName]
+PLATFORM 4: DISCORD (Community vibe) 👾
+- Quick alert, casual hype.
+- Format: "Hey @everyone! 🚨 ... Let's discuss in #general".
 
-**🚩 STYLE 3: The Roadmap / Listicle (For Collections)**
-*Goal: Motivation & Clarity.*
-*Structure:*
-[Motivational Opener: "عشان تبدأ صح، مش لازم تدفع فلوس.. جمعنالك الخلاصة 👇"]
-
-1️⃣ **[Resource 1]:** [Why it's good in 3 words]
-2️⃣ **[Resource 2]:** [Why it's good]
-3️⃣ **[Resource 3]:** [Why it's good]
-
-[Encouraging Outro: "ابدأ بدول وادعيلي!"]
-🔗 [Link]
-
----
-
-### 🚫 STRICT NEGATIVE CONSTRAINTS (Violating these = Failure):
-1.  **NO LABELS:** Never write headers like "الخلاصة:", "المقدمة:", "الرأي:", "التفاصيل:". The text must flow naturally.
-2.  **NO TRANSLATIONESE:** Don't say "The tool allows users to...". Say "الأداة دي بتخليك تقدر...".
-3.  **ENGLISH HANDLING:** English is ONLY for technical terms (React, AI, CEO, Bug). Grammar must remain Egyptian Arabic.
-4.  **NO CODE BLOCKS:** Do not use markdown fences (```) for the post body.
-
-### 📤 OUTPUT FORMAT:
-Return a single valid **JSON Object** (minified) with these keys:
+OUTPUT JSON STRUCTURE (ONLY JSON; no markdown wrapper):
 {
-  "caption": "The full post text string here (with emojis)",
-  "has_poll": boolean,
-  "poll_question": "Provocative question in Arabic (if true)",
+  "telegram_post": "string",
+  "facebook_post": "string",
+  "blog_title": "string",
+  "blog_content_md": "string",
+  "discord_msg": "string",
+  "has_poll": true/false,
+  "poll_question": "string",
   "poll_options": ["Option 1", "Option 2", "Option 3"]
 }
 """
 
+
 DEFAULT_MODEL_CANDIDATES = [
     "llama-3.3-70b-versatile",
 ]
-DEFAULT_MAX_TOKENS = 1800
-DEFAULT_TEMPERATURE = 0.3
+
+DEFAULT_MAX_TOKENS = 2600
+DEFAULT_TEMPERATURE = 0.35
 
 _client: Optional[OpenAI] = None
 _last_error: Optional[str] = None
@@ -95,16 +80,18 @@ def _get_client() -> Optional[OpenAI]:
     global _client  # noqa: PLW0603
     if _client is not None:
         return _client
+
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         _set_last_error("Missing GROQ_API_KEY")
         return None
+
     _client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=api_key)
     return _client
 
 
 def _parse_json_response(content: str) -> Optional[Dict[str, Any]]:
-    cleaned = content.strip()
+    cleaned = (content or "").strip()
     if not cleaned:
         return None
 
@@ -121,13 +108,11 @@ def _parse_json_response(content: str) -> Optional[Dict[str, Any]]:
     if direct is not None:
         return direct
 
-    # Fallback: extract first JSON object from mixed text.
     start = cleaned.find("{")
     end = cleaned.rfind("}")
     if start == -1 or end == -1 or end <= start:
         return None
-    sliced = cleaned[start : end + 1]
-    return _try_parse(sliced)
+    return _try_parse(cleaned[start : end + 1])
 
 
 def _coerce_bool(value: Any) -> Optional[bool]:
@@ -147,7 +132,6 @@ def _coerce_bool(value: Any) -> Optional[bool]:
 def _strip_code_fences(text: str) -> str:
     if not text:
         return ""
-    # Remove Markdown ```code``` blocks entirely
     return re.sub(r"```.*?```", "", text, flags=re.DOTALL).strip()
 
 
@@ -161,23 +145,64 @@ def _latin_ratio(text: str) -> float:
     return len(latin_chars) / len(total_chars)
 
 
-def _normalize_ai_result(parsed: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    caption = str(parsed.get("caption", "") or "").strip()
-    if not caption:
+_BANNED_PHRASES = [
+    "based on the article",
+    "in conclusion",
+    "بناءً على",
+    "في الختام",
+]
+
+
+def _contains_banned_phrases(text: str) -> bool:
+    lowered = (text or "").lower()
+    return any(p in lowered for p in _BANNED_PHRASES)
+
+
+def _ensure_string(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _normalize_ai_result(parsed: Dict[str, Any], *, link: str) -> Optional[Dict[str, Any]]:
+    telegram_post = _strip_code_fences(_ensure_string(parsed.get("telegram_post")))
+    facebook_post = _strip_code_fences(_ensure_string(parsed.get("facebook_post")))
+    blog_title = _ensure_string(parsed.get("blog_title"))
+    blog_content_md = _strip_code_fences(_ensure_string(parsed.get("blog_content_md")))
+    discord_msg = _strip_code_fences(_ensure_string(parsed.get("discord_msg")))
+
+    if not (telegram_post and facebook_post and blog_title and blog_content_md and discord_msg):
         return None
+
+    joined = "\n".join([telegram_post, facebook_post, blog_title, blog_content_md, discord_msg])
+    if _contains_banned_phrases(joined):
+        return None
+
+    latin_fraction = _latin_ratio(joined)
+    if latin_fraction > 0.55:
+        return None
+
+    # Ensure the link exists (main pipeline may append again safely).
+    if link and link not in telegram_post:
+        telegram_post = telegram_post.rstrip() + f"\n\n{link}"
+    if link and link not in facebook_post:
+        facebook_post = facebook_post.rstrip() + f"\n\n{link}"
+    if link and link not in discord_msg:
+        discord_msg = discord_msg.rstrip() + f"\n{link}"
 
     has_poll = _coerce_bool(parsed.get("has_poll"))
     if has_poll is None:
         has_poll = False
-
-    poll_question = str(parsed.get("poll_question", "") or "").strip()
+    poll_question = _ensure_string(parsed.get("poll_question"))
     poll_options_raw = parsed.get("poll_options")
     poll_options: list[str] = []
     if isinstance(poll_options_raw, list):
         poll_options = [str(o).strip() for o in poll_options_raw if str(o).strip()]
 
     return {
-        "caption": caption,
+        "telegram_post": telegram_post,
+        "facebook_post": facebook_post,
+        "blog_title": blog_title,
+        "blog_content_md": blog_content_md,
+        "discord_msg": discord_msg,
         "has_poll": bool(has_poll),
         "poll_question": poll_question,
         "poll_options": poll_options,
@@ -190,6 +215,7 @@ def rewrite_with_ai(
     link: str,
     system_prompt: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
+    """Generate per-platform content as a single JSON object."""
     _set_last_error(None)
     client = _get_client()
     if client is None:
@@ -201,12 +227,9 @@ def rewrite_with_ai(
         f"Title: {title}\n"
         f"Summary: {summary}\n"
         f"Link: {link}\n\n"
-        "Rewrite as JSON with the specified keys."
+        "Return ONLY the JSON object with the required keys."
     )
 
-    # Model selection (env-driven):
-    # - GROQ_MODELS: comma-separated priority list (primary first)
-    # - GROQ_MODEL: single model name (primary)
     raw_models = (os.getenv("GROQ_MODELS") or "").strip()
     env_models: list[str] = []
     if raw_models:
@@ -217,11 +240,8 @@ def rewrite_with_ai(
             env_models = [single]
 
     model_candidates = [*env_models, *DEFAULT_MODEL_CANDIDATES]
-    # De-dup while preserving order
     seen_models: set[str] = set()
-    model_candidates = [
-        m for m in model_candidates if not (m in seen_models or seen_models.add(m))
-    ]
+    model_candidates = [m for m in model_candidates if not (m in seen_models or seen_models.add(m))]
 
     last_error: Optional[str] = None
     for model_name in model_candidates:
@@ -232,34 +252,31 @@ def rewrite_with_ai(
                     {"role": "system", "content": effective_system_prompt},
                     {"role": "user", "content": user_content},
                 ],
-                max_tokens=DEFAULT_MAX_TOKENS,
-                temperature=DEFAULT_TEMPERATURE,
+                max_tokens=int(os.getenv("GROQ_MAX_TOKENS", "0") or 0) or DEFAULT_MAX_TOKENS,
+                temperature=float(os.getenv("GROQ_TEMPERATURE", "0") or 0) or DEFAULT_TEMPERATURE,
                 response_format={"type": "json_object"},
             )
+
             content = resp.choices[0].message.content if resp and resp.choices else None
             if not content:
                 _set_last_error(f"Empty AI response (model={model_name})")
                 return None
+
             parsed = _parse_json_response(content)
             if parsed is None:
                 snippet = content.strip().replace("\n", " ")
-                _set_last_error(
-                    f"Invalid JSON from AI (model={model_name}): {snippet[:180]}"
-                )
+                _set_last_error(f"Invalid JSON from AI (model={model_name}): {snippet[:180]}")
                 return None
-            normalized = _normalize_ai_result(parsed)
+
+            normalized = _normalize_ai_result(parsed, link=link)
             if normalized is None:
-                _set_last_error(f"AI JSON missing required keys (model={model_name})")
-                return None
-            caption_clean = _strip_code_fences(normalized["caption"])
-            latin_fraction = _latin_ratio(caption_clean)
-            if latin_fraction > 0.55:
                 _set_last_error(
-                    f"Caption failed Arabic-only check (Latin ratio={latin_fraction:.0%})"
+                    f"AI JSON missing required keys / banned phrases / language skew (model={model_name})"
                 )
                 return None
-            normalized["caption"] = caption_clean
+
             return normalized
+
         except Exception as exc:  # noqa: BLE001
             status = getattr(exc, "status_code", None) or getattr(exc, "status", None)
             msg = str(getattr(exc, "message", "") or "")
@@ -270,8 +287,9 @@ def rewrite_with_ai(
             if detail:
                 base += f": {detail}"
             last_error = f"{base} (model={model_name})"[:300]
+
             # Retry once for Groq JSON validation failures
-            if "json_validate_failed" in (detail.lower()):
+            if "json_validate_failed" in detail.lower():
                 try:
                     resp = client.chat.completions.create(
                         model=model_name,
@@ -280,39 +298,28 @@ def rewrite_with_ai(
                             {
                                 "role": "user",
                                 "content": user_content
-                                + "\nReturn valid JSON ONLY with keys: caption, has_poll, poll_question, poll_options.",
+                                + "\nReturn valid JSON ONLY with keys: telegram_post, facebook_post, blog_title, blog_content_md, discord_msg, has_poll, poll_question, poll_options.",
                             },
                         ],
-                        max_tokens=max(300, DEFAULT_MAX_TOKENS - 100),
+                        max_tokens=max(400, DEFAULT_MAX_TOKENS - 200),
                         temperature=0.2,
                         response_format={"type": "json_object"},
                     )
-                    content = (
-                        resp.choices[0].message.content
-                        if resp and resp.choices
-                        else None
-                    )
+                    content = resp.choices[0].message.content if resp and resp.choices else None
                     parsed = _parse_json_response(content or "")
                     if parsed:
-                        normalized = _normalize_ai_result(parsed)
-                        if normalized:
-                            caption_clean = _strip_code_fences(normalized["caption"])
-                            latin_fraction = _latin_ratio(caption_clean)
-                            if latin_fraction <= 0.55:
-                                normalized["caption"] = caption_clean
-                                return normalized
+                        normalized = _normalize_ai_result(parsed, link=link)
+                        if normalized is not None:
+                            return normalized
                 except Exception:
                     pass
-            # If model is deprecated/unknown, try the next candidate.
+
             lowered = detail.lower()
-            if (
-                "decommissioned" in lowered
-                or "no longer supported" in lowered
-                or "not found" in lowered
-            ):
+            if "decommissioned" in lowered or "no longer supported" in lowered or "not found" in lowered:
                 continue
             _set_last_error(last_error)
             return None
 
     _set_last_error(last_error or "AI request failed")
     return None
+

@@ -108,6 +108,7 @@ class MultiPlatformPublisher:
         link: Optional[str] = None,
         image_url: Optional[str] = None,
         platforms: Optional[list[PlatformType]] = None,
+        platform_payloads: Optional[Dict[PlatformType, Dict[str, Any]]] = None,
         telegram_context: Optional[Any] = None,
         send_reports: bool = True,
     ) -> Dict[str, Any]:
@@ -129,6 +130,8 @@ class MultiPlatformPublisher:
         target_platforms = platforms or self.enabled_platforms
         results = {}
 
+        payloads = platform_payloads or {}
+
         # Send start report
         if send_reports and self.reporter:
             await self.reporter.report_post_start(
@@ -138,6 +141,18 @@ class MultiPlatformPublisher:
 
         for platform in target_platforms:
             try:
+                payload = payloads.get(platform) if isinstance(payloads, dict) else None
+                caption_for_platform = (
+                    str(payload.get("caption", "")).strip()
+                    if isinstance(payload, dict) and payload.get("caption") is not None
+                    else caption
+                )
+                title_for_platform = (
+                    str(payload.get("title", "")).strip()
+                    if isinstance(payload, dict) and payload.get("title") is not None
+                    else ""
+                )
+
                 # Check if we should delay this platform
                 if self.scheduler and self.use_scheduler:
                     config = self.scheduler.get_platform_config(platform)
@@ -149,7 +164,7 @@ class MultiPlatformPublisher:
                         # Schedule for later
                         scheduled_post = self.scheduler.schedule_post(
                             platform=platform,
-                            caption=caption,
+                            caption=caption_for_platform,
                             link=link,
                             image_url=image_url,
                         )
@@ -172,40 +187,50 @@ class MultiPlatformPublisher:
                 # Publish immediately
                 if platform == "telegram":
                     result = await self._publish_telegram(
-                        caption, link, image_url, telegram_context
+                        caption_for_platform, link, image_url, telegram_context
                     )
                     results["telegram"] = result
 
                 elif platform == "linkedin":
-                    result = self._publish_linkedin(caption, link, image_url)
+                    result = self._publish_linkedin(caption_for_platform, link, image_url)
                     results["linkedin"] = result
 
                 elif platform == "discord":
-                    result = self._publish_discord(caption, link, image_url)
+                    result = self._publish_discord(caption_for_platform, link, image_url)
                     results["discord"] = result
 
                 elif platform == "medium":
-                    result = self._publish_medium(caption, link, image_url)
+                    result = self._publish_medium(caption_for_platform, link, image_url)
                     results["medium"] = result
 
                 elif platform == "twitter":
-                    result = self._publish_twitter(caption, link, image_url)
+                    result = self._publish_twitter(caption_for_platform, link, image_url)
                     results["twitter"] = result
 
                 elif platform == "blogger":
-                    result = self._publish_blogger(caption, link, image_url)
+                    result = self._publish_blogger(
+                        caption_for_platform,
+                        link,
+                        image_url,
+                        title_override=title_for_platform or None,
+                    )
                     results["blogger"] = result
 
                 elif platform == "reddit":
-                    result = self._publish_reddit(caption, link, image_url)
+                    result = self._publish_reddit(caption_for_platform, link, image_url)
                     results["reddit"] = result
 
                 elif platform == "facebook":
-                    result = self._publish_facebook(caption, link, image_url)
+                    result = self._publish_facebook(caption_for_platform, link, image_url)
                     results["facebook"] = result
 
                 elif platform == "devto":
-                    result = self._publish_devto(caption, link, image_url)
+                    result = self._publish_devto(
+                        caption_for_platform,
+                        link,
+                        image_url,
+                        title_override=title_for_platform or None,
+                    )
                     results["devto"] = result
 
                 # Send success report
@@ -350,15 +375,23 @@ class MultiPlatformPublisher:
         return publisher.publish_tweet(text=tweet_text, image_url=image_url)
 
     def _publish_blogger(
-        self, caption: str, link: Optional[str], image_url: Optional[str]
+        self,
+        caption: str,
+        link: Optional[str],
+        image_url: Optional[str],
+        *,
+        title_override: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Publish to Blogger"""
         from blogger_publisher import BloggerPublisher
 
         publisher = BloggerPublisher()
         # Extract title from caption (first line or first 100 chars)
-        lines = caption.split("\n")
-        title = lines[0][:100] if lines else caption[:100]
+        if title_override and title_override.strip():
+            title = title_override.strip()[:100]
+        else:
+            lines = caption.split("\n")
+            title = lines[0][:100] if lines else caption[:100]
         # Add AI/Tech label by default
         labels = ["AI", "Technology", "Tech News"]
         return publisher.publish_post(
@@ -404,13 +437,21 @@ class MultiPlatformPublisher:
         else:
             # Text-only post
             return publisher.publish_text(message=caption)
-    def _publish_devto(self, caption: str, link: str, image_url: str):
+    def _publish_devto(
+        self,
+        caption: str,
+        link: str,
+        image_url: str,
+        *,
+        title_override: Optional[str] = None,
+    ):
         """Publish to Dev.to"""
         from devto_publisher import DevtoPublisher
 
         publisher = DevtoPublisher()
         return publisher.publish(
             caption=caption,
+            title=title_override,
             link=link,
             image_url=image_url,
         )

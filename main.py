@@ -199,7 +199,14 @@ async def fetch_and_publish(
     if not ai:
         return {"status": "error", "error": get_last_ai_error() or "AI failed"}
 
-    caption = str(ai.get("caption", "") or "").strip()
+    telegram_post = str(ai.get("telegram_post", "") or "").strip()
+    facebook_post = str(ai.get("facebook_post", "") or "").strip()
+    blog_title = str(ai.get("blog_title", "") or "").strip()
+    blog_content_md = str(ai.get("blog_content_md", "") or "").strip()
+    discord_msg = str(ai.get("discord_msg", "") or "").strip()
+
+    # Default caption fallback for platforms not explicitly tailored.
+    caption = facebook_post or telegram_post
     link = str(post.get("link", "") or "").strip()
     title = str(post.get("title", "") or "").strip()
     image_url = post.get("image")
@@ -224,12 +231,21 @@ async def fetch_and_publish(
     try:
         from multi_platform_publisher import MultiPlatformPublisher
 
+        payloads = {
+            "telegram": {"caption": telegram_post or caption},
+            "facebook": {"caption": facebook_post or caption},
+            "discord": {"caption": discord_msg or caption},
+            "blogger": {"caption": blog_content_md or caption, "title": blog_title or None},
+            "devto": {"caption": blog_content_md or caption, "title": blog_title or None},
+        }
+
         # Enable scheduler and reports
         publisher = MultiPlatformPublisher(use_scheduler=True)
         results = await publisher.publish(
             caption=caption,
             link=link or None,
             image_url=image_url or None,
+            platform_payloads=payloads,
             telegram_context=context,
             send_reports=True,  # Enable real-time reports to admin
         )

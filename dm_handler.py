@@ -204,10 +204,12 @@ async def _force_fetch_job(context: ContextTypes.DEFAULT_TYPE) -> None:
             print("❌ AI rewrite failed")
             return
 
-        caption = ai_result.get("caption", "")
+        caption = ai_result.get("telegram_post", "") or ""
         link = post.get("link", "")
         image_url = post.get("image")
-        message = f"{caption}\n\n🔗 لينك الخبر/الأداة: {link}"
+        message = caption.strip()
+        if link and link not in message:
+            message = f"{message}\n\n🔗 لينك الخبر/الأداة: {link}".strip()
 
         channel_id = context.job.data.get("channel_id") if context.job else None
         if not channel_id:
