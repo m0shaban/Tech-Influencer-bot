@@ -115,6 +115,8 @@ def get_admin_keyboard() -> ReplyKeyboardMarkup:
         [
             ["⚡ Force Fetch", "📊 Stats"],
             ["📢 Broadcast", "🛑 Status Toggle"],
+            ["📝 Edit Prompt", "📡 Feeds"],
+            ["📋 Logs", "ℹ️ System Info"],
         ],
         resize_keyboard=True,
         is_persistent=True,
@@ -312,6 +314,155 @@ async def admin_status_toggle(
     await update.message.reply_text(f"{emoji} Status: {new_status}")
 
 
+async def admin_view_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message:
+        return
+    cfg = _load_config()
+    prompt = cfg.get("system_prompt", "(No custom prompt set - using default)")
+    preview = prompt[:500] + "..." if len(prompt) > 500 else prompt
+    await update.message.reply_text(
+        f"📝 **Current System Prompt:**\n\n{preview}\n\n"
+        "Send /setprompt <your_new_prompt> to update.",
+        parse_mode="Markdown"
+    )
+
+
+async def admin_set_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message or not context.args:
+        await update.message.reply_text(
+            "Usage: /setprompt <your new prompt text>\n\n"
+            "Or reply to this with multi-line text."
+        ) if update.message else None
+        return
+    new_prompt = " ".join(context.args)
+    cfg = _load_config()
+    cfg["system_prompt"] = new_prompt
+    _save_config(cfg)
+    await update.message.reply_text(f"✅ Prompt updated! ({len(new_prompt)} chars)")
+
+
+async def admin_list_feeds(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message:
+        return
+    cfg = _load_config()
+    feeds = cfg.get("feeds", [])
+    if not feeds:
+        await update.message.reply_text("📡 No custom feeds. Using defaults from feeds_config.py")
+        return
+    text = f"📡 **Active Feeds** ({len(feeds)}):\n\n"
+    for i, feed in enumerate(feeds[:20], 1):  # Show first 20
+        text += f"{i}. {feed[:50]}...\n"
+    if len(feeds) > 20:
+        text += f"\n...and {len(feeds) - 20} more."
+    await update.message.reply_text(text, parse_mode="Markdown")
+
+
+async def admin_add_feed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message or not context.args:
+        await update.message.reply_text(
+            "Usage: /addfeed <RSS_URL>\n\nExample:\n/addfeed https://example.com/feed.xml"
+        ) if update.message else None
+        return
+    new_feed = context.args[0].strip()
+    if not new_feed.startswith(("http://", "https://")):
+        await update.message.reply_text("❌ Invalid URL. Must start with http:// or https://")
+        return
+    cfg = _load_config()
+    feeds = cfg.get("feeds", [])
+    if new_feed in feeds:
+        await update.message.reply_text("⚠️ Feed already exists.")
+        return
+    feeds.append(new_feed)
+    cfg["feeds"] = feeds
+    _save_config(cfg)
+    await update.message.reply_text(f"✅ Feed added! Total: {len(feeds)}")
+
+
+async def admin_remove_feed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message or not context.args:
+        await update.message.reply_text(
+            "Usage: /removefeed <URL_or_index>\n\n"
+            "Example:\n/removefeed 5\nor\n/removefeed https://example.com/feed.xml"
+        ) if update.message else None
+        return
+    cfg = _load_config()
+    feeds = cfg.get("feeds", [])
+    if not feeds:
+        await update.message.reply_text("❌ No custom feeds to remove.")
+        return
+    
+    target = " ".join(context.args)
+    # Try as index first
+    if target.isdigit():
+        idx = int(target) - 1
+        if 0 <= idx < len(feeds):
+            removed = feeds.pop(idx)
+            cfg["feeds"] = feeds
+            _save_config(cfg)
+            await update.message.reply_text(f"✅ Removed: {removed[:50]}...")
+            return
+    # Try as URL
+    if target in feeds:
+        feeds.remove(target)
+        cfg["feeds"] = feeds
+        _save_config(cfg)
+        await update.message.reply_text(f"✅ Removed: {target[:50]}...")
+        return
+    
+    await update.message.reply_text("❌ Feed not found. Use /feeds to see current list.")
+
+
+async def admin_view_logs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message:
+        return
+    if not LOG_PATH.exists():
+        await update.message.reply_text("📋 No logs yet.")
+        return
+    
+    try:
+        with LOG_PATH.open("r", encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()
+        last_lines = lines[-30:]  # Last 30 lines
+        log_text = "".join(last_lines)
+        if len(log_text) > 4000:
+            log_text = "..." + log_text[-4000:]
+        await update.message.reply_text(f"📋 **Recent Logs:**\n\n```\n{log_text}\n```", parse_mode="Markdown")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error reading logs: {e}")
+
+
+async def admin_system_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message:
+        return
+    
+    cfg = _load_config()
+    status = cfg.get("status", "unknown")
+    model = cfg.get("model", "llama-3.3-70b-versatile")
+    feeds_count = len(cfg.get("feeds", []))
+    
+    seen_count = 0
+    if SEEN_POSTS_PATH.exists():
+        try:
+            import json
+            data = json.loads(SEEN_POSTS_PATH.read_text(encoding="utf-8"))
+            seen_count = len(data) if isinstance(data, list) else 0
+        except:
+            pass
+    
+    info = (
+        f"ℹ️ **System Info**\n\n"
+        f"Status: {status} {'🟢' if status == 'active' else '🔴'}\n"
+        f"Model: {model}\n"
+        f"Custom Feeds: {feeds_count}\n"
+        f"Posts Published: {seen_count}\n"
+        f"Channel: {CHANNEL_ID}\n"
+        f"Group: {GROUP_ID or 'N/A'}\n\n"
+        f"Use the buttons below to manage the bot."
+    )
+    
+    await update.message.reply_text(info, parse_mode="Markdown")
+
+
 def _broadcast_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
@@ -459,6 +610,14 @@ def main() -> None:
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
     app.add_handler(CommandHandler("contact", cmd_contact))
+    
+    # Admin commands
+    app.add_handler(CommandHandler("setprompt", admin_set_prompt))
+    app.add_handler(CommandHandler("addfeed", admin_add_feed))
+    app.add_handler(CommandHandler("removefeed", admin_remove_feed))
+    app.add_handler(CommandHandler("feeds", admin_list_feeds))
+    app.add_handler(CommandHandler("logs", admin_view_logs))
+    app.add_handler(CommandHandler("info", admin_system_info))
 
     admin_filter = filters.User(user_id=ADMIN_USER_ID)
 
@@ -474,6 +633,26 @@ def main() -> None:
     app.add_handler(
         MessageHandler(
             admin_filter & filters.Regex(r"^🛑 Status Toggle$"), admin_status_toggle
+        )
+    )
+    app.add_handler(
+        MessageHandler(
+            admin_filter & filters.Regex(r"^📝 Edit Prompt$"), admin_view_prompt
+        )
+    )
+    app.add_handler(
+        MessageHandler(
+            admin_filter & filters.Regex(r"^📡 Feeds$"), admin_list_feeds
+        )
+    )
+    app.add_handler(
+        MessageHandler(
+            admin_filter & filters.Regex(r"^📋 Logs$"), admin_view_logs
+        )
+    )
+    app.add_handler(
+        MessageHandler(
+            admin_filter & filters.Regex(r"^ℹ️ System Info$"), admin_system_info
         )
     )
 
