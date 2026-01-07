@@ -92,8 +92,9 @@
 - **68+ curated RSS feeds**: TechCrunch, Verge, arXiv, GitHub, ProductHunt, HackerNews, MENA tech sources
 - **Smart deduplication**: Never repeats content
 - **Image extraction**: Automatic visual pulls from HTML/RSS
-- **Natural language**: Egyptian Arabic with technical terms in English
-- **3 content styles**: Narrative, Tool Card, Listicle
+- **Omni-Channel JSON**: One AI call returns platform-ready strings: Telegram, Facebook, Discord, Blog (Dev.to/Blogger) + optional poll
+- **Natural language**: Egyptian Business Arabic with English only for tech terms
+- **Platform-aware tone**: Friend (Telegram) / Viral (Facebook) / Reference (Blog) / Hype (Discord)
 
 ### 📊 Triple Dashboard Control
 
@@ -129,7 +130,14 @@
 
 ### Currently Supported
 
-- ✅ **Telegram**: Full support (channels, groups, DMs)
+- ✅ **Telegram** (channels/groups)
+- ✅ **Facebook** (page posts with/without image)
+- ✅ **Discord** (webhook alerts)
+- ✅ **Dev.to / Blogger** (longform Markdown)
+- ✅ **LinkedIn** (if tokens exist)
+- ✅ **Twitter/X** (if tokens exist)
+- ✅ **Reddit** (if tokens exist)
+- ✅ **Medium** (if tokens exist)
 
 ### In Development (Q1 2026)
 
@@ -164,9 +172,9 @@
 │  │  ┌──────────▼─────────────────────┐   │             │
 │  │  │  ai_processor.py               │   │             │
 │  │  │  - Groq LLaMA 3.3 70B         │   │             │
-│  │  │  - JSON validation             │   │             │
+│  │  │  - Omni-channel JSON (TG/FB/Blog/Discord + poll) │
 │  │  │  - Arabic/English mix          │   │             │
-│  │  │  - 3 content styles            │   │             │
+│  │  │  - Platform-aware tone         │   │             │
 │  │  └──────────┬─────────────────────┘   │             │
 │  │             │                          │             │
 │  │  ┌──────────▼─────────────────────┐   │             │
@@ -247,7 +255,7 @@
   - [main.py](main.py): Bot app, jittered scheduler, Cairo time window, publish flow.
   - [feed_manager.py](feed_manager.py): Fetch latest post across feeds; dedupe; image extraction.
   - [feeds_config.py](feeds_config.py): List of RSS sources (edit as needed).
-  - [ai_processor.py](ai_processor.py): Groq/OpenAI client; JSON captions + poll data.
+  - [ai_processor.py](ai_processor.py): Groq/OpenAI client; omni-channel JSON (Telegram/Facebook/Blog/Discord + poll).
   - [data/seen_posts.json](data/seen_posts.json): Local persistence of seen links.
 - Ops & Control
   - [dashboard.py](dashboard.py): Streamlit Command Center with config locking.
@@ -306,9 +314,9 @@ streamlit run dashboard.py
 
 1. Scheduler sleeps randomly (1–15 minutes), then checks Cairo time window.
 2. Fetches across shuffled feeds and stops at the first unseen post.
-3. AI (Groq) returns JSON: `caption`, `has_poll`, `poll_question`, `poll_options`.
-4. If an image is present, posts as photo with caption; otherwise text.
-5. If `has_poll` is true, sends a poll immediately after.
+3. AI (Groq) returns **one JSON** with: `telegram_post`, `facebook_post`, `blog_title`, `blog_content_md`, `discord_msg`, `has_poll`, `poll_question`, `poll_options`.
+4. MultiPlatformPublisher sends the right text per platform (Telegram/Facebook/Discord/Dev.to/Blogger/etc.) with per-platform delays.
+5. If `has_poll` is true, Telegram poll can be sent after the post (roadmap).
 
 ## Dashboard Features
 
