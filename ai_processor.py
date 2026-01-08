@@ -132,7 +132,18 @@ def _coerce_bool(value: Any) -> Optional[bool]:
 def _strip_code_fences(text: str) -> str:
     if not text:
         return ""
-    return re.sub(r"```.*?```", "", text, flags=re.DOTALL).strip()
+    # Only remove start/end fences if they wrap the entire content,
+    # or just remove all backticks if that's safer.
+    # But usually we just want to strip the outer markdown block if present.
+    # Let's just remove the fence markers but keep content.
+    s = text.strip()
+    if s.startswith("```"):
+        # Remove first line starting with ```
+        s = re.sub(r"^```\w*\s*\n?", "", s)
+    if s.endswith("```"):
+        # Remove last ```
+        s = re.sub(r"\n?```\s*$", "", s)
+    return s.strip()
 
 
 def _latin_ratio(text: str) -> float:
@@ -148,7 +159,6 @@ def _latin_ratio(text: str) -> float:
 _BANNED_PHRASES = [
     "based on the article",
     "in conclusion",
-    "بناءً على",
     "في الختام",
 ]
 
@@ -187,7 +197,7 @@ def _normalize_ai_result(
         return None
 
     latin_fraction = _latin_ratio(joined)
-    if latin_fraction > 0.55:
+    if latin_fraction > 0.75:
         return None
 
     # Ensure the link exists (main pipeline may append again safely).
