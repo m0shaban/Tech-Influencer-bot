@@ -1,11 +1,13 @@
 services:
-  # Worker Service - Telegram Bot (polling)
-  # NOTE: For zero Telegram conflicts, keep exactly ONE worker instance running.
-  - type: worker
-    name: robovai-worker
+  # Web Service - Telegram Bot (polling) + Keep-Alive HTTP endpoint
+  # NOTE: For zero Telegram conflicts, keep exactly ONE instance running.
+  # Uses Flask health endpoint to prevent free-tier sleep.
+  - type: web
+    name: robovai-bot
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: python main.py
+    healthCheckPath: /health
     envVars:
       - key: TELEGRAM_TOKEN
         sync: false

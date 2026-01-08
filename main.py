@@ -29,6 +29,13 @@ load_dotenv()
 # Import scheduling task
 from scheduled_publisher_task import start_scheduler_task
 
+# Start keep-alive HTTP server (for Render web service)
+try:
+    from keep_alive import keep_alive
+    keep_alive()
+except ImportError:
+    print("⚠️ keep_alive not available (OK for local dev)")
+
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_DIR / "config.json"
 SEEN_POSTS_PATH = BASE_DIR / "data" / "seen_posts.json"
