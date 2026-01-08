@@ -3,7 +3,7 @@
 > **Scale your content empire with intelligent curation, AI rewriting, and multi-platform publishing.**
 
 [![Live Demo](https://img.shields.io/badge/Demo-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit)](https://tech-influencer-bot.streamlit.app/)
-[![Deployed](https://img.shields.io/badge/Deployed-Render-46E3B7?style=for-the-badge&logo=render)](https://robovai-creator.onrender.com/)
+[![Deployed](https://img.shields.io/badge/Deployed-Render-46E3B7?style=for-the-badge&logo=render)](https://robovai-bot.onrender.com/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -52,16 +52,19 @@
 
 ### Production Instances
 
-- **🎛️ Admin Dashboard**: https://tech-influencer-bot.streamlit.app/
-- **🤖 Bot Service**: https://robovai-creator.onrender.com/
-- **📱 Telegram Bot**: [@nextlevelegypt](https://t.me/nextlevelegypt)
+- **🎛️ Admin Dashboard**: https://tech-influencer-bot.streamlit.app/ (Streamlit Cloud)
+- **🤖 Bot Service**: https://robovai-bot.onrender.com/ (Render Web Service + Landing Page)
+- **📱 Telegram Channel**: https://t.me/nextlevelegypt
+- **💬 Discussion Group**: https://t.me/nextlevelegyptt
 
 ### Deployment Status
 
-- ✅ **Uptime**: 99.9% (Render free tier)
+- ✅ **Uptime**: 24/7 (Render Web Service + UptimeRobot keep-alive)
 - ✅ **Response Time**: < 2s average
-- ✅ **Posts Published**: 38+ and counting
-- ✅ **Cost**: $0/month
+- ✅ **Posts Published**: 50+ and counting
+- ✅ **Cost**: $0/month (100% free tier)
+- ✅ **Image Storage**: Storj (S3-compatible, 5GB free)
+- ✅ **Landing Page**: Professional UI at https://robovai-bot.onrender.com/
 
 ---
 
@@ -151,8 +154,14 @@
 │                  Production Stack                        │
 ├───────────────────┬─────────────────────────────────────┤
 │  Render.com       │  Streamlit Cloud                    │
-│  (Bot Worker)     │  (Dashboard)                        │
-│  24/7 Free        │  750 hrs/month                      │
+│  (Web Service)    │  (Dashboard)                        │
+│  24/7 Free        │  Community Free                     │
+│  + Landing Page   │  Full Admin UI                      │
+│  + Flask Server   │                                     │
+├───────────────────┴─────────────────────────────────────┤
+│  Storj (S3)       │  UptimeRobot                        │
+│  Image Storage    │  Keep-Alive (5min ping)             │
+│  5GB Free         │  Free Forever                       │
 ├───────────────────┴─────────────────────────────────────┤
 │                                                          │
 │  ┌──────────────┐    ┌──────────────┐                  │
@@ -198,11 +207,15 @@
 
 ### Core Components
 
-- **[main.py](main.py)**: Bot lifecycle, scheduler, 3-way admin controls
+- **[main.py](main.py)**: Bot lifecycle, scheduler, 3-way admin controls, Flask keep-alive integration
 - **[feed_manager.py](feed_manager.py)**: Multi-source RSS with smart dedup
-- **[ai_processor.py](ai_processor.py)**: Groq LLaMA integration + validation
+- **[ai_processor.py](ai_processor.py)**: Groq LLaMA integration + omni-channel JSON output
+- **[image_generator.py](image_generator.py)**: Advanced OG image generator with Arabic fonts
+- **[r2_uploader.py](r2_uploader.py)**: Storj S3-compatible image uploader
+- **[keep_alive.py](keep_alive.py)**: Flask server for health checks + landing page
 - **[dashboard.py](dashboard.py)**: Streamlit admin panel
 - **[health_check.py](health_check.py)**: Pre-deploy diagnostics
+- **[templates/index.html](templates/index.html)**: Professional landing page
 
 ---
 
@@ -267,9 +280,11 @@
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.11+
 - Telegram Bot token and channel/group IDs
-- Groq Cloud API key (for OpenAI client using Groq)
+- Groq Cloud API key (for LLaMA 3.3 70B)
+- Storj S3 credentials (for public image URLs)
+- Optional: UptimeRobot account (free, for 24/7 uptime)
 
 ## Quick Start
 
@@ -333,10 +348,48 @@ streamlit run dashboard.py
 - Images: some feeds won’t provide media; bot falls back to text posting.
 - Time window: posts only between 09:00–23:00 Africa/Cairo.
 
+## Deployment Architecture
+
+### Current Setup (100% Free)
+
+1. **Render Web Service** (`robovai-bot`)
+   - Runs `main.py` (Telegram bot polling)
+   - Flask server on port 8080 (health checks + landing page)
+   - Endpoints: `/` (landing), `/health`, `/api/status`
+   - Keep-alive: UptimeRobot pings every 5 minutes
+   - Cost: $0/month (free tier, 750 hours)
+
+2. **Streamlit Cloud** (Dashboard)
+   - Separate deployment of `dashboard.py`
+   - Admin UI for feeds, logs, system control
+   - Cost: $0/month (community tier)
+
+3. **Storj** (Image Storage)
+   - S3-compatible object storage
+   - Public URLs for cross-platform images
+   - Cost: $0/month (5GB free)
+
+4. **UptimeRobot** (Monitoring)
+   - Pings `https://robovai-bot.onrender.com/health` every 5 min
+   - Prevents Render free tier sleep
+   - Cost: $0/month (free tier)
+
+### Setup Guides
+
+- **[RENDER_DEPLOYMENT_STEPS.md](RENDER_DEPLOYMENT_STEPS.md)**: Complete Render deployment guide
+- **[STREAMLIT_SECRETS.md](STREAMLIT_SECRETS.md)**: Streamlit Cloud secrets configuration
+- **[UPTIMEROBOT_SETUP.md](UPTIMEROBOT_SETUP.md)**: Keep-alive monitoring setup
+- **[LANDING_PAGE.md](LANDING_PAGE.md)**: Landing page customization guide
+
 ## Notes
 
 - Dashboard writes to `config.json`. Wire your bot logic to consume flags like `status`/`force_fetch` as needed.
 - Keep `feeds_config.py` updated with sources relevant to your audience.
+- Images are uploaded to Storj; fallback to `IMAGE_BASE_URL` if upload fails.
+- Landing page displays bot info, stats, and social links at the root URL.
 
-—
-Product name: RoboVAI
+---
+
+**Product name**: RoboVAI  
+**Powered by**: Groq AI + Storj + Render + Streamlit  
+**Made with** ❤️ **by** [m0shaban](https://github.com/m0shaban)

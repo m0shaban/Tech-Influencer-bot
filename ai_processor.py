@@ -181,15 +181,29 @@ def _normalize_ai_result(
     blog_content_md = _strip_code_fences(_ensure_string(parsed.get("blog_content_md")))
     discord_msg = _strip_code_fences(_ensure_string(parsed.get("discord_msg")))
 
-    missing_keys = []
-    if not telegram_post: missing_keys.append("telegram_post")
-    if not facebook_post: missing_keys.append("facebook_post")
-    if not blog_title: missing_keys.append("blog_title")
-    if not blog_content_md: missing_keys.append("blog_content_md")
-    if not discord_msg: missing_keys.append("discord_msg")
+    # --- FLUID FALLBACKS (Robust Recovery) ---
+    # 1. Gather any valid text content found
+    sources = [t for t in [telegram_post, facebook_post, blog_content_md, discord_msg] if t]
 
-    if missing_keys:
-        raise ValueError(f"Missing required keys/values: {', '.join(missing_keys)}")
+    # 2. If completely empty, try looking at ALL dict values (in case of wrong keys)
+    if not sources:
+        sources = [str(v) for v in parsed.values() if isinstance(v, str) and v.strip()]
+
+    if not sources:
+        raise ValueError(f"AI output contained no usable text content. Keys: {list(parsed.keys())}")
+
+    fallback_text = sources[0]
+
+    # 3. Fill missing fields with fallback content
+    if not telegram_post: telegram_post = fallback_text
+    if not facebook_post: facebook_post = telegram_post
+    if not blog_content_md: blog_content_md = telegram_post
+    if not discord_msg: discord_msg = telegram_post
+    if not blog_title:
+        # Extract potential title from first line of content
+        first_line = fallback_text.split('\n')[0].strip()
+        # Remove markdown headers if present
+        blog_title = re.sub(r'^[\#\*]+', '', first_line).strip() or "Tech Update"
 
     joined = "\n".join(
         [telegram_post, facebook_post, blog_title, blog_content_md, discord_msg]
