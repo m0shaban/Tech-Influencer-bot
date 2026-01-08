@@ -7,14 +7,22 @@ def _env(name: str) -> str:
     return str(os.getenv(name, "") or "").strip()
 
 
+def _env_any(*names: str) -> str:
+    for name in names:
+        val = _env(name)
+        if val:
+            return val
+    return ""
+
+
 def r2_is_configured() -> bool:
     return all(
         [
-            _env("R2_ACCESS_KEY_ID"),
-            _env("R2_SECRET_ACCESS_KEY"),
-            _env("R2_ENDPOINT_URL"),
-            _env("R2_BUCKET"),
-            _env("R2_PUBLIC_BASE_URL"),
+            _env_any("R2_ACCESS_KEY_ID", "STORJ_ACCESS_KEY_ID"),
+            _env_any("R2_SECRET_ACCESS_KEY", "STORJ_SECRET_ACCESS_KEY"),
+            _env_any("R2_ENDPOINT_URL", "STORJ_ENDPOINT_URL"),
+            _env_any("R2_BUCKET", "STORJ_BUCKET"),
+            _env_any("R2_PUBLIC_BASE_URL", "STORJ_PUBLIC_BASE_URL"),
         ]
     )
 
@@ -42,12 +50,12 @@ def upload_file_to_r2(local_path: str, key: str, content_type: Optional[str] = N
         raise FileNotFoundError(local_path)
 
     session = Session(
-        aws_access_key_id=_env("R2_ACCESS_KEY_ID"),
-        aws_secret_access_key=_env("R2_SECRET_ACCESS_KEY"),
+        aws_access_key_id=_env_any("R2_ACCESS_KEY_ID", "STORJ_ACCESS_KEY_ID"),
+        aws_secret_access_key=_env_any("R2_SECRET_ACCESS_KEY", "STORJ_SECRET_ACCESS_KEY"),
     )
     s3 = session.client(
         "s3",
-        endpoint_url=_env("R2_ENDPOINT_URL"),
+        endpoint_url=_env_any("R2_ENDPOINT_URL", "STORJ_ENDPOINT_URL"),
         region_name="auto",
     )
 
@@ -55,10 +63,10 @@ def upload_file_to_r2(local_path: str, key: str, content_type: Optional[str] = N
     if content_type:
         extra_args["ContentType"] = content_type
 
-    bucket = _env("R2_BUCKET")
+    bucket = _env_any("R2_BUCKET", "STORJ_BUCKET")
     s3.upload_file(str(file_path), bucket, key, ExtraArgs=extra_args or None)
 
-    public_base = _env("R2_PUBLIC_BASE_URL").rstrip("/")
+    public_base = _env_any("R2_PUBLIC_BASE_URL", "STORJ_PUBLIC_BASE_URL").rstrip("/")
     return f"{public_base}/{key.lstrip('/')}"
 
 
@@ -67,6 +75,6 @@ def upload_image_if_configured(local_path: str, filename: str) -> Optional[str]:
     if not r2_is_configured():
         return None
 
-    prefix = _env("R2_PREFIX").strip("/")
+    prefix = _env_any("R2_PREFIX", "STORJ_PREFIX").strip("/")
     key = f"{prefix}/{filename}" if prefix else filename
     return upload_file_to_r2(local_path=local_path, key=key, content_type="image/png")
