@@ -16,15 +16,16 @@ def _env_any(*names: str) -> str:
 
 
 def r2_is_configured() -> bool:
-    return all(
-        [
-            _env_any("R2_ACCESS_KEY_ID", "STORJ_ACCESS_KEY_ID"),
-            _env_any("R2_SECRET_ACCESS_KEY", "STORJ_SECRET_ACCESS_KEY"),
-            _env_any("R2_ENDPOINT_URL", "STORJ_ENDPOINT_URL"),
-            _env_any("R2_BUCKET", "STORJ_BUCKET"),
-            _env_any("R2_PUBLIC_BASE_URL", "STORJ_PUBLIC_BASE_URL"),
-        ]
-    )
+    # Check if either R2 or Storj is fully configured
+    required_vars = [
+        ("R2_ACCESS_KEY_ID", "STORJ_ACCESS_KEY_ID"),
+        ("R2_SECRET_ACCESS_KEY", "STORJ_SECRET_ACCESS_KEY"),
+        ("R2_ENDPOINT_URL", "STORJ_ENDPOINT_URL"),
+        ("R2_BUCKET", "STORJ_BUCKET"),
+        ("R2_PUBLIC_BASE_URL", "STORJ_PUBLIC_BASE_URL"),
+    ]
+    
+    return all(bool(_env_any(*names)) for names in required_vars)
 
 
 def upload_file_to_r2(
@@ -79,6 +80,16 @@ def upload_image_if_configured(local_path: str, filename: str) -> Optional[str]:
     if not r2_is_configured():
         return None
 
-    prefix = _env_any("R2_PREFIX", "STORJ_PREFIX").strip("/")
-    key = f"{prefix}/{filename}" if prefix else filename
+    # Check if using Storj (STORJ_ prefixed env vars)
+    use_storj = bool(os.getenv("STORJ_ACCESS_KEY_ID"))
+    
+    if use_storj:
+        # Storj: Upload directly to bucket without additional prefix
+        # (STORJ_PUBLIC_BASE_URL already includes bucket path)
+        key = filename
+    else:
+        # R2: Use optional R2_PREFIX
+        prefix = _env_any("R2_PREFIX", "STORJ_PREFIX").strip("/")
+        key = f"{prefix}/{filename}" if prefix else filename
+    
     return upload_file_to_r2(local_path=local_path, key=key, content_type="image/png")

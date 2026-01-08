@@ -713,18 +713,23 @@ class OGImageGenerator:
             image.save(output_path, quality=95)
 
             public_url = None
-            # Prefer Cloudflare R2 (production-grade public URL)
+            # Prefer Storj (S3-compatible) for public image hosting
             try:
                 from r2_uploader import upload_image_if_configured
 
                 public_url = upload_image_if_configured(str(output_path), filename)
             except Exception as exc:
-                print(f"⚠️ R2 upload failed: {exc}")
+                print(f"⚠️ Storj upload failed: {exc}")
 
-            # Fallback: Build public URL if IMAGE_BASE_URL is set (when using a static image server)
+            # Fallback: Build public URL if STORJ_PUBLIC_BASE_URL is set
             if not public_url:
-                base_url = os.getenv("IMAGE_BASE_URL", "").rstrip("/")
-                public_url = f"{base_url}/og/{filename}" if base_url else None
+                base_url = os.getenv("STORJ_PUBLIC_BASE_URL", "").rstrip("/")
+                if base_url:
+                    public_url = f"{base_url}/{filename}"
+                else:
+                    # Final fallback to IMAGE_BASE_URL if still not set
+                    base_url = os.getenv("IMAGE_BASE_URL", "").rstrip("/")
+                    public_url = f"{base_url}/og/{filename}" if base_url else None
 
             print(f"✅ Generated: {output_path}")
             if public_url:
@@ -775,69 +780,27 @@ class ImageStrategy:
             or None if all strategies fail
         """
 
-        # Strategy 1: Extract from article
+        # Strategy 1: Extract from article HTML (if URL provided)
         if article_url:
-            print(f"🖼️ Strategy 1: Extracting image...")
-            image_data = self._extract_from_article(article_url)
-            if image_data:
-                print("✅ Got image from article")
-                # External URLs work for all platforms
-                return {"local_path": image_data, "public_url": image_data}
+            print(f"🖼️ Strategy 1: Extracting image from article...")
+            try:
+                from feed_manager import extract_image_from_html
+                import requests as req
+                
+                response = req.get(article_url, timeout=10)
+                image_url = extract_image_from_html(response.text)
+                if image_url:
+                    print(f"✅ Found image in article: {image_url[:60]}...")
+                    return {"local_path": image_url, "public_url": image_url}
+            except Exception as e:
+                print(f"⚠️ Article extraction failed: {e}")
 
-        # Strategy 2: AI generation (optional)
-        if os.getenv("HUGGINGFACE_API_KEY"):
-            print("🤖 Strategy 2: AI generation...")
-            image_data = self._generate_with_ai(headline)
-            if image_data:
-                print("✅ Generated with AI")
-                # AI generated files need both local and public URLs
-                return {"local_path": image_data, "public_url": None}
-
-        # Strategy 3: OG Image (always available)
+        # Strategy 2: OG Image (always available as fallback)
         if fallback_to_og:
-            print("🎨 Strategy 3: OG Image...")
+            print("🎨 Strategy 2: Generating OG Image...")
             image_result = self.og_generator.generate_og_image(headline)
             if image_result and image_result.get("local_path"):
                 return image_result
-
-        return None
-
-    def _extract_from_article(self, url: str) -> Optional[str]:
-        """Extract image from article"""
-        try:
-            from feed_manager import extract_image_from_url
-
-            return extract_image_from_url(url)
-        except Exception as e:
-            print(f"⚠️ Failed: {e}")
-            return None
-
-    def _generate_with_ai(self, headline: str) -> Optional[str]:
-        """Generate image with Hugging Face"""
-        try:
-            api_key = os.getenv("HUGGINGFACE_API_KEY")
-            if not api_key:
-                return None
-
-            import requests as req
-
-            headers = {"Authorization": f"Bearer {api_key}"}
-            api_url = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-3"
-
-            response = req.post(
-                api_url,
-                headers=headers,
-                json={"inputs": f"Professional tech news: {headline[:100]}"},
-                timeout=30,
-            )
-
-            if response.status_code == 200:
-                image_path = Path("/tmp") / f"ai_gen_{hash(headline)}.png"
-                with open(image_path, "wb") as f:
-                    f.write(response.content)
-                return str(image_path)
-        except Exception as e:
-            print(f"⚠️ AI failed: {e}")
 
         return None
 
