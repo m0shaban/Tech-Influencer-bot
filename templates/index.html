@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RoboVAI - Your Content Empire</title>
+    <title>RoboVAI - منظومة المحتوى الذكي</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -63,6 +63,7 @@
                 radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
                 radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.15) 0px, transparent 50%);
             background-attachment: fixed;
+            scroll-behavior: smooth;
         }
     </style>
 </head>
@@ -72,72 +73,85 @@
     <nav class="fixed w-full z-50 transition-all duration-300 py-4 glass border-b-0">
         <div class="container mx-auto px-6 flex justify-between items-center">
             <div class="flex items-center gap-2">
-                <i class="fa-solid fa-robot text-brand-400 text-2xl"></i>
+                <i class="fa-solid fa-layer-group text-brand-400 text-2xl"></i>
                 <span class="text-2xl font-bold tracking-tighter">Robo<span class="text-brand-400">VAI</span></span>
             </div>
             <div class="hidden md:flex gap-8 text-sm font-semibold text-gray-300">
-                <a href="#hero" class="hover:text-white transition">الرئيسية</a>
-                <a href="#features" class="hover:text-white transition">المميزات</a>
-                <a href="#roi" class="hover:text-white transition">العائد</a>
+                <a href="#problem" class="hover:text-white transition">المشكلة</a>
+                <a href="#solution" class="hover:text-white transition">الحل</a>
+                <a href="#platforms" class="hover:text-white transition">المنصات</a>
                 <a href="#pricing" class="hover:text-white transition">الباقات</a>
             </div>
-            <a href="https://tech-influencer-bot.streamlit.app/" target="_blank" class="px-5 py-2 bg-gradient-to-r from-brand-600 to-accent-500 rounded-full font-bold text-sm hover:shadow-[0_0_20px_rgba(59,130,246,0.5)] transition transform hover:-translate-y-1">
-                دخول للوحة التحكم
+            <a href="#contact" class="px-6 py-2 bg-gradient-to-r from-brand-600 to-accent-500 rounded-full font-bold text-sm hover:shadow-[0_0_20px_rgba(59,130,246,0.5)] transition transform hover:-translate-y-1">
+                تواصل معنا
             </a>
         </div>
     </nav>
 
     <!-- Hero Section -->
-    <section id="hero" class="min-h-screen flex items-center justify-center pt-20 relative overflow-hidden">
+    <section class="min-h-screen flex items-center justify-center pt-20 relative overflow-hidden">
+        <!-- Background Elements -->
         <div class="absolute inset-0 z-0">
-            <div class="absolute top-1/4 left-1/4 w-72 h-72 bg-brand-500/20 rounded-full blur-[100px]"></div>
-            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-500/20 rounded-full blur-[100px]"></div>
+            <div class="absolute top-1/4 left-1/4 w-72 h-72 bg-brand-500/10 rounded-full blur-[100px]"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-500/10 rounded-full blur-[100px]"></div>
         </div>
 
         <div class="container mx-auto px-6 relative z-10 text-center">
-            <div class="inline-block mb-4 px-4 py-1 rounded-full glass text-brand-300 text-sm font-semibold border-brand-500/30">
-                🚀 الجيل القادم من أتمتة المحتوى
+            <div class="inline-block mb-6 px-6 py-2 rounded-full glass text-brand-300 text-sm font-semibold border-brand-500/30 animate-pulse-slow">
+                 ✨ الحل النهائي لإدارة المحتوى
             </div>
-            <h1 class="text-5xl md:text-7xl font-black mb-6 leading-tight">
-                RoboVAI<br>
-                <span class="gradient-text">Your Content Empire,</span><br>
-                Tailored to Your Voice
+            <h1 class="text-5xl md:text-7xl font-black mb-8 leading-tight">
+                لسه بتضيع وقتك في<br>
+                <span class="gradient-text">إدارة السوشيال ميديا؟</span>
             </h1>
             <p class="text-xl md:text-2xl text-gray-400 mb-10 max-w-3xl mx-auto leading-relaxed">
-                لا نبيعك محتوى، بل نبني لك "مصنعاً" ذكياً. <br>
-                <span class="text-white font-semibold">RoboVAI</span> هو محرك أتمتة متكامل يتعلم أسلوبك، يراقب مصادرك الخاصة، وينشر نيابة عنك 24/7 على كافة المنصات.
+                ريح دماغك. إحنا بنبني لك "نظام" كامل يشتغل وانت نايم. <br>
+                محرك ذكي بيجمع، يكتب، يصمم، وينشر على كل منصاتك.. بضغطة زر.
             </p>
-            <div class="flex flex-col md:flex-row gap-4 justify-center items-center">
-                <a href="#features" class="px-8 py-4 bg-white text-black rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-lg shadow-white/10 w-full md:w-auto">
-                    استكشف النظام
+            
+            <div class="flex flex-col md:flex-row gap-4 justify-center items-center mb-16">
+                <a href="#pricing" class="px-10 py-4 bg-white text-black rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-lg shadow-white/10 w-full md:w-auto">
+                    شوف الباقات
                 </a>
-                <a href="https://t.me/nextlevelegypt" target="_blank" class="px-8 py-4 glass text-white rounded-xl font-bold text-lg hover:bg-white/10 transition border border-white/20 w-full md:w-auto flex items-center justify-center gap-2">
-                    <i class="fa-brands fa-telegram"></i> انضم للقناة
+                <a href="#problem" class="px-10 py-4 glass text-white rounded-xl font-bold text-lg hover:bg-white/10 transition border border-white/20 w-full md:w-auto">
+                    إزاي بنساعدك؟
                 </a>
             </div>
-            
-            <!-- Dashboard Mockup -->
-            <div class="mt-20 relative animate-float">
-                <div class="glass p-2 rounded-2xl border-t border-l border-white/20 shadow-2xl max-w-4xl mx-auto">
-                    <div class="bg-dark-900 rounded-xl overflow-hidden aspect-video relative flex items-center justify-center group">
-                        <!-- Code Visual -->
-                        <div class="absolute inset-0 p-6 font-mono text-left text-xs md:text-sm opacity-60">
-                            <span class="text-pink-500">class</span> <span class="text-yellow-300">ContentEngine</span>:<br>
-                            &nbsp;&nbsp;<span class="text-pink-500">def</span> <span class="text-blue-400">generate_empire</span>(self):<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;sources = [<span class="text-green-400">"TechCrunch"</span>, <span class="text-green-400">"Verge"</span>, <span class="text-green-400">"GitHub"</span>]<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;voice = <span class="text-green-400">"Professional_Friendly_Arabic"</span><br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;platforms = [<span class="text-green-400">"Telegram"</span>, <span class="text-green-400">"Facebook"</span>, <span class="text-green-400">"Discord"</span>]<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-pink-500">return</span> AI.publish(content, style=voice)<br>
-                            <br>
-                            <span class="text-gray-500"># Output: 100+ posts/day | Cost: $0</span>
-                        </div>
-                        <div class="absolute inset-0 bg-gradient-to-t from-dark-900 via-transparent to-transparent"></div>
-                        <div class="z-10 text-center">
-                            <div class="w-16 h-16 bg-brand-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-[0_0_30px_rgba(59,130,246,0.6)]">
-                                <i class="fa-solid fa-bolt text-3xl text-white"></i>
+
+            <!-- Dashboard Visualization (Simplified for Biz Owners) -->
+            <div class="relative animate-float max-w-5xl mx-auto">
+                <div class="glass p-2 rounded-2xl border-t border-l border-white/20 shadow-2xl">
+                    <div class="bg-dark-900/80 rounded-xl overflow-hidden aspect-[16/7] relative flex items-center justify-center">
+                        <div class="absolute inset-0 bg-gradient-to-br from-brand-900/20 to-transparent"></div>
+                        
+                        <!-- Center Core -->
+                        <div class="z-10 flex flex-col items-center">
+                            <div class="w-20 h-20 bg-gradient-to-r from-brand-500 to-accent-500 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(59,130,246,0.5)] mb-4">
+                                <i class="fa-solid fa-brain text-4xl text-white"></i>
                             </div>
-                            <h3 class="text-2xl font-bold">نظام يعمل ذاتياً</h3>
-                            <p class="text-sm text-gray-400">أنت المدير، والذكاء الاصطناعي هو الفريق.</p>
+                            <div class="bg-white/10 px-6 py-2 rounded-full mb-8 backdrop-blur-md border border-white/10">
+                                <span class="font-bold text-sm">النظام الذكي يعمل الآن...</span>
+                            </div>
+
+                            <!-- Connectivity Lines -->
+                            <div class="flex gap-8 md:gap-16 text-center">
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center text-white text-xl"><i class="fa-brands fa-facebook-f"></i></div>
+                                    <span class="text-xs text-gray-400">نُشر بنجاح</span>
+                                </div>
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-12 h-12 bg-pink-600 rounded-lg flex items-center justify-center text-white text-xl"><i class="fa-brands fa-instagram"></i></div>
+                                    <span class="text-xs text-gray-400">نُشر بنجاح</span>
+                                </div>
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-12 h-12 bg-sky-500 rounded-lg flex items-center justify-center text-white text-xl"><i class="fa-brands fa-telegram"></i></div>
+                                    <span class="text-xs text-gray-400">نُشر بنجاح</span>
+                                </div>
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-12 h-12 bg-black border border-white/20 rounded-lg flex items-center justify-center text-white text-xl"><i class="fa-brands fa-x-twitter"></i></div>
+                                    <span class="text-xs text-gray-400">نُشر بنجاح</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -145,222 +159,280 @@
         </div>
     </section>
 
-    <!-- Why Us Section (Modularity) -->
-    <section id="features" class="py-24 relative">
+    <!-- The Problem (Pain Points) -->
+    <section id="problem" class="py-24 bg-black/20">
         <div class="container mx-auto px-6">
             <div class="text-center mb-16">
-                <h2 class="text-4xl font-bold mb-4">The <span class="gradient-text">Customization</span> Power 🎨</h2>
-                <p class="text-gray-400 text-lg">تحكم كامل في كل جزء من منظومة المحتوى الخاصة بك</p>
+                <h2 class="text-3xl md:text-5xl font-bold mb-6">ليه إدارة المحتوى <span class="text-red-500">مُتعبة؟</span></h2>
+                <p class="text-gray-400 text-lg max-w-2xl mx-auto">لو بتدير شغلك بنفسك، أكيد حاسس بالمشاكل دي كل يوم</p>
             </div>
 
             <div class="grid md:grid-cols-3 gap-8">
-                <!-- Card 1 -->
-                <div class="glass p-8 rounded-2xl hover:bg-white/5 transition duration-300 group border-t border-brand-500/20">
-                    <div class="w-14 h-14 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition">
-                        <i class="fa-solid fa-rss text-blue-400 text-2xl"></i>
+                <div class="glass p-8 rounded-2xl border-t-4 border-red-500/50 hover:-translate-y-2 transition duration-300">
+                    <div class="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6 mx-auto">
+                        <i class="fa-solid fa-hourglass-end text-red-400 text-3xl"></i>
                     </div>
-                    <h3 class="text-2xl font-bold mb-4">مصادرك هي الوقود</h3>
-                    <p class="text-gray-400 leading-relaxed">
-                        ضع روابط الـ RSS التي تناسب مجالك (تقنية، رياضة، عقارات، أخبار).
-                        <br>الروبوت سيراقبها لحظة بلحظة.
+                    <h3 class="text-xl font-bold mb-4 text-center">ضياع الوقت</h3>
+                    <p class="text-gray-400 text-center leading-relaxed">
+                        بتقضي ساعات تدور على أخبار، وتكتب، وتعدل صور.. وفي الآخر بتنسى تنشر!
                     </p>
                 </div>
 
-                <!-- Card 2 -->
-                <div class="glass p-8 rounded-2xl hover:bg-white/5 transition duration-300 group border-t border-purple-500/20">
-                    <div class="w-14 h-14 bg-purple-500/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition">
-                        <i class="fa-solid fa-microphone-lines text-purple-400 text-2xl"></i>
+                <div class="glass p-8 rounded-2xl border-t-4 border-red-500/50 hover:-translate-y-2 transition duration-300">
+                    <div class="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6 mx-auto">
+                        <i class="fa-solid fa-money-bill-wave text-red-400 text-3xl"></i>
                     </div>
-                    <h3 class="text-2xl font-bold mb-4">صوتك هو الدليل</h3>
-                    <p class="text-gray-400 leading-relaxed">
-                        نضبط شخصية الذكاء الاصطناعي (Tone of Voice) لتتحدث بلسانك.
-                        <br>عامية مصرية، فصحى مهنية، أو أسلوب فكاهي.
+                    <h3 class="text-xl font-bold mb-4 text-center">تكاليف عالية</h3>
+                    <p class="text-gray-400 text-center leading-relaxed">
+                        توظيف "مودريتور" أو "كاتب محتوى" و "مصمم" هيكلفك مرتبات شهرية كبيرة جداً.
                     </p>
                 </div>
 
-                <!-- Card 3 -->
-                <div class="glass p-8 rounded-2xl hover:bg-white/5 transition duration-300 group border-t border-green-500/20">
-                    <div class="w-14 h-14 bg-green-500/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition">
-                        <i class="fa-solid fa-share-nodes text-green-400 text-2xl"></i>
+                <div class="glass p-8 rounded-2xl border-t-4 border-red-500/50 hover:-translate-y-2 transition duration-300">
+                    <div class="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6 mx-auto">
+                        <i class="fa-solid fa-chart-line text-red-400 text-3xl"></i>
                     </div>
-                    <h3 class="text-2xl font-bold mb-4">منصاتك هي الملعب</h3>
-                    <p class="text-gray-400 leading-relaxed">
-                        نشر ذكي ومختلف لكل منصة في وقت واحد.
-                        <br>Telegram, Facebook, Discord, Blogs.
+                    <h3 class="text-xl font-bold mb-4 text-center">تشتت وعدم استمرارية</h3>
+                    <p class="text-gray-400 text-center leading-relaxed">
+                        يوم تنشر 5 بوستات، وعشرة لا.. وده بيوقع الريتش وبيموت صفحتك.
                     </p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- ROI Calculator -->
-    <section id="roi" class="py-24 bg-dark-800/50">
-        <div class="container mx-auto px-6">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl font-bold mb-4">العائد على الاستثمار 💰</h2>
-                <p class="text-gray-400 text-lg">الأرقام لا تكذب. انظر ماذا يوفر لك RoboVAI</p>
-            </div>
-
-            <div class="glass rounded-3xl overflow-hidden max-w-4xl mx-auto shadow-2xl">
-                <div class="grid md:grid-cols-2">
-                    <div class="p-8 md:p-12 border-b md:border-b-0 md:border-l border-white/10 bg-white/5">
-                        <h3 class="text-2xl font-bold mb-8 text-gray-400"><i class="fa-regular fa-clock"></i> الطريقة اليدوية</h3>
-                        <ul class="space-y-6">
-                            <li class="flex items-center gap-4 text-gray-400">
-                                <span class="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-500"><i class="fa-solid fa-xmark"></i></span>
-                                <div>
-                                    <div class="font-bold text-lg">3 ساعات يومياً</div>
-                                    <div class="text-sm">بحث وكتابة وتنسيق</div>
-                                </div>
-                            </li>
-                            <li class="flex items-center gap-4 text-gray-400">
-                                <span class="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-500"><i class="fa-solid fa-xmark"></i></span>
-                                <div>
-                                    <div class="font-bold text-lg">$2,000 / شهرياً</div>
-                                    <div class="text-sm">تكلفة توظيف كاتب محتوى</div>
-                                </div>
-                            </li>
-                            <li class="flex items-center gap-4 text-gray-400">
-                                <span class="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-500"><i class="fa-solid fa-xmark"></i></span>
-                                <div>
-                                    <div class="font-bold text-lg">5 بوستات / يوم</div>
-                                    <div class="text-sm">الحد الأقصى للجهد البشري</div>
-                                </div>
-                            </li>
-                        </ul>
+    <!-- The Solution -->
+    <section id="solution" class="py-24 relative overflow-hidden">
+        <div class="container mx-auto px-6 relative z-10">
+            <div class="grid md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <div class="inline-block px-4 py-1 rounded-full bg-green-500/10 text-green-400 font-bold mb-6 text-sm">
+                        🚀 الحل الذكي
                     </div>
-
-                    <div class="p-8 md:p-12 bg-gradient-to-br from-brand-900/50 to-dark-900/50 relative overflow-hidden">
-                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-500 to-accent-500"></div>
-                        <h3 class="text-3xl font-bold mb-8 text-white"><i class="fa-solid fa-rocket text-brand-400"></i> مع RoboVAI</h3>
-                        <ul class="space-y-6">
-                            <li class="flex items-center gap-4">
-                                <span class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400"><i class="fa-solid fa-check"></i></span>
-                                <div>
-                                    <div class="font-bold text-xl text-white">15 دقيقة فقط</div>
-                                    <div class="text-sm text-green-300">توفير 95% من الوقت (مراجعة فقط)</div>
-                                </div>
-                            </li>
-                            <li class="flex items-center gap-4">
-                                <span class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400"><i class="fa-solid fa-check"></i></span>
-                                <div>
-                                    <div class="font-bold text-xl text-white">0 دولار</div>
-                                    <div class="text-sm text-green-300">بنية تحتية مجانية (Render + Storj)</div>
-                                </div>
-                            </li>
-                            <li class="flex items-center gap-4">
-                                <span class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400"><i class="fa-solid fa-check"></i></span>
-                                <div>
-                                    <div class="font-bold text-xl text-white">100+ بوست / يوم</div>
-                                    <div class="text-sm text-green-300">انتشار مضاعف بلا مجهود</div>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Technical Architecture -->
-    <section class="py-20 text-center container mx-auto px-6">
-        <h2 class="text-3xl font-bold mb-12">البنية التحتية (مجانية بالكامل) 🛠️</h2>
-        <div class="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-80 grayscale hover:grayscale-0 transition duration-500">
-            <div class="flex flex-col items-center gap-3">
-                <i class="fa-brands fa-python text-5xl text-yellow-300"></i>
-                <span class="font-mono text-sm">Python Backend</span>
-            </div>
-            <div class="h-px w-12 bg-white/20 md:w-24"></div>
-            <div class="flex flex-col items-center gap-3">
-                <i class="fa-solid fa-cloud text-5xl text-white"></i>
-                <span class="font-mono text-sm">Render (Service)</span>
-            </div>
-            <div class="h-px w-12 bg-white/20 md:w-24"></div>
-            <div class="flex flex-col items-center gap-3">
-                <i class="fa-solid fa-database text-5xl text-blue-400"></i>
-                <span class="font-mono text-sm">Storj (Images)</span>
-            </div>
-            <div class="h-px w-12 bg-white/20 md:w-24"></div>
-            <div class="flex flex-col items-center gap-3">
-                <i class="fa-solid fa-gauge-high text-5xl text-red-400"></i>
-                <span class="font-mono text-sm">Streamlit (UI)</span>
-            </div>
-        </div>
-    </section>
-
-    <!-- Pricing -->
-    <section id="pricing" class="py-24 relative">
-        <div class="container mx-auto px-6">
-            <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                <!-- Free -->
-                <div class="glass p-8 rounded-2xl border border-white/10 flex flex-col">
-                    <div class="mb-4 text-brand-400 font-bold uppercase tracking-widest text-sm">Creator</div>
-                    <h3 class="text-4xl font-bold mb-2">مجاني</h3>
-                    <p class="text-gray-400 text-sm mb-6">النسخة الـ DIY للمطورين</p>
-                    <ul class="space-y-3 mb-8 flex-1">
-                        <li class="flex gap-2"><i class="fa-solid fa-check text-brand-500 mt-1"></i> كود مفتوح المصدر</li>
-                        <li class="flex gap-2"><i class="fa-solid fa-check text-brand-500 mt-1"></i> استضافة مجانية</li>
-                        <li class="flex gap-2"><i class="fa-solid fa-check text-brand-500 mt-1"></i> تحكم كامل</li>
+                    <h2 class="text-4xl md:text-6xl font-black mb-8">
+                        حولنا مشاكلك لـ <br>
+                        <span class="gradient-text">نظام آلي متكامل</span>
+                    </h2>
+                    <ul class="space-y-6">
+                        <li class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-brand-500/20 flex items-center justify-center shrink-0 mt-1"><i class="fa-solid fa-check text-brand-400"></i></div>
+                            <div>
+                                <h4 class="text-xl font-bold mb-1">استمرارية مضمونة</h4>
+                                <p class="text-gray-400">النظام مش بينام، مش بياخد أجازات، وبينشر في المواعيد بالثانية.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-brand-500/20 flex items-center justify-center shrink-0 mt-1"><i class="fa-solid fa-check text-brand-400"></i></div>
+                            <div>
+                                <h4 class="text-xl font-bold mb-1">جودة واحترافية</h4>
+                                <p class="text-gray-400">محتوى مكتوب "بصوتك" وأسلوبك الخاص، وصور متصممة بهويتك البصرية.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-brand-500/20 flex items-center justify-center shrink-0 mt-1"><i class="fa-solid fa-check text-brand-400"></i></div>
+                            <div>
+                                <h4 class="text-xl font-bold mb-1">توفير ضخم</h4>
+                                <p class="text-gray-400">ادفع مرة واحدة لتركيب النظام، وانسى المرتبات الشهرية للأبد.</p>
+                            </div>
+                        </li>
                     </ul>
-                    <a href="https://github.com/m0shaban/Tech-Influencer-bot" target="_blank" class="block w-full py-3 rounded-lg border border-white/20 text-center hover:bg-white hover:text-black transition font-bold">
-                        تحميل الكود
-                    </a>
                 </div>
-
-                <!-- Managed -->
-                <div class="p-1 rounded-2xl bg-gradient-to-b from-brand-500 to-accent-500 relative transform md:-translate-y-4">
-                    <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-500 to-accent-500 text-white px-4 py-1 rounded-full text-xs font-bold shadow-lg">
-                        الأكثر طلباً
+                <!-- Visual representation of value -->
+                <div class="glass p-8 rounded-3xl relative">
+                    <div class="absolute -top-10 -right-10 w-40 h-40 bg-brand-500/20 rounded-full blur-[50px]"></div>
+                    <div class="bg-dark-800 rounded-2xl p-6 border border-white/5">
+                        <div class="flex justify-between items-center mb-6">
+                            <span class="text-gray-400 font-mono text-sm">Activity Log</span>
+                            <div class="flex gap-2">
+                                <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                                <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                                <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                            </div>
+                        </div>
+                        <div class="space-y-4 font-mono text-sm">
+                            <div class="flex items-center gap-3 text-green-400">
+                                <i class="fa-solid fa-check-circle"></i> <span>تم جلب الأخبار الجديدة</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-green-400">
+                                <i class="fa-solid fa-check-circle"></i> <span>تمت صياغة المحتوى (Style: Friendly)</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-green-400">
+                                <i class="fa-solid fa-check-circle"></i> <span>تم تصميم الصورة (Brand Colors)</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-blue-400 pl-4 border-l border-white/10">
+                                <i class="fa-solid fa-paper-plane"></i> <span>جاري النشر على فيسبوك...</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-pink-400 pl-4 border-l border-white/10">
+                                <i class="fa-solid fa-paper-plane"></i> <span>جاري النشر على انستجرام...</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-sky-400 pl-4 border-l border-white/10">
+                                <i class="fa-solid fa-paper-plane"></i> <span>جاري النشر على تليجرام...</span>
+                            </div>
+                            <div class="mt-6 pt-4 border-t border-white/10 text-center text-gray-400 text-xs">
+                                النظام يعمل بكفاءة 100%
+                            </div>
+                        </div>
                     </div>
-                    <div class="bg-dark-900 p-8 rounded-xl h-full flex flex-col">
-                        <div class="mb-4 text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-accent-400 font-bold uppercase tracking-widest text-sm">Managed</div>
-                        <h3 class="text-4xl font-bold mb-2">مُدار</h3>
-                        <p class="text-gray-400 text-sm mb-6">نحن نعدّه لك بالكامل</p>
-                        <ul class="space-y-3 mb-8 flex-1">
-                            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> إعداد السيرفرات</li>
-                            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> إضافة مصادرك الخاصة</li>
-                            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> White-label (اسمك)</li>
-                            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> دعم فني</li>
-                        </ul>
-                        <a href="https://t.me/m0shaban" target="_blank" class="block w-full py-3 rounded-lg bg-gradient-to-r from-brand-600 to-accent-600 text-center hover:shadow-lg hover:shadow-brand-500/25 transition font-bold text-white">
-                            تواصل معنا
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Enterprise -->
-                <div class="glass p-8 rounded-2xl border border-white/10 flex flex-col">
-                    <div class="mb-4 text-purple-400 font-bold uppercase tracking-widest text-sm">Enterprise</div>
-                    <h3 class="text-4xl font-bold mb-2">مؤسسات</h3>
-                    <p class="text-gray-400 text-sm mb-6">توسع بلا حدود</p>
-                    <ul class="space-y-3 mb-8 flex-1">
-                        <li class="flex gap-2"><i class="fa-solid fa-check text-purple-500 mt-1"></i> إدارة حسابات متعددة</li>
-                        <li class="flex gap-2"><i class="fa-solid fa-check text-purple-500 mt-1"></i> Dedicated Infrastructure</li>
-                        <li class="flex gap-2"><i class="fa-solid fa-check text-purple-500 mt-1"></i> SLA Guarantees</li>
-                    </ul>
-                    <a href="#" class="block w-full py-3 rounded-lg border border-white/20 text-center hover:bg-white hover:text-black transition font-bold">
-                        طلب عرض سعر
-                    </a>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="py-10 border-t border-white/10 bg-black/20">
+    <!-- Platforms Section -->
+    <section id="platforms" class="py-20 bg-gradient-to-b from-dark-900 via-dark-800 to-dark-900">
         <div class="container mx-auto px-6 text-center">
-            <div class="flex justify-center items-center gap-2 mb-6 opacity-70">
-                <i class="fa-solid fa-robot text-brand-400 text-xl"></i>
-                <span class="text-xl font-bold">RoboVAI</span>
-            </div>
-            <p class="text-gray-500 text-sm mb-6">
-                &copy; 2026 RoboVAI Solutions via <a href="https://github.com/m0shaban" class="text-brand-400 hover:underline">m0shaban</a>. All rights reserved.
+            <h2 class="text-3xl font-bold mb-12">نربطك بالعالم.. <span class="text-brand-400">بكل مكان</span> 🌍</h2>
+            <p class="text-gray-400 mb-12 max-w-2xl mx-auto">
+                اياً كانت المنصة اللي عملاءك عليها، النظام بتاعنا هيوصلهم.
             </p>
-            <div class="flex justify-center gap-6">
-                <a href="https://t.me/nextlevelegypt" class="text-gray-400 hover:text-brand-400 transition"><i class="fa-brands fa-telegram text-xl"></i></a>
-                <a href="https://tech-influencer-bot.streamlit.app/" class="text-gray-400 hover:text-red-400 transition"><i class="fa-solid fa-gauge-high text-xl"></i></a>
-                <a href="https://github.com/m0shaban/Tech-Influencer-bot" class="text-gray-400 hover:text-white transition"><i class="fa-brands fa-github text-xl"></i></a>
+            
+            <div class="flex flex-wrap justify-center gap-6 md:gap-10">
+                <!-- Platform Items -->
+                <div class="flex flex-col items-center gap-3 group cursor-pointer">
+                    <div class="w-20 h-20 glass rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition duration-300 border-b-4 border-blue-600">
+                        <i class="fa-brands fa-facebook-f text-blue-500"></i>
+                    </div>
+                    <span class="font-bold text-gray-400 group-hover:text-white">Facebook</span>
+                </div>
+                
+                <div class="flex flex-col items-center gap-3 group cursor-pointer">
+                    <div class="w-20 h-20 glass rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition duration-300 border-b-4 border-pink-600">
+                        <i class="fa-brands fa-instagram text-pink-500"></i>
+                    </div>
+                    <span class="font-bold text-gray-400 group-hover:text-white">Instagram</span>
+                </div>
+
+                <div class="flex flex-col items-center gap-3 group cursor-pointer">
+                    <div class="w-20 h-20 glass rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition duration-300 border-b-4 border-sky-500">
+                        <i class="fa-brands fa-telegram text-sky-400"></i>
+                    </div>
+                    <span class="font-bold text-gray-400 group-hover:text-white">Telegram</span>
+                </div>
+
+                <div class="flex flex-col items-center gap-3 group cursor-pointer">
+                    <div class="w-20 h-20 glass rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition duration-300 border-b-4 border-white">
+                        <i class="fa-brands fa-x-twitter text-white"></i>
+                    </div>
+                    <span class="font-bold text-gray-400 group-hover:text-white">Twitter / X</span>
+                </div>
+
+                <div class="flex flex-col items-center gap-3 group cursor-pointer">
+                    <div class="w-20 h-20 glass rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition duration-300 border-b-4 border-indigo-600">
+                        <i class="fa-brands fa-discord text-indigo-500"></i>
+                    </div>
+                    <span class="font-bold text-gray-400 group-hover:text-white">Discord</span>
+                </div>
+
+                <div class="flex flex-col items-center gap-3 group cursor-pointer">
+                    <div class="w-20 h-20 glass rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition duration-300 border-b-4 border-blue-700">
+                        <i class="fa-brands fa-linkedin-in text-blue-600"></i>
+                    </div>
+                    <span class="font-bold text-gray-400 group-hover:text-white">LinkedIn</span>
+                </div>
+                
+                <div class="flex flex-col items-center gap-3 group cursor-pointer">
+                    <div class="w-20 h-20 glass rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition duration-300 border-b-4 border-green-500">
+                        <i class="fa-brands fa-whatsapp text-green-500"></i>
+                    </div>
+                    <span class="font-bold text-gray-400 group-hover:text-white">WhatsApp</span>
+                </div>
+
+                 <div class="flex flex-col items-center gap-3 group cursor-pointer">
+                    <div class="w-20 h-20 glass rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition duration-300 border-dashed border-2 border-gray-600">
+                        <i class="fa-solid fa-plus text-gray-500"></i>
+                    </div>
+                    <span class="font-bold text-gray-400 group-hover:text-white">وغيرها...</span>
+                </div>
             </div>
+        </div>
+    </section>
+
+    <!-- Pricing Packages -->
+    <section id="pricing" class="py-24 relative container mx-auto px-6">
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold mb-4">اختر خطة الراحة الخاصة بك 📦</h2>
+            <p class="text-gray-400 text-lg">باقات تناسب جميع أحجام البيزنس.. ادفع مرة واحدة (Setup) أو اشتراك، حسب احتياجك</p>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            <!-- Basic -->
+            <div class="glass p-8 rounded-2xl hover:bg-white/5 transition duration-300 flex flex-col relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-gray-500/10 rounded-bl-full -mr-4 -mt-4 transition group-hover:bg-gray-500/20"></div>
+                <h3 class="text-2xl font-bold mb-2">البداية</h3>
+                <p class="text-gray-400 text-sm mb-6">لأصحاب الصفحات الناشئة</p>
+                <div class="text-3xl font-bold mb-6 text-white">ممتازة <span class="text-sm font-normal text-gray-400">/ للبدايات</span></div>
+                
+                <ul class="space-y-4 mb-8 flex-1 text-gray-300 text-sm">
+                    <li class="flex gap-3"><i class="fa-solid fa-check text-brand-500"></i> ربط منصتين (مثلاً Facebok & Telegram)</li>
+                    <li class="flex gap-3"><i class="fa-solid fa-check text-brand-500"></i> 5 أخبار يومياً</li>
+                    <li class="flex gap-3"><i class="fa-solid fa-check text-brand-500"></i> شخصية واحدة (Tone) للمحتوى</li>
+                    <li class="flex gap-3"><i class="fa-solid fa-check text-brand-500"></i> تصميمات بسيطة</li>
+                </ul>
+                <a href="#contact" class="block w-full py-3 rounded-xl border border-white/20 text-center hover:bg-white hover:text-black transition font-bold">
+                    اطلب عرض سعر
+                </a>
+            </div>
+
+            <!-- Pro -->
+            <div class="p-[1px] rounded-2xl bg-gradient-to-b from-brand-500 to-accent-500 relative transform md:-translate-y-4 shadow-2xl shadow-brand-500/20">
+                <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-500 to-accent-500 text-white px-6 py-1 rounded-full text-sm font-bold shadow-lg whitespace-nowrap">
+                    الأكثر مبيعاً 🔥
+                </div>
+                <div class="bg-dark-900 p-8 rounded-[15px] h-full flex flex-col">
+                    <h3 class="text-2xl font-bold mb-2 text-white">المحترف</h3>
+                    <p class="text-gray-400 text-sm mb-6">للبيزنس اللي عايز يكبر بسرعة</p>
+                    <div class="text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-accent-400">شاملة <span class="text-sm font-normal text-gray-400 text-white">/ كل شيء</span></div>
+                    
+                    <ul class="space-y-4 mb-8 flex-1 text-gray-300 text-sm">
+                        <li class="flex gap-3"><i class="fa-solid fa-check text-green-400"></i> ربط 5 منصات (Omnichannel)</li>
+                        <li class="flex gap-3"><i class="fa-solid fa-check text-green-400"></i> نشر بلا حدود (Unlimited)</li>
+                        <li class="flex gap-3"><i class="fa-solid fa-check text-green-400"></i> تخصيص كامل للعلامة التجارية</li>
+                        <li class="flex gap-3"><i class="fa-solid fa-check text-green-400"></i> لوحة تحكم خاصة بك</li>
+                        <li class="flex gap-3"><i class="fa-solid fa-check text-green-400"></i> دعم فني مخصص</li>
+                    </ul>
+                    <a href="#contact" class="block w-full py-4 rounded-xl bg-gradient-to-r from-brand-600 to-accent-600 text-center hover:shadow-lg hover:shadow-brand-500/40 transition font-bold text-white">
+                        تواصل معنا الآن
+                    </a>
+                </div>
+            </div>
+
+            <!-- Custom -->
+            <div class="glass p-8 rounded-2xl hover:bg-white/5 transition duration-300 flex flex-col relative overflow-hidden group">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-bl-full -mr-4 -mt-4 transition group-hover:bg-purple-500/20"></div>
+                <h3 class="text-2xl font-bold mb-2">مؤسسات</h3>
+                <p class="text-gray-400 text-sm mb-6">حلول مخصصة للشركات الكبرى</p>
+                <div class="text-3xl font-bold mb-6 text-white">Enterprise</div>
+                
+                <ul class="space-y-4 mb-8 flex-1 text-gray-300 text-sm">
+                    <li class="flex gap-3"><i class="fa-solid fa-check text-purple-400"></i> إدارة عدة حسابات/براندات</li>
+                    <li class="flex gap-3"><i class="fa-solid fa-check text-purple-400"></i> سيرفرات خاصة (Dedicated)</li>
+                    <li class="flex gap-3"><i class="fa-solid fa-check text-purple-400"></i> عقود صيانة سنوية</li>
+                    <li class="flex gap-3"><i class="fa-solid fa-check text-purple-400"></i> تكامل مع أنظمتك (API)</li>
+                </ul>
+                <a href="#contact" class="block w-full py-3 rounded-xl border border-white/20 text-center hover:bg-white hover:text-black transition font-bold">
+                    إتصل بنا
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer / Contact -->
+    <footer id="contact" class="py-12 border-t border-white/10 bg-black/40">
+        <div class="container mx-auto px-6 text-center">
+            <h2 class="text-3xl font-bold mb-8">جاهز تريح دماغك؟ ☕</h2>
+            <div class="flex flex-col md:flex-row justify-center gap-6 mb-12">
+                <a href="https://t.me/m0shaban" target="_blank" class="flex items-center justify-center gap-3 px-8 py-4 bg-[#0088cc] rounded-xl font-bold text-white hover:bg-[#0077b5] transition hover:-translate-y-1 shadow-lg shadow-blue-500/20">
+                    <i class="fa-brands fa-telegram text-2xl"></i> راسلنا على تليجرام
+                </a>
+                <a href="mailto:contact@robovai.com" class="flex items-center justify-center gap-3 px-8 py-4 glass rounded-xl font-bold text-white hover:bg-white/10 transition hover:-translate-y-1">
+                    <i class="fa-solid fa-envelope text-2xl text-gray-400"></i> البريد الإلكتروني
+                </a>
+            </div>
+            
+            <p class="text-gray-500 text-sm">
+                &copy; 2026 RoboVAI Solutions. All rights reserved. <br>
+                <span class="text-xs opacity-50">Designed for Business Efficiency.</span>
+            </p>
         </div>
     </footer>
 
