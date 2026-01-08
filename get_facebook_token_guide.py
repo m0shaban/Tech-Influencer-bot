@@ -8,7 +8,8 @@ print("📘 How to Get Facebook Page Access Token")
 print("كيفية الحصول على Facebook Page Access Token")
 print("=" * 70)
 
-print("""
+print(
+    """
 STEP 1: Create a Facebook App
 الخطوة 1: إنشاء تطبيق فيسبوك
 ----------------------------------------------------------------------
@@ -128,7 +129,8 @@ QUICK METHOD (Using Graph API Explorer directly):
 That's it! You're ready to post to your Facebook page!
 هذا كل شيء! أنت جاهز للنشر على صفحتك!
 
-""")
+"""
+)
 
 print("=" * 70)
 print("📝 Test Your Setup:")

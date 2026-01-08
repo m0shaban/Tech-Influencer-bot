@@ -36,20 +36,18 @@ services:
       - key: DEVTO_API_KEY
         sync: false
 
-      # Cloudflare R2 (recommended for cross-platform public image URLs)
-      - key: R2_ACCESS_KEY_ID
+      # Storj (S3-compatible) for cross-platform public image URLs
+      - key: STORJ_ACCESS_KEY_ID
         sync: false
-      - key: R2_SECRET_ACCESS_KEY
+      - key: STORJ_SECRET_ACCESS_KEY
         sync: false
-      - key: R2_ENDPOINT_URL
+      - key: STORJ_ENDPOINT_URL
         sync: false
-      - key: R2_BUCKET
+      - key: STORJ_BUCKET
         sync: false
-      - key: R2_PUBLIC_BASE_URL
-        sync: false
-      - key: R2_PREFIX
+      - key: STORJ_PUBLIC_BASE_URL
         sync: false
 
-      # Optional fallback if you also run a static image server elsewhere
+      # Optional fallback (only if you run your own static image server)
       - key: IMAGE_BASE_URL
         sync: false

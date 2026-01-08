@@ -76,8 +76,8 @@ python main.py & streamlit run dashboard.py --server.port=$PORT --server.address
 ### المميزات
 
 - ✅ 750 hours/month مجاناً
-- ✅ Auto-sleep بعد 15 دقيقة inactivity
-- ✅ Web Service + Background Worker منفصلين
+- ✅ مناسب لتشغيل البوت كـ Worker
+- ✅ يمنع تعارض Telegram لو شغلت نسخة واحدة فقط
 
 ### الخطوات
 
@@ -98,18 +98,16 @@ python main.py & streamlit run dashboard.py --server.port=$PORT --server.address
 
 #### 4. Configure Services
 
-Render هينشئ:
+النهاردة (أفضل حل إنتاجي):
 
-- **Web Service:** Streamlit Dashboard (ينام بعد 15 دقيقة)
-- **Background Worker:** Telegram Bot (يشتغل 24/7)
+- **Background Worker فقط:** Telegram Bot (Polling)
+- **Dashboard:** على Streamlit Cloud (منفصل)
+- **Images:** على Storj (Public URLs)
 
-### Keep Dashboard Awake (اختياري)
+### ملاحظة مهمة جداً (Telegram Conflict)
 
-استخدم **UptimeRobot** أو **Cron-job.org** للـ ping:
-
-```
-https://your-app.onrender.com
-```
+لازم يكون فيه **نسخة واحدة فقط** من البوت شغالة (Polling).
+يعني لو شغال على Render، اقفل أي Deploy تاني (Railway/Local) بنفس التوكن.
 
 ---
 

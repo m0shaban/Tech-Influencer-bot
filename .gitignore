@@ -29,6 +29,9 @@ env/
 # Environment Variables
 .env
 
+# Secrets / credential exports
+Storj-*.txt
+
 # IDEs
 .vscode/
 .idea/
@@ -48,6 +51,9 @@ bot.log
 # Data
 data/
 *.json.lock
+
+# Runtime-generated images
+images/
 
 # Streamlit
 .streamlit/

@@ -673,7 +673,13 @@ class OGImageGenerator:
 
     def _load_backgrounds(self) -> list:
         """Load available background images"""
-        return list(self.brands_dir.glob("*.png"))
+        # Primary location (optional): images/brand_backgrounds/*.png
+        backgrounds = list(self.brands_dir.glob("*.png"))
+        if backgrounds:
+            return backgrounds
+
+        # Fallback location (tracked in repo): ./background1.png, ./background2.png, ...
+        return list(BASE_DIR.glob("background*.png"))
 
     def generate_og_image(self, headline: str) -> Dict[str, Optional[str]]:
         """

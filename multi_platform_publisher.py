@@ -206,19 +206,27 @@ class MultiPlatformPublisher:
                     results["telegram"] = result
 
                 elif platform == "linkedin":
-                    result = self._publish_linkedin(caption_for_platform, link, image_for_platform)
+                    result = self._publish_linkedin(
+                        caption_for_platform, link, image_for_platform
+                    )
                     results["linkedin"] = result
 
                 elif platform == "discord":
-                    result = self._publish_discord(caption_for_platform, link, image_for_platform)
+                    result = self._publish_discord(
+                        caption_for_platform, link, image_for_platform
+                    )
                     results["discord"] = result
 
                 elif platform == "medium":
-                    result = self._publish_medium(caption_for_platform, link, image_for_platform)
+                    result = self._publish_medium(
+                        caption_for_platform, link, image_for_platform
+                    )
                     results["medium"] = result
 
                 elif platform == "twitter":
-                    result = self._publish_twitter(caption_for_platform, link, image_for_platform)
+                    result = self._publish_twitter(
+                        caption_for_platform, link, image_for_platform
+                    )
                     results["twitter"] = result
 
                 elif platform == "blogger":
@@ -231,11 +239,15 @@ class MultiPlatformPublisher:
                     results["blogger"] = result
 
                 elif platform == "reddit":
-                    result = self._publish_reddit(caption_for_platform, link, image_for_platform)
+                    result = self._publish_reddit(
+                        caption_for_platform, link, image_for_platform
+                    )
                     results["reddit"] = result
 
                 elif platform == "facebook":
-                    result = self._publish_facebook(caption_for_platform, link, image_for_platform)
+                    result = self._publish_facebook(
+                        caption_for_platform, link, image_for_platform
+                    )
                     results["facebook"] = result
 
                 elif platform == "devto":
@@ -451,6 +463,7 @@ class MultiPlatformPublisher:
         else:
             # Text-only post
             return publisher.publish_text(message=caption)
+
     def _publish_devto(
         self,
         caption: str,
@@ -469,6 +482,7 @@ class MultiPlatformPublisher:
             link=link,
             image_url=image_url,
         )
+
     def get_platform_status(self) -> Dict[str, bool]:
         """Check which platforms are configured and ready"""
         status = {}

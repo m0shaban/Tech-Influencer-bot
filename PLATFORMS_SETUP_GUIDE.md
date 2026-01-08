@@ -7,21 +7,25 @@
 ## ✅ المنصات المفعّلة حالياً:
 
 ### 1️⃣ Telegram ✅
+
 - **الحالة**: مفعّل
 - **المطلوب**: `TELEGRAM_TOKEN`, `CHANNEL_ID`
 - **الاستخدام**: قناة النشر الرئيسية
 
 ### 2️⃣ Discord ✅
+
 - **الحالة**: مفعّل
 - **المطلوب**: `DISCORD_WEBHOOK_URL`
 - **الاستخدام**: مجتمع التقنية
 
 ### 3️⃣ Blogger ✅
+
 - **الحالة**: مفعّل
 - **المطلوب**: OAuth 2.0 tokens
 - **الاستخدام**: مدونة تفصيلية
 
 ### 4️⃣ Facebook ✅
+
 - **الحالة**: مفعّل
 - **المطلوب**: `FACEBOOK_PAGE_ACCESS_TOKEN`, `FACEBOOK_PAGE_ID`
 - **الاستخدام**: صفحة الفيسبوك
@@ -31,9 +35,11 @@
 ## 🆕 المنصات المتاحة (تحتاج إعداد):
 
 ### 5️⃣ Dev.to 🆕
+
 **الوصف**: منصة للمطورين لنشر المقالات التقنية والشروحات
 
 **لماذا مفيدة؟**
+
 - ✅ مجتمع كبير من المطورين (1M+ مستخدم)
 - ✅ SEO قوي جداً
 - ✅ Free forever
@@ -41,6 +47,7 @@
 - ✅ تفاعل عالي على المحتوى التقني
 
 **خطوات التفعيل:**
+
 1. اذهب لـ https://dev.to
 2. سجل دخول أو أنشئ حساب جديد
 3. اذهب لـ Settings → Extensions: https://dev.to/settings/extensions
@@ -60,6 +67,7 @@
    ```
 
 **اختبار:**
+
 ```bash
 python devto_publisher.py
 ```
@@ -67,14 +75,17 @@ python devto_publisher.py
 ---
 
 ### 6️⃣ LinkedIn 💼
+
 **الوصف**: شبكة احترافية لنشر محتوى مهني
 
 **لماذا مفيدة؟**
+
 - ✅ جمهور احترافي (B2B)
 - ✅ مناسبة للمحتوى التقني والريادي
 - ✅ Reach عالي للمحتوى الجيد
 
 **خطوات التفعيل:**
+
 1. اذهب لـ https://www.linkedin.com/developers/
 2. أنشئ تطبيق جديد
 3. احصل على Access Token
@@ -89,14 +100,17 @@ python devto_publisher.py
 ---
 
 ### 7️⃣ Twitter / X 🐦
+
 **الوصف**: منصة micro-blogging للأخبار السريعة
 
 **لماذا مفيدة؟**
+
 - ✅ انتشار سريع جداً
 - ✅ مناسبة للأخبار العاجلة
 - ✅ Viral potential عالي
 
 **خطوات التفعيل:**
+
 1. اذهب لـ https://developer.twitter.com/
 2. أنشئ Project & App
 3. احصل على API credentials
@@ -111,14 +125,17 @@ python devto_publisher.py
 ---
 
 ### 8️⃣ Reddit 🤖
+
 **الوصف**: مجتمعات متخصصة (subreddits)
 
 **لماذا مفيدة؟**
+
 - ✅ مجتمعات تقنية كبيرة (r/programming, r/technology)
 - ✅ تفاعل عميق ومناقشات طويلة
 - ✅ مصداقية عالية
 
 **خطوات التفعيل:**
+
 1. اذهب لـ https://www.reddit.com/prefs/apps
 2. أنشئ تطبيق من نوع "script"
 3. احصل على Client ID & Secret
@@ -134,14 +151,17 @@ python devto_publisher.py
 ---
 
 ### 9️⃣ Medium 📝
+
 **الوصف**: منصة نشر مقالات طويلة وتحليلية
 
 **لماذا مفيدة؟**
+
 - ✅ قراء يبحثون عن محتوى عميق
 - ✅ SEO ممتاز
 - ✅ Monetization options
 
 **خطوات التفعيل:**
+
 1. اذهب لـ https://medium.com/me/settings/security
 2. احصل على Integration Token
 3. أضف للـ `.env`:
@@ -157,9 +177,11 @@ python devto_publisher.py
 ## 🚀 منصات إضافية مقترحة:
 
 ### 🔟 Hashnode
+
 **الوصف**: منصة blogging للمطورين (منافس Dev.to)
 
 **المميزات:**
+
 - ✅ Custom domain مجاني
 - ✅ Newsletter مدمج
 - ✅ SEO قوي
@@ -171,27 +193,32 @@ python devto_publisher.py
 ---
 
 ### 1️⃣1️⃣ Substack
+
 **الوصف**: منصة newsletters احترافية
 
 **المميزات:**
+
 - ✅ بناء قائمة بريدية
 - ✅ Monetization (subscriptions)
 - ✅ Analytics قوية
 
-**الاستخدام المقترح:** 
+**الاستخدام المقترح:**
 Newsletter أسبوعي يلخص أهم الأخبار
 
 ---
 
 ### 1️⃣2️⃣ Instagram
+
 **الوصف**: منصة visual content
 
 **المميزات:**
+
 - ✅ Reach كبير جداً
 - ✅ Stories & Reels
 - ✅ Young audience
 
 **الاستخدام المقترح:**
+
 - تحويل الأخبار لـ Infographics
 - Stories يومية
 - Carousel posts
@@ -201,14 +228,17 @@ Newsletter أسبوعي يلخص أهم الأخبار
 ---
 
 ### 1️⃣3️⃣ TikTok
+
 **الوصف**: short-form video
 
 **المميزات:**
+
 - ✅ أعلى reach organic
 - ✅ Algorithm قوي جداً
 - ✅ Viral potential
 
 **الاستخدام المقترح:**
+
 - فيديوهات قصيرة (60 ثانية)
 - شروحات سريعة
 - Tech tips
@@ -218,9 +248,11 @@ Newsletter أسبوعي يلخص أهم الأخبار
 ---
 
 ### 1️⃣4️⃣ YouTube Community
+
 **الوصف**: Community posts على يوتيوب
 
 **المميزات:**
+
 - ✅ Reach من subscribers
 - ✅ يدعم Text + Images + Polls
 - ✅ مكمل لقناة يوتيوب
@@ -228,9 +260,11 @@ Newsletter أسبوعي يلخص أهم الأخبار
 ---
 
 ### 1️⃣5️⃣ WhatsApp Channel
+
 **الوصف**: قنوات البث على واتساب
 
 **المميزات:**
+
 - ✅ أعلى engagement rate
 - ✅ مستخدمين كثير في الوطن العربي
 - ✅ Notifications قوية
@@ -238,9 +272,11 @@ Newsletter أسبوعي يلخص أهم الأخبار
 ---
 
 ### 1️⃣6️⃣ Telegram Stories
+
 **الوصف**: Stories على تليجرام (feature جديد)
 
 **المميزات:**
+
 - ✅ مدمج مع قناتنا الحالية
 - ✅ 24 hours visibility
 - ✅ Interactive
@@ -250,16 +286,19 @@ Newsletter أسبوعي يلخص أهم الأخبار
 ## 📊 الترشيحات حسب الأولوية:
 
 ### 🥇 أولوية عالية (افعلهم الآن):
+
 1. **Dev.to** ← أسهل + أكبر فائدة للمحتوى التقني ✅ **تم إضافته!**
 2. **LinkedIn** ← موجود في .env، فقط فعّله
 3. **Twitter** ← مهم جداً للانتشار السريع
 
 ### 🥈 أولوية متوسطة:
+
 4. **Hashnode** ← بديل Dev.to
 5. **WhatsApp Channel** ← engagement عالي
 6. **Instagram** ← يحتاج تصميم صور
 
 ### 🥉 أولوية منخفضة (مستقبلاً):
+
 7. **YouTube Community** ← إذا عملت قناة يوتيوب
 8. **TikTok** ← يحتاج video production
 9. **Substack** ← للـ premium content
@@ -269,11 +308,13 @@ Newsletter أسبوعي يلخص أهم الأخبار
 ## ⚙️ كيف تفعّل أي منصة:
 
 ### الخطوة 1: أضف API Key للـ .env
+
 ```env
 PLATFORM_API_KEY=your_key_here
 ```
 
 ### الخطوة 2: فعّل في platform_config.json
+
 ```json
 "platform_name": {
   "enabled": true,
@@ -286,6 +327,7 @@ PLATFORM_API_KEY=your_key_here
 ```
 
 ### الخطوة 3: اختبر
+
 ```bash
 python platform_name_publisher.py
 ```
@@ -295,19 +337,23 @@ python platform_name_publisher.py
 ## 💡 نصائح:
 
 1. **لا تفعّل كل المنصات مرة واحدة**
+
    - ابدأ بـ 3-4 منصات
    - راقب الأداء
    - ثم أضف تدريجياً
 
 2. **خصص المحتوى لكل منصة**
+
    - استخدم `custom_prompt` في platform_config.json
    - كل منصة لها أسلوب مختلف
 
 3. **راقب Analytics**
+
    - شوف أي منصة تعطي engagement أحسن
    - ركز على الأفضل
 
 4. **استخدم Staggered Publishing**
+
    - لا تنشر في نفس الوقت على كل منصة
    - وزع كل 5-10 دقائق
 
@@ -320,6 +366,7 @@ python platform_name_publisher.py
 ## ❓ محتاج مساعدة؟
 
 إذا واجهت مشكلة في إعداد أي منصة:
+
 1. شوف الـ error message
 2. تأكد من الـ API keys صحيحة
 3. اختبر بـ `test_connection()` function

@@ -162,17 +162,27 @@ def _ensure_string(value: Any) -> str:
     return str(value or "").strip()
 
 
-def _normalize_ai_result(parsed: Dict[str, Any], *, link: str) -> Optional[Dict[str, Any]]:
+def _normalize_ai_result(
+    parsed: Dict[str, Any], *, link: str
+) -> Optional[Dict[str, Any]]:
     telegram_post = _strip_code_fences(_ensure_string(parsed.get("telegram_post")))
     facebook_post = _strip_code_fences(_ensure_string(parsed.get("facebook_post")))
     blog_title = _ensure_string(parsed.get("blog_title"))
     blog_content_md = _strip_code_fences(_ensure_string(parsed.get("blog_content_md")))
     discord_msg = _strip_code_fences(_ensure_string(parsed.get("discord_msg")))
 
-    if not (telegram_post and facebook_post and blog_title and blog_content_md and discord_msg):
+    if not (
+        telegram_post
+        and facebook_post
+        and blog_title
+        and blog_content_md
+        and discord_msg
+    ):
         return None
 
-    joined = "\n".join([telegram_post, facebook_post, blog_title, blog_content_md, discord_msg])
+    joined = "\n".join(
+        [telegram_post, facebook_post, blog_title, blog_content_md, discord_msg]
+    )
     if _contains_banned_phrases(joined):
         return None
 
@@ -241,7 +251,9 @@ def rewrite_with_ai(
 
     model_candidates = [*env_models, *DEFAULT_MODEL_CANDIDATES]
     seen_models: set[str] = set()
-    model_candidates = [m for m in model_candidates if not (m in seen_models or seen_models.add(m))]
+    model_candidates = [
+        m for m in model_candidates if not (m in seen_models or seen_models.add(m))
+    ]
 
     last_error: Optional[str] = None
     for model_name in model_candidates:
@@ -252,8 +264,10 @@ def rewrite_with_ai(
                     {"role": "system", "content": effective_system_prompt},
                     {"role": "user", "content": user_content},
                 ],
-                max_tokens=int(os.getenv("GROQ_MAX_TOKENS", "0") or 0) or DEFAULT_MAX_TOKENS,
-                temperature=float(os.getenv("GROQ_TEMPERATURE", "0") or 0) or DEFAULT_TEMPERATURE,
+                max_tokens=int(os.getenv("GROQ_MAX_TOKENS", "0") or 0)
+                or DEFAULT_MAX_TOKENS,
+                temperature=float(os.getenv("GROQ_TEMPERATURE", "0") or 0)
+                or DEFAULT_TEMPERATURE,
                 response_format={"type": "json_object"},
             )
 
@@ -265,7 +279,9 @@ def rewrite_with_ai(
             parsed = _parse_json_response(content)
             if parsed is None:
                 snippet = content.strip().replace("\n", " ")
-                _set_last_error(f"Invalid JSON from AI (model={model_name}): {snippet[:180]}")
+                _set_last_error(
+                    f"Invalid JSON from AI (model={model_name}): {snippet[:180]}"
+                )
                 return None
 
             normalized = _normalize_ai_result(parsed, link=link)
@@ -305,7 +321,11 @@ def rewrite_with_ai(
                         temperature=0.2,
                         response_format={"type": "json_object"},
                     )
-                    content = resp.choices[0].message.content if resp and resp.choices else None
+                    content = (
+                        resp.choices[0].message.content
+                        if resp and resp.choices
+                        else None
+                    )
                     parsed = _parse_json_response(content or "")
                     if parsed:
                         normalized = _normalize_ai_result(parsed, link=link)
@@ -315,11 +335,14 @@ def rewrite_with_ai(
                     pass
 
             lowered = detail.lower()
-            if "decommissioned" in lowered or "no longer supported" in lowered or "not found" in lowered:
+            if (
+                "decommissioned" in lowered
+                or "no longer supported" in lowered
+                or "not found" in lowered
+            ):
                 continue
             _set_last_error(last_error)
             return None
 
     _set_last_error(last_error or "AI request failed")
     return None
-

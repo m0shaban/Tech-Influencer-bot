@@ -27,7 +27,9 @@ def r2_is_configured() -> bool:
     )
 
 
-def upload_file_to_r2(local_path: str, key: str, content_type: Optional[str] = None) -> str:
+def upload_file_to_r2(
+    local_path: str, key: str, content_type: Optional[str] = None
+) -> str:
     """Upload a local file to Cloudflare R2 (S3-compatible) and return its public URL.
 
     Requires env vars:
@@ -51,7 +53,9 @@ def upload_file_to_r2(local_path: str, key: str, content_type: Optional[str] = N
 
     session = Session(
         aws_access_key_id=_env_any("R2_ACCESS_KEY_ID", "STORJ_ACCESS_KEY_ID"),
-        aws_secret_access_key=_env_any("R2_SECRET_ACCESS_KEY", "STORJ_SECRET_ACCESS_KEY"),
+        aws_secret_access_key=_env_any(
+            "R2_SECRET_ACCESS_KEY", "STORJ_SECRET_ACCESS_KEY"
+        ),
     )
     s3 = session.client(
         "s3",

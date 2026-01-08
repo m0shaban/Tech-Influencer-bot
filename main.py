@@ -236,8 +236,14 @@ async def fetch_and_publish(
             "telegram": {"caption": telegram_post or caption},
             "facebook": {"caption": facebook_post or caption},
             "discord": {"caption": discord_msg or caption},
-            "blogger": {"caption": blog_content_md or caption, "title": blog_title or None},
-            "devto": {"caption": blog_content_md or caption, "title": blog_title or None},
+            "blogger": {
+                "caption": blog_content_md or caption,
+                "title": blog_title or None,
+            },
+            "devto": {
+                "caption": blog_content_md or caption,
+                "title": blog_title or None,
+            },
         }
 
         # Enable scheduler and reports
@@ -764,18 +770,20 @@ async def post_init(app: Application) -> None:
             BotCommand("test_discord", "Admin: test Discord"),
         ]
     )
-    
+
     # Start background scheduler task (will start when bot starts)
     print("🕐 Background scheduler will start with bot...")
     try:
         from scheduled_publisher_task import start_scheduler_task
         import asyncio
+
         scheduler_task = start_scheduler_task()
         # Create task in the running loop
         asyncio.create_task(scheduler_task.run())
         print("✅ Scheduler task queued successfully")
     except Exception as e:
         print(f"⚠️ Failed to start scheduler: {e}")
+
 
 def main() -> None:
     if not TELEGRAM_TOKEN:

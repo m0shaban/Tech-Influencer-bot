@@ -62,12 +62,11 @@ Render will automatically detect `render.yaml` and show you:
 
 **Services to be created:**
 
-- ✅ **robobot-worker** (Background Worker) - Telegram Bot
-- ✅ **robobot-dashboard** (Web Service) - Streamlit Dashboard
+- ✅ **robovai-worker** (Background Worker) - Telegram Bot (Polling)
 
 ### 2.4 Add Environment Variables
 
-⚠️ **CRITICAL STEP!** You must add these for BOTH services:
+⚠️ **CRITICAL STEP!** Add these for the **worker** service:
 
 Click on **"Add Environment Variable"** and add:
 
@@ -77,7 +76,13 @@ ADMIN_USER_ID=your_telegram_user_id
 CHANNEL_ID=@your_channel_username
 GROUP_ID=your_group_id_or_username
 GROQ_API_KEY=your_groq_api_key_here
-DASHBOARD_PASSWORD=your_secure_password
+
+# Storj public image URLs (required for Facebook/Discord/Dev.to/etc)
+STORJ_ACCESS_KEY_ID=...
+STORJ_SECRET_ACCESS_KEY=...
+STORJ_ENDPOINT_URL=https://gateway.storjshare.io
+STORJ_BUCKET=your_bucket
+STORJ_PUBLIC_BASE_URL=https://link.storjshare.io/raw/<share-token>/<bucket>
 ```
 
 **How to get these values:**
@@ -89,7 +94,7 @@ DASHBOARD_PASSWORD=your_secure_password
 | `CHANNEL_ID`         | Your channel username (e.g., @nextlevelegypt) |
 | `GROUP_ID`           | Group chat ID (use @userinfobot in the group) |
 | `GROQ_API_KEY`       | https://console.groq.com/keys                 |
-| `DASHBOARD_PASSWORD` | Create a strong password                      |
+| `STORJ_PUBLIC_BASE_URL` | Public base URL (anonymous GET must work) |
 
 ### 2.5 Review & Deploy
 
@@ -105,15 +110,10 @@ DASHBOARD_PASSWORD=your_secure_password
 
 In Render Dashboard, you should see:
 
-**robobot-worker** (Background Worker)
+**robovai-worker** (Background Worker)
 
 - Status: ✅ **Live**
 - Logs: Should show "Bot started" message
-
-**robobot-dashboard** (Web Service)
-
-- Status: ✅ **Live**
-- URL: `https://robobot-dashboard.onrender.com` (or similar)
 
 ### 3.2 Test the Bot
 
@@ -124,34 +124,19 @@ In Render Dashboard, you should see:
 
 ### 3.3 Test the Dashboard
 
-1. Click on the **robobot-dashboard** URL
-2. Enter your `DASHBOARD_PASSWORD`
-3. You should see the CEO Cockpit with:
-   - ✅ System status
-   - ✅ Feed manager
-   - ✅ Bot logs
-   - ✅ Control panel
+Dashboard is intended to run on **Streamlit Cloud** (separate from Render).
+Deploy the same repo there and run:
+
+`streamlit run dashboard.py`
 
 ---
 
 ## 🔧 Step 4: Post-Deployment Configuration
 
-### 4.1 Keep Dashboard Awake (Optional)
+### 4.1 Telegram Conflict (مهم جداً)
 
-Render free tier sleeps after 15 minutes of inactivity.
-
-**Solution: Use UptimeRobot**
-
-1. Go to: https://uptimerobot.com
-2. Sign up (free)
-3. Add New Monitor:
-   - **Monitor Type:** HTTP(s)
-   - **Friendly Name:** RoboVAI Dashboard
-   - **URL:** Your dashboard URL
-   - **Monitoring Interval:** 5 minutes
-4. Save
-
-Now your dashboard will wake up automatically when pinged!
+لو ظهر خطأ `telegram.error.Conflict` يبقى فيه **نسختين** من البوت شغالين.
+اقفل/احذف أي Deploy تاني (Railway/Local/Service قديم على Render) بنفس `TELEGRAM_TOKEN`.
 
 ### 4.2 Monitor Logs
 
@@ -223,9 +208,8 @@ Now your dashboard will wake up automatically when pinged!
 
 ### Pro Tips:
 
-1. **Worker (Bot) runs 24/7** - no sleep! ✅
-2. **Dashboard sleeps** but wakes up fast when accessed
-3. Use UptimeRobot to keep dashboard alive (optional)
+1. خلي Render فيه **Worker واحد فقط** للبوت ✅
+2. خلي الصور تطلع Public عبر Storj عشان باقي المنصات ✅
 
 ---
 

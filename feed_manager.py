@@ -163,16 +163,19 @@ def fetch_random_new_post() -> Optional[Dict[str, Any]]:
 
             title = latest.get("title", "")
             image_url = _extract_image(latest)
-            
+
             # Use advanced image strategy if no image found
             image_local_path = None
             if not image_url:
                 try:
                     from image_generator import get_article_image
+
                     image_result = get_article_image(title, link)
                     if image_result:
                         # Prefer public URL for cross-platform compatibility
-                        image_url = image_result.get("public_url") or image_result.get("local_path")
+                        image_url = image_result.get("public_url") or image_result.get(
+                            "local_path"
+                        )
                         image_local_path = image_result.get("local_path")
                 except Exception as e:
                     print(f"⚠️ Image generation failed: {e}")
