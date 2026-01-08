@@ -174,31 +174,32 @@ def _ensure_string(value: Any) -> str:
 
 def _normalize_ai_result(
     parsed: Dict[str, Any], *, link: str
-) -> Optional[Dict[str, Any]]:
+) -> Dict[str, Any]:
     telegram_post = _strip_code_fences(_ensure_string(parsed.get("telegram_post")))
     facebook_post = _strip_code_fences(_ensure_string(parsed.get("facebook_post")))
     blog_title = _ensure_string(parsed.get("blog_title"))
     blog_content_md = _strip_code_fences(_ensure_string(parsed.get("blog_content_md")))
     discord_msg = _strip_code_fences(_ensure_string(parsed.get("discord_msg")))
 
-    if not (
-        telegram_post
-        and facebook_post
-        and blog_title
-        and blog_content_md
-        and discord_msg
-    ):
-        return None
+    missing_keys = []
+    if not telegram_post: missing_keys.append("telegram_post")
+    if not facebook_post: missing_keys.append("facebook_post")
+    if not blog_title: missing_keys.append("blog_title")
+    if not blog_content_md: missing_keys.append("blog_content_md")
+    if not discord_msg: missing_keys.append("discord_msg")
+
+    if missing_keys:
+        raise ValueError(f"Missing required keys/values: {', '.join(missing_keys)}")
 
     joined = "\n".join(
         [telegram_post, facebook_post, blog_title, blog_content_md, discord_msg]
     )
     if _contains_banned_phrases(joined):
-        return None
+        raise ValueError("Content contains banned phrases")
 
     latin_fraction = _latin_ratio(joined)
     if latin_fraction > 0.75:
-        return None
+        raise ValueError(f"Language skew detected (latin ratio: {latin_fraction:.2f} > 0.75)")
 
     # Ensure the link exists (main pipeline may append again safely).
     if link and link not in telegram_post:
@@ -294,14 +295,12 @@ def rewrite_with_ai(
                 )
                 return None
 
-            normalized = _normalize_ai_result(parsed, link=link)
-            if normalized is None:
-                _set_last_error(
-                    f"AI JSON missing required keys / banned phrases / language skew (model={model_name})"
-                )
+            try:
+                normalized = _normalize_ai_result(parsed, link=link)
+                return normalized
+            except ValueError as ve:
+                _set_last_error(f"AI Validation Error ({model_name}): {ve}")
                 return None
-
-            return normalized
 
         except Exception as exc:  # noqa: BLE001
             status = getattr(exc, "status_code", None) or getattr(exc, "status", None)
