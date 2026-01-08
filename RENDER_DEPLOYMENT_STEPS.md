@@ -87,14 +87,14 @@ STORJ_PUBLIC_BASE_URL=https://link.storjshare.io/raw/<share-token>/<bucket>
 
 **How to get these values:**
 
-| Variable             | Where to Find                                 |
-| -------------------- | --------------------------------------------- |
-| `TELEGRAM_TOKEN`     | @BotFather on Telegram                        |
-| `ADMIN_USER_ID`      | @userinfobot on Telegram (send /start)        |
-| `CHANNEL_ID`         | Your channel username (e.g., @nextlevelegypt) |
-| `GROUP_ID`           | Group chat ID (use @userinfobot in the group) |
-| `GROQ_API_KEY`       | https://console.groq.com/keys                 |
-| `STORJ_PUBLIC_BASE_URL` | Public base URL (anonymous GET must work) |
+| Variable                | Where to Find                                 |
+| ----------------------- | --------------------------------------------- |
+| `TELEGRAM_TOKEN`        | @BotFather on Telegram                        |
+| `ADMIN_USER_ID`         | @userinfobot on Telegram (send /start)        |
+| `CHANNEL_ID`            | Your channel username (e.g., @nextlevelegypt) |
+| `GROUP_ID`              | Group chat ID (use @userinfobot in the group) |
+| `GROQ_API_KEY`          | https://console.groq.com/keys                 |
+| `STORJ_PUBLIC_BASE_URL` | Public base URL (anonymous GET must work)     |
 
 ### 2.5 Review & Deploy
 

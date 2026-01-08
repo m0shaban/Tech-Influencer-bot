@@ -21,6 +21,7 @@ BLOGGER_BLOG_ID = "your_blogger_blog_id"
 ```
 
 ## How to Add:
+
 1. Go to https://share.streamlit.io/
 2. Click on your app (tech-influencer-bot)
 3. Settings → Secrets
