@@ -3,281 +3,366 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RoboVAI - AI Tech Content Bot</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+    <title>RoboVAI - Your Content Empire</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Cairo', 'sans-serif'],
+                    },
+                    colors: {
+                        dark: {
+                            900: '#0f172a',
+                            800: '#1e293b',
+                            700: '#334155',
+                        },
+                        brand: {
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            400: '#60a5fa',
+                        },
+                        accent: {
+                            500: '#8b5cf6',
+                            400: '#a78bfa',
+                        }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        }
+                    }
+                }
+            }
         }
-        
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass {
+                @apply bg-white/5 backdrop-blur-lg border border-white/10;
+            }
+            .text-glow {
+                text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+            }
+            .gradient-text {
+                @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-400 to-accent-400;
+            }
+        }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 800px;
-            width: 100%;
-            overflow: hidden;
-            animation: slideUp 0.6s ease-out;
-        }
-        
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px 30px;
-            text-align: center;
-        }
-        
-        .header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-        
-        .header .tagline {
-            font-size: 1.1rem;
-            opacity: 0.95;
-        }
-        
-        .status-badge {
-            display: inline-block;
-            background: #10b981;
-            color: white;
-            padding: 8px 20px;
-            border-radius: 20px;
-            margin-top: 15px;
-            font-weight: bold;
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
-        }
-        
-        .content {
-            padding: 40px 30px;
-        }
-        
-        .section {
-            margin-bottom: 30px;
-        }
-        
-        .section h2 {
-            color: #667eea;
-            font-size: 1.5rem;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 10px;
-        }
-        
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
-        
-        .feature {
-            background: #f7fafc;
-            padding: 20px;
-            border-radius: 10px;
-            border-right: 4px solid #667eea;
-        }
-        
-        .feature h3 {
-            color: #764ba2;
-            margin-bottom: 10px;
-            font-size: 1.1rem;
-        }
-        
-        .feature p {
-            color: #4a5568;
-            line-height: 1.6;
-        }
-        
-        .cta-buttons {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            margin-top: 30px;
-        }
-        
-        .btn {
-            flex: 1;
-            min-width: 200px;
-            padding: 15px 30px;
-            border-radius: 10px;
-            text-decoration: none;
-            text-align: center;
-            font-weight: bold;
-            transition: all 0.3s;
-            display: inline-block;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .btn-secondary {
-            background: #48bb78;
-            color: white;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
-        
-        .footer {
-            background: #f7fafc;
-            padding: 20px 30px;
-            text-align: center;
-            color: #718096;
-            border-top: 1px solid #e2e8f0;
-        }
-        
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-        
-        .stat {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 2rem;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .stat-label {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-        
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .cta-buttons {
-                flex-direction: column;
-            }
-            
-            .btn {
-                width: 100%;
-            }
+            background-color: #0f172a;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🤖 RoboVAI</h1>
-            <p class="tagline">بوت ذكاء اصطناعي لنشر المحتوى التقني التلقائي</p>
-            <span class="status-badge">🟢 نشط الآن</span>
+<body class="text-gray-100 font-sans antialiased overflow-x-hidden">
+
+    <!-- Navbar -->
+    <nav class="fixed w-full z-50 transition-all duration-300 py-4 glass border-b-0">
+        <div class="container mx-auto px-6 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-robot text-brand-400 text-2xl"></i>
+                <span class="text-2xl font-bold tracking-tighter">Robo<span class="text-brand-400">VAI</span></span>
+            </div>
+            <div class="hidden md:flex gap-8 text-sm font-semibold text-gray-300">
+                <a href="#hero" class="hover:text-white transition">الرئيسية</a>
+                <a href="#features" class="hover:text-white transition">المميزات</a>
+                <a href="#roi" class="hover:text-white transition">العائد</a>
+                <a href="#pricing" class="hover:text-white transition">الباقات</a>
+            </div>
+            <a href="https://tech-influencer-bot.streamlit.app/" target="_blank" class="px-5 py-2 bg-gradient-to-r from-brand-600 to-accent-500 rounded-full font-bold text-sm hover:shadow-[0_0_20px_rgba(59,130,246,0.5)] transition transform hover:-translate-y-1">
+                دخول للوحة التحكم
+            </a>
         </div>
-        
-        <div class="content">
-            <div class="section">
-                <h2>📊 إحصائيات مباشرة</h2>
-                <div class="stats">
-                    <div class="stat">
-                        <div class="stat-value">24/7</div>
-                        <div class="stat-label">تشغيل متواصل</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-value">6+</div>
-                        <div class="stat-label">منصات نشر</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-value">AI</div>
-                        <div class="stat-label">محتوى ذكي</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="section">
-                <h2>✨ المميزات</h2>
-                <div class="features">
-                    <div class="feature">
-                        <h3>🧠 ذكاء اصطناعي متقدم</h3>
-                        <p>يعيد صياغة الأخبار التقنية باحترافية باستخدام Groq AI</p>
-                    </div>
-                    <div class="feature">
-                        <h3>🌐 نشر متعدد المنصات</h3>
-                        <p>Telegram, Discord, Facebook, Dev.to, Blogger تلقائياً</p>
-                    </div>
-                    <div class="feature">
-                        <h3>🎨 صور احترافية</h3>
-                        <p>توليد صور OG مخصصة بخطوط عربية جميلة</p>
-                    </div>
-                    <div class="feature">
-                        <h3>⚡ تحديثات فورية</h3>
-                        <p>يتابع مصادر RSS ويكتشف الأخبار الجديدة تلقائياً</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="section">
-                <h2>🔗 تابعنا</h2>
-                <div class="cta-buttons">
-                    <a href="https://t.me/nextlevelegypt" class="btn btn-primary" target="_blank">
-                        📢 قناة Telegram
-                    </a>
-                    <a href="https://t.me/nextlevelegyptt" class="btn btn-secondary" target="_blank">
-                        💬 جروب المناقشة
-                    </a>
-                </div>
-            </div>
-            
-            <div class="section">
-                <h2>🛠️ التقنيات المستخدمة</h2>
-                <p style="color: #4a5568; line-height: 1.8;">
-                    <strong>Backend:</strong> Python, python-telegram-bot, Groq AI<br>
-                    <strong>Storage:</strong> Storj (S3-compatible)<br>
-                    <strong>Deployment:</strong> Render (Web Service) + Streamlit Cloud<br>
-                    <strong>Monitoring:</strong> UptimeRobot keep-alive
-                </p>
-            </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="hero" class="min-h-screen flex items-center justify-center pt-20 relative overflow-hidden">
+        <div class="absolute inset-0 z-0">
+            <div class="absolute top-1/4 left-1/4 w-72 h-72 bg-brand-500/20 rounded-full blur-[100px]"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-500/20 rounded-full blur-[100px]"></div>
         </div>
-        
-        <div class="footer">
-            <p>🚀 Powered by <strong>RoboVAI Solutions</strong></p>
-            <p style="margin-top: 10px; font-size: 0.9rem;">
-                Automated AI Content Publishing System
+
+        <div class="container mx-auto px-6 relative z-10 text-center">
+            <div class="inline-block mb-4 px-4 py-1 rounded-full glass text-brand-300 text-sm font-semibold border-brand-500/30">
+                🚀 الجيل القادم من أتمتة المحتوى
+            </div>
+            <h1 class="text-5xl md:text-7xl font-black mb-6 leading-tight">
+                RoboVAI<br>
+                <span class="gradient-text">Your Content Empire,</span><br>
+                Tailored to Your Voice
+            </h1>
+            <p class="text-xl md:text-2xl text-gray-400 mb-10 max-w-3xl mx-auto leading-relaxed">
+                لا نبيعك محتوى، بل نبني لك "مصنعاً" ذكياً. <br>
+                <span class="text-white font-semibold">RoboVAI</span> هو محرك أتمتة متكامل يتعلم أسلوبك، يراقب مصادرك الخاصة، وينشر نيابة عنك 24/7 على كافة المنصات.
             </p>
+            <div class="flex flex-col md:flex-row gap-4 justify-center items-center">
+                <a href="#features" class="px-8 py-4 bg-white text-black rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-lg shadow-white/10 w-full md:w-auto">
+                    استكشف النظام
+                </a>
+                <a href="https://t.me/nextlevelegypt" target="_blank" class="px-8 py-4 glass text-white rounded-xl font-bold text-lg hover:bg-white/10 transition border border-white/20 w-full md:w-auto flex items-center justify-center gap-2">
+                    <i class="fa-brands fa-telegram"></i> انضم للقناة
+                </a>
+            </div>
+            
+            <!-- Dashboard Mockup -->
+            <div class="mt-20 relative animate-float">
+                <div class="glass p-2 rounded-2xl border-t border-l border-white/20 shadow-2xl max-w-4xl mx-auto">
+                    <div class="bg-dark-900 rounded-xl overflow-hidden aspect-video relative flex items-center justify-center group">
+                        <!-- Code Visual -->
+                        <div class="absolute inset-0 p-6 font-mono text-left text-xs md:text-sm opacity-60">
+                            <span class="text-pink-500">class</span> <span class="text-yellow-300">ContentEngine</span>:<br>
+                            &nbsp;&nbsp;<span class="text-pink-500">def</span> <span class="text-blue-400">generate_empire</span>(self):<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;sources = [<span class="text-green-400">"TechCrunch"</span>, <span class="text-green-400">"Verge"</span>, <span class="text-green-400">"GitHub"</span>]<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;voice = <span class="text-green-400">"Professional_Friendly_Arabic"</span><br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;platforms = [<span class="text-green-400">"Telegram"</span>, <span class="text-green-400">"Facebook"</span>, <span class="text-green-400">"Discord"</span>]<br>
+                            &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-pink-500">return</span> AI.publish(content, style=voice)<br>
+                            <br>
+                            <span class="text-gray-500"># Output: 100+ posts/day | Cost: $0</span>
+                        </div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-dark-900 via-transparent to-transparent"></div>
+                        <div class="z-10 text-center">
+                            <div class="w-16 h-16 bg-brand-500 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-[0_0_30px_rgba(59,130,246,0.6)]">
+                                <i class="fa-solid fa-bolt text-3xl text-white"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold">نظام يعمل ذاتياً</h3>
+                            <p class="text-sm text-gray-400">أنت المدير، والذكاء الاصطناعي هو الفريق.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
+    </section>
+
+    <!-- Why Us Section (Modularity) -->
+    <section id="features" class="py-24 relative">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold mb-4">The <span class="gradient-text">Customization</span> Power 🎨</h2>
+                <p class="text-gray-400 text-lg">تحكم كامل في كل جزء من منظومة المحتوى الخاصة بك</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Card 1 -->
+                <div class="glass p-8 rounded-2xl hover:bg-white/5 transition duration-300 group border-t border-brand-500/20">
+                    <div class="w-14 h-14 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-rss text-blue-400 text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">مصادرك هي الوقود</h3>
+                    <p class="text-gray-400 leading-relaxed">
+                        ضع روابط الـ RSS التي تناسب مجالك (تقنية، رياضة، عقارات، أخبار).
+                        <br>الروبوت سيراقبها لحظة بلحظة.
+                    </p>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="glass p-8 rounded-2xl hover:bg-white/5 transition duration-300 group border-t border-purple-500/20">
+                    <div class="w-14 h-14 bg-purple-500/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-microphone-lines text-purple-400 text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">صوتك هو الدليل</h3>
+                    <p class="text-gray-400 leading-relaxed">
+                        نضبط شخصية الذكاء الاصطناعي (Tone of Voice) لتتحدث بلسانك.
+                        <br>عامية مصرية، فصحى مهنية، أو أسلوب فكاهي.
+                    </p>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="glass p-8 rounded-2xl hover:bg-white/5 transition duration-300 group border-t border-green-500/20">
+                    <div class="w-14 h-14 bg-green-500/10 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-share-nodes text-green-400 text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">منصاتك هي الملعب</h3>
+                    <p class="text-gray-400 leading-relaxed">
+                        نشر ذكي ومختلف لكل منصة في وقت واحد.
+                        <br>Telegram, Facebook, Discord, Blogs.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ROI Calculator -->
+    <section id="roi" class="py-24 bg-dark-800/50">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold mb-4">العائد على الاستثمار 💰</h2>
+                <p class="text-gray-400 text-lg">الأرقام لا تكذب. انظر ماذا يوفر لك RoboVAI</p>
+            </div>
+
+            <div class="glass rounded-3xl overflow-hidden max-w-4xl mx-auto shadow-2xl">
+                <div class="grid md:grid-cols-2">
+                    <div class="p-8 md:p-12 border-b md:border-b-0 md:border-l border-white/10 bg-white/5">
+                        <h3 class="text-2xl font-bold mb-8 text-gray-400"><i class="fa-regular fa-clock"></i> الطريقة اليدوية</h3>
+                        <ul class="space-y-6">
+                            <li class="flex items-center gap-4 text-gray-400">
+                                <span class="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-500"><i class="fa-solid fa-xmark"></i></span>
+                                <div>
+                                    <div class="font-bold text-lg">3 ساعات يومياً</div>
+                                    <div class="text-sm">بحث وكتابة وتنسيق</div>
+                                </div>
+                            </li>
+                            <li class="flex items-center gap-4 text-gray-400">
+                                <span class="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-500"><i class="fa-solid fa-xmark"></i></span>
+                                <div>
+                                    <div class="font-bold text-lg">$2,000 / شهرياً</div>
+                                    <div class="text-sm">تكلفة توظيف كاتب محتوى</div>
+                                </div>
+                            </li>
+                            <li class="flex items-center gap-4 text-gray-400">
+                                <span class="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-500"><i class="fa-solid fa-xmark"></i></span>
+                                <div>
+                                    <div class="font-bold text-lg">5 بوستات / يوم</div>
+                                    <div class="text-sm">الحد الأقصى للجهد البشري</div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="p-8 md:p-12 bg-gradient-to-br from-brand-900/50 to-dark-900/50 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-brand-500 to-accent-500"></div>
+                        <h3 class="text-3xl font-bold mb-8 text-white"><i class="fa-solid fa-rocket text-brand-400"></i> مع RoboVAI</h3>
+                        <ul class="space-y-6">
+                            <li class="flex items-center gap-4">
+                                <span class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400"><i class="fa-solid fa-check"></i></span>
+                                <div>
+                                    <div class="font-bold text-xl text-white">15 دقيقة فقط</div>
+                                    <div class="text-sm text-green-300">توفير 95% من الوقت (مراجعة فقط)</div>
+                                </div>
+                            </li>
+                            <li class="flex items-center gap-4">
+                                <span class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400"><i class="fa-solid fa-check"></i></span>
+                                <div>
+                                    <div class="font-bold text-xl text-white">0 دولار</div>
+                                    <div class="text-sm text-green-300">بنية تحتية مجانية (Render + Storj)</div>
+                                </div>
+                            </li>
+                            <li class="flex items-center gap-4">
+                                <span class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center text-green-400"><i class="fa-solid fa-check"></i></span>
+                                <div>
+                                    <div class="font-bold text-xl text-white">100+ بوست / يوم</div>
+                                    <div class="text-sm text-green-300">انتشار مضاعف بلا مجهود</div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technical Architecture -->
+    <section class="py-20 text-center container mx-auto px-6">
+        <h2 class="text-3xl font-bold mb-12">البنية التحتية (مجانية بالكامل) 🛠️</h2>
+        <div class="flex flex-wrap justify-center items-center gap-8 md:gap-16 opacity-80 grayscale hover:grayscale-0 transition duration-500">
+            <div class="flex flex-col items-center gap-3">
+                <i class="fa-brands fa-python text-5xl text-yellow-300"></i>
+                <span class="font-mono text-sm">Python Backend</span>
+            </div>
+            <div class="h-px w-12 bg-white/20 md:w-24"></div>
+            <div class="flex flex-col items-center gap-3">
+                <i class="fa-solid fa-cloud text-5xl text-white"></i>
+                <span class="font-mono text-sm">Render (Service)</span>
+            </div>
+            <div class="h-px w-12 bg-white/20 md:w-24"></div>
+            <div class="flex flex-col items-center gap-3">
+                <i class="fa-solid fa-database text-5xl text-blue-400"></i>
+                <span class="font-mono text-sm">Storj (Images)</span>
+            </div>
+            <div class="h-px w-12 bg-white/20 md:w-24"></div>
+            <div class="flex flex-col items-center gap-3">
+                <i class="fa-solid fa-gauge-high text-5xl text-red-400"></i>
+                <span class="font-mono text-sm">Streamlit (UI)</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section id="pricing" class="py-24 relative">
+        <div class="container mx-auto px-6">
+            <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                <!-- Free -->
+                <div class="glass p-8 rounded-2xl border border-white/10 flex flex-col">
+                    <div class="mb-4 text-brand-400 font-bold uppercase tracking-widest text-sm">Creator</div>
+                    <h3 class="text-4xl font-bold mb-2">مجاني</h3>
+                    <p class="text-gray-400 text-sm mb-6">النسخة الـ DIY للمطورين</p>
+                    <ul class="space-y-3 mb-8 flex-1">
+                        <li class="flex gap-2"><i class="fa-solid fa-check text-brand-500 mt-1"></i> كود مفتوح المصدر</li>
+                        <li class="flex gap-2"><i class="fa-solid fa-check text-brand-500 mt-1"></i> استضافة مجانية</li>
+                        <li class="flex gap-2"><i class="fa-solid fa-check text-brand-500 mt-1"></i> تحكم كامل</li>
+                    </ul>
+                    <a href="https://github.com/m0shaban/Tech-Influencer-bot" target="_blank" class="block w-full py-3 rounded-lg border border-white/20 text-center hover:bg-white hover:text-black transition font-bold">
+                        تحميل الكود
+                    </a>
+                </div>
+
+                <!-- Managed -->
+                <div class="p-1 rounded-2xl bg-gradient-to-b from-brand-500 to-accent-500 relative transform md:-translate-y-4">
+                    <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-500 to-accent-500 text-white px-4 py-1 rounded-full text-xs font-bold shadow-lg">
+                        الأكثر طلباً
+                    </div>
+                    <div class="bg-dark-900 p-8 rounded-xl h-full flex flex-col">
+                        <div class="mb-4 text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-accent-400 font-bold uppercase tracking-widest text-sm">Managed</div>
+                        <h3 class="text-4xl font-bold mb-2">مُدار</h3>
+                        <p class="text-gray-400 text-sm mb-6">نحن نعدّه لك بالكامل</p>
+                        <ul class="space-y-3 mb-8 flex-1">
+                            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> إعداد السيرفرات</li>
+                            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> إضافة مصادرك الخاصة</li>
+                            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> White-label (اسمك)</li>
+                            <li class="flex gap-2"><i class="fa-solid fa-check text-green-400 mt-1"></i> دعم فني</li>
+                        </ul>
+                        <a href="https://t.me/m0shaban" target="_blank" class="block w-full py-3 rounded-lg bg-gradient-to-r from-brand-600 to-accent-600 text-center hover:shadow-lg hover:shadow-brand-500/25 transition font-bold text-white">
+                            تواصل معنا
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Enterprise -->
+                <div class="glass p-8 rounded-2xl border border-white/10 flex flex-col">
+                    <div class="mb-4 text-purple-400 font-bold uppercase tracking-widest text-sm">Enterprise</div>
+                    <h3 class="text-4xl font-bold mb-2">مؤسسات</h3>
+                    <p class="text-gray-400 text-sm mb-6">توسع بلا حدود</p>
+                    <ul class="space-y-3 mb-8 flex-1">
+                        <li class="flex gap-2"><i class="fa-solid fa-check text-purple-500 mt-1"></i> إدارة حسابات متعددة</li>
+                        <li class="flex gap-2"><i class="fa-solid fa-check text-purple-500 mt-1"></i> Dedicated Infrastructure</li>
+                        <li class="flex gap-2"><i class="fa-solid fa-check text-purple-500 mt-1"></i> SLA Guarantees</li>
+                    </ul>
+                    <a href="#" class="block w-full py-3 rounded-lg border border-white/20 text-center hover:bg-white hover:text-black transition font-bold">
+                        طلب عرض سعر
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-10 border-t border-white/10 bg-black/20">
+        <div class="container mx-auto px-6 text-center">
+            <div class="flex justify-center items-center gap-2 mb-6 opacity-70">
+                <i class="fa-solid fa-robot text-brand-400 text-xl"></i>
+                <span class="text-xl font-bold">RoboVAI</span>
+            </div>
+            <p class="text-gray-500 text-sm mb-6">
+                &copy; 2026 RoboVAI Solutions via <a href="https://github.com/m0shaban" class="text-brand-400 hover:underline">m0shaban</a>. All rights reserved.
+            </p>
+            <div class="flex justify-center gap-6">
+                <a href="https://t.me/nextlevelegypt" class="text-gray-400 hover:text-brand-400 transition"><i class="fa-brands fa-telegram text-xl"></i></a>
+                <a href="https://tech-influencer-bot.streamlit.app/" class="text-gray-400 hover:text-red-400 transition"><i class="fa-solid fa-gauge-high text-xl"></i></a>
+                <a href="https://github.com/m0shaban/Tech-Influencer-bot" class="text-gray-400 hover:text-white transition"><i class="fa-brands fa-github text-xl"></i></a>
+            </div>
+        </div>
+    </footer>
+
 </body>
 </html>
