@@ -253,8 +253,8 @@ async def fetch_and_publish(
             },
         }
 
-        # Enable scheduler and reports
-        publisher = MultiPlatformPublisher(use_scheduler=True)
+        # Publish immediately to all platforms (no fake scheduling)
+        publisher = MultiPlatformPublisher(use_scheduler=False)
         results = await publisher.publish(
             caption=caption,
             link=link or None,
@@ -267,7 +267,7 @@ async def fetch_and_publish(
 
         any_success = any(
             isinstance(v, dict)
-            and (v.get("status") in ["success", "scheduled"] or v.get("success"))
+            and (v.get("status") == "success" or v.get("success"))
             for v in results.values()
         )
         if not any_success:
@@ -778,18 +778,30 @@ async def post_init(app: Application) -> None:
         ]
     )
 
-    # Start background scheduler task (will start when bot starts)
-    print("🕐 Background scheduler will start with bot...")
+    # Start Auto Publisher (smart pacing with business hours)
+    print("🚀 Starting Auto Publisher...")
     try:
-        from scheduled_publisher_task import start_scheduler_task
+        from auto_publisher import get_auto_publisher
         import asyncio
-
-        scheduler_task = start_scheduler_task()
-        # Create task in the running loop
-        asyncio.create_task(scheduler_task.run())
-        print("✅ Scheduler task queued successfully")
+        
+        auto_pub = get_auto_publisher()
+        
+        # Create a wrapper that captures the context
+        async def publish_wrapper(ctx, override_status=False):
+            return await fetch_and_publish(ctx, override_status=override_status)
+        
+        # Create a fake context object that can access the bot
+        class BotContext:
+            def __init__(self, bot):
+                self.bot = bot
+        
+        ctx = BotContext(app.bot)
+        
+        # Start auto publishing in background
+        asyncio.create_task(auto_pub.run(publish_wrapper, ctx))
+        print("✅ Auto Publisher started successfully")
     except Exception as e:
-        print(f"⚠️ Failed to start scheduler: {e}")
+        print(f"⚠️ Failed to start Auto Publisher: {e}")
 
 
 def main() -> None:

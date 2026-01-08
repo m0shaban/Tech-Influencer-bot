@@ -24,25 +24,23 @@ PlatformType = Literal[
 ]
 
 
+# Delay between platform publishes to prevent rate limiting
+PLATFORM_DELAY_SECONDS = 5
+
+
 class MultiPlatformPublisher:
     """Publish content to multiple platforms from a single interface"""
 
     def __init__(self, use_scheduler: bool = False):
+        # use_scheduler is ignored - we always publish immediately now
         self.enabled_platforms = self._get_enabled_platforms()
-        self.use_scheduler = use_scheduler
-        self.scheduler = None
         self.reporter = None
 
-        if use_scheduler:
-            try:
-                from publishing_scheduler import PublishingScheduler
-                from publishing_reporter import get_reporter
-
-                self.scheduler = PublishingScheduler()
-                self.reporter = get_reporter()
-            except Exception as e:
-                print(f"Failed to initialize scheduler: {e}")
-                self.use_scheduler = False
+        try:
+            from publishing_reporter import get_reporter
+            self.reporter = get_reporter()
+        except Exception as e:
+            print(f"Failed to initialize reporter: {e}")
 
     def _get_enabled_platforms(self) -> list[PlatformType]:
         """Detect which platforms are configured"""
@@ -167,38 +165,12 @@ class MultiPlatformPublisher:
                     else:
                         image_for_platform = None
 
-                # Check if we should delay this platform
-                if self.scheduler and self.use_scheduler:
-                    config = self.scheduler.get_platform_config(platform)
-                    if (
-                        config
-                        and config.publish_mode == "delayed"
-                        and config.delay_minutes > 0
-                    ):
-                        # Schedule for later
-                        scheduled_post = self.scheduler.schedule_post(
-                            platform=platform,
-                            caption=caption_for_platform,
-                            link=link,
-                            image_url=image_for_platform,
-                        )
+                # Small delay between platforms to prevent rate limiting
+                # (skip delay for the first platform)
+                if results:  # Not the first platform
+                    time.sleep(PLATFORM_DELAY_SECONDS)
 
-                        results[platform] = {
-                            "status": "scheduled",
-                            "scheduled_time": scheduled_post.scheduled_time.isoformat(),
-                            "delay_minutes": config.delay_minutes,
-                        }
-
-                        # Send schedule report
-                        if send_reports and self.reporter:
-                            await self.reporter.report_scheduled_post(
-                                platform=platform,
-                                scheduled_time=scheduled_post.scheduled_time,
-                            )
-
-                        continue
-
-                # Publish immediately
+                # Publish immediately to this platform
                 if platform == "telegram":
                     result = await self._publish_telegram(
                         caption_for_platform, link, image_for_platform, telegram_context
@@ -292,7 +264,7 @@ class MultiPlatformPublisher:
                 1
                 for r in results.values()
                 if isinstance(r, dict)
-                and (r.get("status") in ["success", "scheduled"] or r.get("success"))
+                and (r.get("status") == "success" or r.get("success"))
             )
             failed = len(results) - successful
             duration = time.time() - start_time
