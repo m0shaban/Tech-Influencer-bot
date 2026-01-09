@@ -7,6 +7,10 @@ import os
 import random
 from typing import Optional, Dict, Any, List
 from openai import OpenAI
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 
 class AIProviderManager:
@@ -139,8 +143,12 @@ class AIProviderManager:
                 ],
                 "temperature": config["temperature"],
                 "max_tokens": config["max_tokens"],
-                "response_format": {"type": "json_object"},
             }
+            
+            # Only NVIDIA supports response_format json_object
+            # Groq doesn't support this parameter
+            if config["provider"] == "nvidia":
+                params["response_format"] = {"type": "json_object"}
 
             # Enable reasoning for deep content (Blogger, Dev.to)
             if enable_reasoning and config["provider"] == "nvidia":
