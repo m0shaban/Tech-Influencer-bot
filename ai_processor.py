@@ -4,6 +4,7 @@ import re
 from typing import Any, Dict, Optional
 
 from openai import OpenAI
+from ai_provider_manager import AIProviderManager
 
 
 DEFAULT_SYSTEM_PROMPT = r"""
@@ -143,6 +144,7 @@ DEFAULT_TEMPERATURE = 0.55  # Increased for more creative, original content
 
 _client: Optional[OpenAI] = None
 _last_error: Optional[str] = None
+_ai_manager: Optional[AIProviderManager] = None
 
 
 def get_last_ai_error() -> Optional[str]:
@@ -152,6 +154,14 @@ def get_last_ai_error() -> Optional[str]:
 def _set_last_error(message: Optional[str]) -> None:
     global _last_error  # noqa: PLW0603
     _last_error = message
+
+
+def _get_ai_manager() -> AIProviderManager:
+    """Get singleton AI Provider Manager."""
+    global _ai_manager  # noqa: PLW0603
+    if _ai_manager is None:
+        _ai_manager = AIProviderManager()
+    return _ai_manager
 
 
 def _get_client() -> Optional[OpenAI]:
@@ -358,13 +368,26 @@ def rewrite_with_ai(
     summary: str,
     link: str,
     system_prompt: Optional[str] = None,
+    platform: str = "telegram",
 ) -> Optional[Dict[str, Any]]:
-    """Generate per-platform content as a single JSON object."""
+    """Generate per-platform content using intelligent AI routing.
+    
+    Args:
+        title: Post title
+        summary: Post summary  
+        link: Post link
+        system_prompt: Custom system prompt (optional)
+        platform: Target platform (blogger, devto, facebook, telegram, etc.)
+    
+    Returns:
+        Dict with platform-specific content or None on failure
+    """
     _set_last_error(None)
-    client = _get_client()
-    if client is None:
-        return None
-
+    
+    # Get AI manager
+    ai_manager = _get_ai_manager()
+    
+    # Use custom prompt if provided, otherwise use default
     effective_system_prompt = (system_prompt or "").strip() or DEFAULT_SYSTEM_PROMPT
 
     user_content = (
@@ -376,107 +399,43 @@ def rewrite_with_ai(
         "Write as if you're explaining this to a friend - use your own words, examples, and insights."
     )
 
-    raw_models = (os.getenv("GROQ_MODELS") or "").strip()
-    env_models: list[str] = []
-    if raw_models:
-        env_models = [m.strip() for m in raw_models.split(",") if m.strip()]
-    else:
-        single = (os.getenv("GROQ_MODEL") or "").strip()
-        if single:
-            env_models = [single]
-
-    model_candidates = [*env_models, *DEFAULT_MODEL_CANDIDATES]
-    seen_models: set[str] = set()
-    model_candidates = [
-        m for m in model_candidates if not (m in seen_models or seen_models.add(m))
-    ]
-
-    last_error: Optional[str] = None
-    for model_name in model_candidates:
-        try:
-            resp = client.chat.completions.create(
-                model=model_name,
-                messages=[
-                    {"role": "system", "content": effective_system_prompt},
-                    {"role": "user", "content": user_content},
-                ],
-                max_tokens=int(os.getenv("GROQ_MAX_TOKENS", "0") or 0)
-                or DEFAULT_MAX_TOKENS,
-                temperature=float(os.getenv("GROQ_TEMPERATURE", "0") or 0)
-                or DEFAULT_TEMPERATURE,
-                response_format={"type": "json_object"},
-            )
-
-            content = resp.choices[0].message.content if resp and resp.choices else None
-            if not content:
-                _set_last_error(f"Empty AI response (model={model_name})")
-                return None
-
-            parsed = _parse_json_response(content)
-            if parsed is None:
-                snippet = content.strip().replace("\n", " ")
-                _set_last_error(
-                    f"Invalid JSON from AI (model={model_name}): {snippet[:180]}"
-                )
-                return None
-
-            try:
-                normalized = _normalize_ai_result(parsed, link=link)
-                return normalized
-            except ValueError as ve:
-                _set_last_error(f"AI Validation Error ({model_name}): {ve}")
-                return None
-
-        except Exception as exc:  # noqa: BLE001
-            status = getattr(exc, "status_code", None) or getattr(exc, "status", None)
-            msg = str(getattr(exc, "message", "") or "")
-            base = f"{type(exc).__name__}"
-            if status is not None:
-                base += f" (HTTP {status})"
-            detail = (msg or str(exc) or "").strip()
-            if detail:
-                base += f": {detail}"
-            last_error = f"{base} (model={model_name})"[:300]
-
-            # Retry once for Groq JSON validation failures
-            if "json_validate_failed" in detail.lower():
-                try:
-                    resp = client.chat.completions.create(
-                        model=model_name,
-                        messages=[
-                            {"role": "system", "content": effective_system_prompt},
-                            {
-                                "role": "user",
-                                "content": user_content
-                                + "\nReturn valid JSON ONLY with keys: telegram_post, facebook_post, blog_title, blog_content_md, discord_msg, has_poll, poll_question, poll_options.",
-                            },
-                        ],
-                        max_tokens=max(400, DEFAULT_MAX_TOKENS - 200),
-                        temperature=0.2,
-                        response_format={"type": "json_object"},
-                    )
-                    content = (
-                        resp.choices[0].message.content
-                        if resp and resp.choices
-                        else None
-                    )
-                    parsed = _parse_json_response(content or "")
-                    if parsed:
-                        normalized = _normalize_ai_result(parsed, link=link)
-                        if normalized is not None:
-                            return normalized
-                except Exception:
-                    pass
-
-            lowered = detail.lower()
-            if (
-                "decommissioned" in lowered
-                or "no longer supported" in lowered
-                or "not found" in lowered
-            ):
-                continue
-            _set_last_error(last_error)
+    try:
+        # Generate content using intelligent AI routing
+        result = ai_manager.generate_content(
+            platform=platform,
+            system_prompt=effective_system_prompt,
+            user_prompt=user_content,
+            max_tokens=int(os.getenv("GROQ_MAX_TOKENS", "0") or 0) or DEFAULT_MAX_TOKENS,
+            temperature=float(os.getenv("GROQ_TEMPERATURE", "0") or 0) or DEFAULT_TEMPERATURE,
+        )
+        
+        if not result or not result.get("content"):
+            _set_last_error("Empty AI response")
+            return None
+        
+        # Parse JSON response
+        content = result["content"]
+        parsed = _parse_json_response(content)
+        if parsed is None:
+            snippet = content.strip().replace("\n", " ")
+            _set_last_error(f"Invalid JSON from AI: {snippet[:180]}")
             return None
 
-    _set_last_error(last_error or "AI request failed")
-    return None
+        try:
+            normalized = _normalize_ai_result(parsed, link=link)
+            return normalized
+        except ValueError as ve:
+            _set_last_error(f"AI Validation Error: {ve}")
+            return None
+            
+    except Exception as exc:  # noqa: BLE001
+        status = getattr(exc, "status_code", None) or getattr(exc, "status", None)
+        msg = str(getattr(exc, "message", "") or "")
+        base = f"{type(exc).__name__}"
+        if status is not None:
+            base += f" (HTTP {status})"
+        detail = (msg or str(exc) or "").strip()
+        if detail:
+            base += f": {detail}"
+        _set_last_error(base[:300])
+        return None

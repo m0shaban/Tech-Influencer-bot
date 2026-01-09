@@ -1,36 +1,54 @@
 {
   "platforms": {
-    "telegram": {
+    "blogger": {
       "enabled": true,
       "publish_mode": "immediate",
       "delay_minutes": 0,
-      "custom_prompt": "أنت المصدر. اكتب رأي شخصي حاد وسريع (Voice of a Friend). لا تذكر مصادر خارجية.",
-      "max_length": 1024,
-      "priority": 1
-    },
-    "discord": {
-      "enabled": true,
-      "publish_mode": "delayed",
-      "delay_minutes": 5,
-      "custom_prompt": "أنت الهاكر الشاطر. اكتب معلومة تقنية وتحدي للنقاش (Voice of Hype). لا تذكر مصادر.",
-      "max_length": 1900,
-      "priority": 2
-    },
-    "blogger": {
-      "enabled": true,
-      "publish_mode": "delayed",
-      "delay_minutes": 10,
-      "custom_prompt": "أنت المعلم. اكتب مقال مرجعي شامل بالعربية الفصحى البسيطة. أنت المرجع الأساسي للمعلومة.",
+      "custom_prompt": "أنت خبير بيزنس تكنولوجي. اكتب مقال **كامل** (800-1200 كلمة) يشرح القيمة التجارية والعائد (ROI) من هذه التقنية. استخدم أسلوب رجل الأعمال: مشكلة → حل → فوائد → خطوات عملية. بدون ذكر مصادر خارجية.",
       "max_length": 5000,
-      "priority": 3
+      "priority": 1,
+      "content_type": "long_form",
+      "enable_cta": true
+    },
+    "devto": {
+      "enabled": true,
+      "publish_mode": "delayed",
+      "delay_minutes": 2,
+      "custom_prompt": "أنت مهندس سينيور. اكتب مقال **تعليمي شامل** (1000-1500 كلمة) يشرح الموضوع خطوة بخطوة للمبرمجين. استخدم: شرح تقني + أمثلة عملية + كود (إن أمكن) + Best Practices. بدون ذكر مصادر.",
+      "max_length": 25000,
+      "priority": 2,
+      "content_type": "long_form",
+      "enable_cta": true
     },
     "facebook": {
       "enabled": true,
       "publish_mode": "delayed",
-      "delay_minutes": 15,
-      "custom_prompt": "أنت الداعية التقني. اكتب قصة وتحليل عميق للمشكلة والحل. تفاعل مع الجمهور ولا تذكر مصادر.",
+      "delay_minutes": 4,
+      "custom_prompt": "أنت مؤثر تقني trendy. اكتب مقال **جذاب** (500-800 كلمة) يثير الفضول ويشجع التفاعل. استخدم: قصة شخصية + إحصائيات صادمة + أسئلة تفاعلية + دعوة للنقاش. أسلوب حماسي ومباشر.",
       "max_length": 2000,
-      "priority": 4
+      "priority": 3,
+      "content_type": "long_form",
+      "enable_cta": true
+    },
+    "telegram": {
+      "enabled": true,
+      "publish_mode": "delayed",
+      "delay_minutes": 6,
+      "custom_prompt": "أنت صديق خبير. اكتب **تيزر** قصير (150-250 كلمة) يلخص الموضوع بطريقة مشوقة ويحفز القارئ على قراءة المقال الكامل. استخدم: Hook قوي + نقاط رئيسية + CTA واضح للمقالات. بدون تفاصيل كثيرة.",
+      "max_length": 1024,
+      "priority": 4,
+      "content_type": "teaser",
+      "enable_cta": true
+    },
+    "discord": {
+      "enabled": true,
+      "publish_mode": "delayed",
+      "delay_minutes": 7,
+      "custom_prompt": "أنت الهاكر المتحمس. اكتب **إعلان تقني** (100-200 كلمة) يثير الفضول التقني ويدعو للنقاش. أسلوب سريع ومباشر مع تحدي تقني.",
+      "max_length": 1900,
+      "priority": 5,
+      "content_type": "short",
+      "enable_cta": false
     },
     "linkedin": {
       "enabled": false,
@@ -38,7 +56,9 @@
       "delay_minutes": 20,
       "custom_prompt": "أنت الخبير الاستراتيجي. اكتب بأسلوب احترافي يركز على العائد (ROI) والمستقبل المهني. أنت المصدر.",
       "max_length": 3000,
-      "priority": 5
+      "priority": 6,
+      "content_type": "long_form",
+      "enable_cta": false
     },
     "twitter": {
       "enabled": false,
@@ -46,7 +66,9 @@
       "delay_minutes": 25,
       "custom_prompt": "أنت المؤثر. تغريدة نارية واحدة تلخص الحدث وتعطي الرأي القاطع. بدون روابط مصادر.",
       "max_length": 280,
-      "priority": 6
+      "priority": 7,
+      "content_type": "micro",
+      "enable_cta": false
     },
     "reddit": {
       "enabled": false,
@@ -54,7 +76,9 @@
       "delay_minutes": 30,
       "custom_prompt": "أنت واحد من المجتمع. ادخل في الموضوع مباشرة بدون مقدمات تسويقية. قدم قيمة حقيقية.",
       "max_length": 2500,
-      "priority": 7
+      "priority": 8,
+      "content_type": "medium",
+      "enable_cta": false
     },
     "medium": {
       "enabled": false,
@@ -62,43 +86,29 @@
       "delay_minutes": 35,
       "custom_prompt": "أنت المفكر. مقال تحليلي عميق يربط التكنولوجيا بالمجتمع والمستقبل. أنت المرجع.",
       "max_length": 8000,
-      "priority": 8
-    },
-    "devto": {
-      "enabled": true,
-      "publish_mode": "delayed",
-      "delay_minutes": 40,
-      "custom_prompt": "أنت المهندس السينيور. شرح تقني عملي (How-to) مع خطوات واضحة. أنت الخبير.",
-      "max_length": 25000,
-      "priority": 9
+      "priority": 9,
+      "content_type": "long_form",
+      "enable_cta": false
+    }
+  },
+  "cross_platform_cta": {
+    "enabled": true,
+    "templates": {
+      "telegram": "\n\n📚 اقرأ المقال الكامل:\n{blogger_url}\n\n💻 شرح تقني تفصيلي:\n{devto_url}\n\n💬 ناقش معانا:\n{facebook_url}",
+      "facebook": "\n\n📖 المزيد من التفاصيل: {blogger_url}\n💻 تطبيق عملي: {devto_url}",
+      "blogger": "\n\n💻 **للمطورين**: شرح تقني كامل على [Dev.to]({devto_url})\n💬 **ناقش معانا** على [Facebook]({facebook_url})",
+      "devto": "\n\n📊 **للبيزنس**: تحليل القيمة التجارية على [Blog]({blogger_url})\n💬 **شاركنا رأيك** على [Facebook]({facebook_url})"
     }
   },
   "global_settings": {
-    "distribution_mode": "shared",
+    "distribution_mode": "sequential",
+    "publish_order_by_priority": true,
     "enable_reports": true,
     "report_to_admin": true,
     "min_interval_between_posts": 60,
     "max_posts_per_hour": 5,
     "retry_on_failure": true,
-    "retry_attempts": 3,
-    "retry_delay_minutes": 5
-  },
-  "schedule_presets": {
-    "instant_all": {
-      "description": "نشر فوري على جميع المنصات",
-      "apply_to_all": { "publish_mode": "immediate", "delay_minutes": 0 }
-    },
-    "staggered_5min": {
-      "description": "توزيع كل 5 دقائق",
-      "delays": [0, 5, 10, 15, 20, 25, 30, 35]
-    },
-    "staggered_10min": {
-      "description": "توزيع كل 10 دقائق",
-      "delays": [0, 10, 20, 30, 40, 50, 60, 70]
-    },
-    "peak_hours": {
-      "description": "أوقات الذروة (9 صباحاً، 12 ظهراً، 6 مساءً)",
-      "hours": [9, 12, 18]
-    }
+    "retry_attempts": 2,
+    "retry_delay_minutes": 3
   }
 }
