@@ -66,7 +66,12 @@ def normalize_suffix(s: str) -> str:
     return s
 
 
-def env_get(base_name: str, *, platform: Optional[str] = None, brand: Optional[Dict[str, Any]] = None) -> Optional[str]:
+def env_get(
+    base_name: str,
+    *,
+    platform: Optional[str] = None,
+    brand: Optional[Dict[str, Any]] = None,
+) -> Optional[str]:
     """Get env var with optional per-platform suffix from active brand.
 
     Priority:
@@ -86,6 +91,11 @@ def env_get(base_name: str, *, platform: Optional[str] = None, brand: Optional[D
     return v2
 
 
-def has_env(base_name: str, *, platform: Optional[str] = None, brand: Optional[Dict[str, Any]] = None) -> bool:
+def has_env(
+    base_name: str,
+    *,
+    platform: Optional[str] = None,
+    brand: Optional[Dict[str, Any]] = None,
+) -> bool:
     v = env_get(base_name, platform=platform, brand=brand)
     return bool(v and str(v).strip())

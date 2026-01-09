@@ -221,6 +221,7 @@ with st.sidebar:
         )
     )
 
+
 def _get_brands(cfg: Dict[str, Any]) -> Dict[str, Any]:
     brands = cfg.get("brands")
     return brands if isinstance(brands, dict) else {}
@@ -375,10 +376,14 @@ elif menu_choice == "🏷️ Brand Manager":
                 p = Path(__file__).parent / "platform_config.json"
                 if p.exists():
                     pdata = json.loads(p.read_text(encoding="utf-8"))
-                    if isinstance(pdata, dict) and isinstance(pdata.get("platforms"), dict):
+                    if isinstance(pdata, dict) and isinstance(
+                        pdata.get("platforms"), dict
+                    ):
                         for k, v in pdata["platforms"].items():
                             if isinstance(v, dict):
-                                platform_defaults[k] = {"enabled": bool(v.get("enabled", True))}
+                                platform_defaults[k] = {
+                                    "enabled": bool(v.get("enabled", True))
+                                }
             except Exception:
                 platform_defaults = {}
 
@@ -453,7 +458,9 @@ elif menu_choice == "🏷️ Brand Manager":
             available_platforms = []
 
         platform_state_raw = b.get("platforms")
-        platform_state: Dict[str, Any] = platform_state_raw if isinstance(platform_state_raw, dict) else {}
+        platform_state: Dict[str, Any] = (
+            platform_state_raw if isinstance(platform_state_raw, dict) else {}
+        )
         updated_platforms: Dict[str, Any] = dict(platform_state)
         cols = st.columns(4)
         for idx, key in enumerate(available_platforms):
@@ -462,7 +469,9 @@ elif menu_choice == "🏷️ Brand Manager":
             if isinstance(entry, dict) and "enabled" in entry:
                 current_enabled = bool(entry.get("enabled"))
             with cols[idx % 4]:
-                checked = st.checkbox(key, value=current_enabled, key=f"brand_{selected}_plat_{key}")
+                checked = st.checkbox(
+                    key, value=current_enabled, key=f"brand_{selected}_plat_{key}"
+                )
             updated_platforms[key] = {"enabled": bool(checked)}
         b["platforms"] = updated_platforms
 
@@ -472,11 +481,22 @@ elif menu_choice == "🏷️ Brand Manager":
         )
         accounts_raw = b.get("accounts")
         accounts = accounts_raw if isinstance(accounts_raw, dict) else {}
-        a_fb = st.text_input("Facebook account suffix", value=str(accounts.get("facebook") or "")).strip()
-        a_dev = st.text_input("Dev.to account suffix", value=str(accounts.get("devto") or "")).strip()
-        a_blog = st.text_input("Blogger account suffix", value=str(accounts.get("blogger") or "")).strip()
-        a_dis = st.text_input("Discord account suffix", value=str(accounts.get("discord") or "")).strip()
-        a_tg = st.text_input("Telegram bot token suffix (optional)", value=str(accounts.get("telegram") or "")).strip()
+        a_fb = st.text_input(
+            "Facebook account suffix", value=str(accounts.get("facebook") or "")
+        ).strip()
+        a_dev = st.text_input(
+            "Dev.to account suffix", value=str(accounts.get("devto") or "")
+        ).strip()
+        a_blog = st.text_input(
+            "Blogger account suffix", value=str(accounts.get("blogger") or "")
+        ).strip()
+        a_dis = st.text_input(
+            "Discord account suffix", value=str(accounts.get("discord") or "")
+        ).strip()
+        a_tg = st.text_input(
+            "Telegram bot token suffix (optional)",
+            value=str(accounts.get("telegram") or ""),
+        ).strip()
         b["accounts"] = {
             "facebook": a_fb,
             "devto": a_dev,
@@ -484,13 +504,17 @@ elif menu_choice == "🏷️ Brand Manager":
             "discord": a_dis,
             "telegram": a_tg,
         }
-        feeds_text = "\n".join([str(x) for x in (b.get("feeds") or []) if isinstance(x, str)])
+        feeds_text = "\n".join(
+            [str(x) for x in (b.get("feeds") or []) if isinstance(x, str)]
+        )
         feeds_text = st.text_area("Feeds (one per line)", value=feeds_text, height=220)
 
         col1, col2 = st.columns(2)
         with col1:
             if st.button("💾 Save Brand"):
-                b["feeds"] = [ln.strip() for ln in feeds_text.splitlines() if ln.strip()]
+                b["feeds"] = [
+                    ln.strip() for ln in feeds_text.splitlines() if ln.strip()
+                ]
                 brands[selected] = b
                 cfg["brands"] = brands
                 save_config(cfg)

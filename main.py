@@ -175,8 +175,14 @@ def _load_platform_config() -> dict:
             try:
                 cfg = _load_config()
                 active_key = str(cfg.get("active_brand") or "").strip()
-                brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
-                brand = brands.get(active_key) if active_key and isinstance(brands, dict) else None
+                brands = (
+                    cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+                )
+                brand = (
+                    brands.get(active_key)
+                    if active_key and isinstance(brands, dict)
+                    else None
+                )
                 if isinstance(brand, dict):
                     overrides = brand.get("platforms")
                     if isinstance(overrides, dict):
@@ -367,7 +373,9 @@ async def _publish_sequential_with_ctas(
         return published_urls.get("blogger") or published_urls.get("devto")
 
     def _facebook_page_url() -> str:
-        cfg_url = str(platforms_config.get("facebook", {}).get("page_url", "") or "").strip()
+        cfg_url = str(
+            platforms_config.get("facebook", {}).get("page_url", "") or ""
+        ).strip()
         if cfg_url:
             return cfg_url
         fb_page_id = (os.getenv("FACEBOOK_PAGE_ID") or "").strip()
@@ -382,7 +390,9 @@ async def _publish_sequential_with_ctas(
         if published_urls.get("devto"):
             buttons.append({"text": "📌 نسخة Dev.to", "url": published_urls["devto"]})
         if published_urls.get("facebook"):
-            buttons.append({"text": "💬 ناقش على فيسبوك", "url": published_urls["facebook"]})
+            buttons.append(
+                {"text": "💬 ناقش على فيسبوك", "url": published_urls["facebook"]}
+            )
         return buttons
 
     def _filter_cta_text(cta_text: str, url_candidates: list[str]) -> str:
@@ -397,7 +407,11 @@ async def _publish_sequential_with_ctas(
                 continue
             if stripped.endswith(":"):
                 continue
-            if ":" in stripped and url_candidates and not any(u in stripped for u in url_candidates):
+            if (
+                ":" in stripped
+                and url_candidates
+                and not any(u in stripped for u in url_candidates)
+            ):
                 continue
             lines.append(line)
         return "\n".join(lines).strip()
@@ -409,7 +423,9 @@ async def _publish_sequential_with_ctas(
             enable_cta = bool(p_config.get("enable_cta", False))
 
             if published_urls and delay_minutes > 0:
-                print(f"⏳ Waiting {delay_minutes} minutes before publishing to {platform}...")
+                print(
+                    f"⏳ Waiting {delay_minutes} minutes before publishing to {platform}..."
+                )
                 await asyncio.sleep(delay_minutes * 60)
 
             content_data = platform_contents.get(platform, {})
@@ -417,14 +433,23 @@ async def _publish_sequential_with_ctas(
             title = content_data.get("title")
 
             # TEXT CTAs only where it makes sense (blog/devto). Not Telegram/Facebook.
-            if cta_enabled and enable_cta and caption and platform not in {"telegram", "facebook"}:
+            if (
+                cta_enabled
+                and enable_cta
+                and caption
+                and platform not in {"telegram", "facebook"}
+            ):
                 cta_template = str(cta_templates.get(platform, "") or "")
                 if cta_template and published_urls:
                     blogger_url = published_urls.get("blogger", "")
                     devto_url = published_urls.get("devto", "")
                     # Dev.to wants stable page URL even before FB post exists
-                    facebook_url = _facebook_page_url() or published_urls.get("facebook", "")
-                    url_candidates = [u for u in [blogger_url, devto_url, facebook_url] if u]
+                    facebook_url = _facebook_page_url() or published_urls.get(
+                        "facebook", ""
+                    )
+                    url_candidates = [
+                        u for u in [blogger_url, devto_url, facebook_url] if u
+                    ]
 
                     raw_cta = cta_template.format(
                         blogger_url=blogger_url,
@@ -461,7 +486,9 @@ async def _publish_sequential_with_ctas(
 
             if platform == "discord" and canonical:
                 payload_for_platform["caption"] = (
-                    caption.rstrip() + f"\n\nاقرأ المزيد: {canonical}" if caption else f"اقرأ المزيد: {canonical}"
+                    caption.rstrip() + f"\n\nاقرأ المزيد: {canonical}"
+                    if caption
+                    else f"اقرأ المزيد: {canonical}"
                 )
 
             payloads = {platform: payload_for_platform}
@@ -481,7 +508,9 @@ async def _publish_sequential_with_ctas(
             result = platform_results.get(platform, {})
             results[platform] = result
 
-            if isinstance(result, dict) and (result.get("status") == "success" or result.get("success")):
+            if isinstance(result, dict) and (
+                result.get("status") == "success" or result.get("success")
+            ):
                 url = result.get("url") or result.get("post_url") or result.get("link")
                 if url:
                     published_urls[platform] = url
@@ -670,7 +699,10 @@ async def fetch_and_publish(
 
     channel_id = _get_channel_id_from_config()
     if not channel_id:
-        return {"status": "error", "error": "CHANNEL_ID is not set (env or config.json)"}
+        return {
+            "status": "error",
+            "error": "CHANNEL_ID is not set (env or config.json)",
+        }
 
     if not override_status and not _is_system_active():
         return {"status": "error", "error": "System is paused"}

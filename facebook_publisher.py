@@ -14,7 +14,9 @@ load_dotenv()
 class FacebookPublisher:
     """Publisher for posting to Facebook Pages"""
 
-    def __init__(self, access_token: Optional[str] = None, page_id: Optional[str] = None):
+    def __init__(
+        self, access_token: Optional[str] = None, page_id: Optional[str] = None
+    ):
         """Initialize Facebook Graph API client"""
         access_token_value = access_token or os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN")
         page_id_value = page_id or os.getenv("FACEBOOK_PAGE_ID")

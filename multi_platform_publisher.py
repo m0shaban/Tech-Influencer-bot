@@ -70,9 +70,17 @@ class MultiPlatformPublisher:
                 cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
                 if isinstance(cfg, dict):
                     active_key = str(cfg.get("active_brand") or "").strip()
-                    brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
-                    brand = brands.get(active_key) if active_key and isinstance(brands, dict) else None
-                    if isinstance(brand, dict) and isinstance(brand.get("platforms"), dict):
+                    brands = (
+                        cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+                    )
+                    brand = (
+                        brands.get(active_key)
+                        if active_key and isinstance(brands, dict)
+                        else None
+                    )
+                    if isinstance(brand, dict) and isinstance(
+                        brand.get("platforms"), dict
+                    ):
                         for k, v in brand["platforms"].items():
                             if isinstance(v, dict) and "enabled" in v:
                                 config_enabled[k] = bool(v.get("enabled"))
@@ -84,20 +92,28 @@ class MultiPlatformPublisher:
             return config_enabled.get(name, True)
 
         # Telegram is always enabled (base platform)
-        if has_env("TELEGRAM_TOKEN", platform="telegram", brand=self.active_brand) and is_enabled("telegram"):
+        if has_env(
+            "TELEGRAM_TOKEN", platform="telegram", brand=self.active_brand
+        ) and is_enabled("telegram"):
             platforms.append("telegram")
 
         # LinkedIn is optional
-        if has_env("LINKEDIN_ACCESS_TOKEN", platform="linkedin", brand=self.active_brand) and is_enabled("linkedin"):
+        if has_env(
+            "LINKEDIN_ACCESS_TOKEN", platform="linkedin", brand=self.active_brand
+        ) and is_enabled("linkedin"):
             platforms.append("linkedin")
 
         # Discord (webhook-based)
-        if has_env("DISCORD_WEBHOOK_URL", platform="discord", brand=self.active_brand) and is_enabled("discord"):
+        if has_env(
+            "DISCORD_WEBHOOK_URL", platform="discord", brand=self.active_brand
+        ) and is_enabled("discord"):
             platforms.append("discord")
 
         # Medium (requires token + user ID)
         if (
-            has_env("MEDIUM_INTEGRATION_TOKEN", platform="medium", brand=self.active_brand)
+            has_env(
+                "MEDIUM_INTEGRATION_TOKEN", platform="medium", brand=self.active_brand
+            )
             and has_env("MEDIUM_USER_ID", platform="medium", brand=self.active_brand)
             and is_enabled("medium")
         ):
@@ -107,9 +123,15 @@ class MultiPlatformPublisher:
         if all(
             [
                 has_env("TWITTER_API_KEY", platform="twitter", brand=self.active_brand),
-                has_env("TWITTER_API_SECRET", platform="twitter", brand=self.active_brand),
-                has_env("TWITTER_ACCESS_TOKEN", platform="twitter", brand=self.active_brand),
-                has_env("TWITTER_ACCESS_SECRET", platform="twitter", brand=self.active_brand),
+                has_env(
+                    "TWITTER_API_SECRET", platform="twitter", brand=self.active_brand
+                ),
+                has_env(
+                    "TWITTER_ACCESS_TOKEN", platform="twitter", brand=self.active_brand
+                ),
+                has_env(
+                    "TWITTER_ACCESS_SECRET", platform="twitter", brand=self.active_brand
+                ),
             ]
         ) and is_enabled("twitter"):
             platforms.append("twitter")
@@ -119,7 +141,9 @@ class MultiPlatformPublisher:
             has_env("BLOGGER_BLOG_ID", platform="blogger", brand=self.active_brand)
             and (
                 has_env("BLOGGER_API_KEY", platform="blogger", brand=self.active_brand)
-                or has_env("BLOGGER_ACCESS_TOKEN", platform="blogger", brand=self.active_brand)
+                or has_env(
+                    "BLOGGER_ACCESS_TOKEN", platform="blogger", brand=self.active_brand
+                )
             )
             and is_enabled("blogger")
         ):
@@ -129,7 +153,9 @@ class MultiPlatformPublisher:
         if all(
             [
                 has_env("REDDIT_CLIENT_ID", platform="reddit", brand=self.active_brand),
-                has_env("REDDIT_CLIENT_SECRET", platform="reddit", brand=self.active_brand),
+                has_env(
+                    "REDDIT_CLIENT_SECRET", platform="reddit", brand=self.active_brand
+                ),
                 has_env("REDDIT_USERNAME", platform="reddit", brand=self.active_brand),
                 has_env("REDDIT_PASSWORD", platform="reddit", brand=self.active_brand),
             ]
@@ -138,14 +164,22 @@ class MultiPlatformPublisher:
 
         # Facebook (requires Page Access Token and Page ID)
         if (
-            has_env("FACEBOOK_PAGE_ACCESS_TOKEN", platform="facebook", brand=self.active_brand)
-            and has_env("FACEBOOK_PAGE_ID", platform="facebook", brand=self.active_brand)
+            has_env(
+                "FACEBOOK_PAGE_ACCESS_TOKEN",
+                platform="facebook",
+                brand=self.active_brand,
+            )
+            and has_env(
+                "FACEBOOK_PAGE_ID", platform="facebook", brand=self.active_brand
+            )
             and is_enabled("facebook")
         ):
             platforms.append("facebook")
 
         # Dev.to (requires API key)
-        if has_env("DEVTO_API_KEY", platform="devto", brand=self.active_brand) and is_enabled("devto"):
+        if has_env(
+            "DEVTO_API_KEY", platform="devto", brand=self.active_brand
+        ) and is_enabled("devto"):
             platforms.append("devto")
 
         return platforms
@@ -386,7 +420,9 @@ class MultiPlatformPublisher:
             raise ValueError("CHANNEL_ID is not set")
 
         # Multi-account support: allow a per-brand TELEGRAM_TOKEN_<SUFFIX>.
-        token_override = env_get("TELEGRAM_TOKEN", platform="telegram", brand=self.active_brand)
+        token_override = env_get(
+            "TELEGRAM_TOKEN", platform="telegram", brand=self.active_brand
+        )
         bot = None
         if token_override and str(token_override).strip():
             try:
@@ -496,10 +532,18 @@ class MultiPlatformPublisher:
         """Publish to Discord via webhook"""
         from discord_publisher import DiscordPublisher
 
-        webhook = env_get("DISCORD_WEBHOOK_URL", platform="discord", brand=self.active_brand)
-        username = env_get("DISCORD_USERNAME", platform="discord", brand=self.active_brand)
-        avatar = env_get("DISCORD_AVATAR_URL", platform="discord", brand=self.active_brand)
-        publisher = DiscordPublisher(webhook_url=webhook, username=username, avatar_url=avatar)
+        webhook = env_get(
+            "DISCORD_WEBHOOK_URL", platform="discord", brand=self.active_brand
+        )
+        username = env_get(
+            "DISCORD_USERNAME", platform="discord", brand=self.active_brand
+        )
+        avatar = env_get(
+            "DISCORD_AVATAR_URL", platform="discord", brand=self.active_brand
+        )
+        publisher = DiscordPublisher(
+            webhook_url=webhook, username=username, avatar_url=avatar
+        )
         return publisher.publish(caption=caption, link=link, image_url=image_url)
 
     def _publish_medium(
@@ -540,12 +584,24 @@ class MultiPlatformPublisher:
         from blogger_publisher import BloggerPublisher
 
         publisher = BloggerPublisher(
-            api_key=env_get("BLOGGER_API_KEY", platform="blogger", brand=self.active_brand),
-            blog_id=env_get("BLOGGER_BLOG_ID", platform="blogger", brand=self.active_brand),
-            access_token=env_get("BLOGGER_ACCESS_TOKEN", platform="blogger", brand=self.active_brand),
-            refresh_token=env_get("BLOGGER_REFRESH_TOKEN", platform="blogger", brand=self.active_brand),
-            client_id=env_get("BLOGGER_CLIENT_ID", platform="blogger", brand=self.active_brand),
-            client_secret=env_get("BLOGGER_CLIENT_SECRET", platform="blogger", brand=self.active_brand),
+            api_key=env_get(
+                "BLOGGER_API_KEY", platform="blogger", brand=self.active_brand
+            ),
+            blog_id=env_get(
+                "BLOGGER_BLOG_ID", platform="blogger", brand=self.active_brand
+            ),
+            access_token=env_get(
+                "BLOGGER_ACCESS_TOKEN", platform="blogger", brand=self.active_brand
+            ),
+            refresh_token=env_get(
+                "BLOGGER_REFRESH_TOKEN", platform="blogger", brand=self.active_brand
+            ),
+            client_id=env_get(
+                "BLOGGER_CLIENT_ID", platform="blogger", brand=self.active_brand
+            ),
+            client_secret=env_get(
+                "BLOGGER_CLIENT_SECRET", platform="blogger", brand=self.active_brand
+            ),
         )
         # Extract title from caption (first line or first 100 chars)
         if title_override and title_override.strip():
@@ -591,8 +647,14 @@ class MultiPlatformPublisher:
         from facebook_publisher import FacebookPublisher
 
         publisher = FacebookPublisher(
-            access_token=env_get("FACEBOOK_PAGE_ACCESS_TOKEN", platform="facebook", brand=self.active_brand),
-            page_id=env_get("FACEBOOK_PAGE_ID", platform="facebook", brand=self.active_brand),
+            access_token=env_get(
+                "FACEBOOK_PAGE_ACCESS_TOKEN",
+                platform="facebook",
+                brand=self.active_brand,
+            ),
+            page_id=env_get(
+                "FACEBOOK_PAGE_ID", platform="facebook", brand=self.active_brand
+            ),
         )
 
         # Facebook prefers photo posts over link posts for engagement
@@ -619,7 +681,9 @@ class MultiPlatformPublisher:
         """Publish to Dev.to"""
         from devto_publisher import DevtoPublisher
 
-        publisher = DevtoPublisher(api_key=env_get("DEVTO_API_KEY", platform="devto", brand=self.active_brand))
+        publisher = DevtoPublisher(
+            api_key=env_get("DEVTO_API_KEY", platform="devto", brand=self.active_brand)
+        )
         return publisher.publish(
             caption=caption,
             title=title_override,
@@ -632,10 +696,14 @@ class MultiPlatformPublisher:
         status = {}
 
         # Telegram
-        status["telegram"] = has_env("TELEGRAM_TOKEN", platform="telegram", brand=self.active_brand)
+        status["telegram"] = has_env(
+            "TELEGRAM_TOKEN", platform="telegram", brand=self.active_brand
+        )
 
         # LinkedIn
-        if has_env("LINKEDIN_ACCESS_TOKEN", platform="linkedin", brand=self.active_brand):
+        if has_env(
+            "LINKEDIN_ACCESS_TOKEN", platform="linkedin", brand=self.active_brand
+        ):
             try:
                 from linkedin_publisher import test_linkedin_connection
 
@@ -657,7 +725,9 @@ class MultiPlatformPublisher:
             status["discord"] = False
 
         # Medium
-        if has_env("MEDIUM_INTEGRATION_TOKEN", platform="medium", brand=self.active_brand) and has_env("MEDIUM_USER_ID", platform="medium", brand=self.active_brand):
+        if has_env(
+            "MEDIUM_INTEGRATION_TOKEN", platform="medium", brand=self.active_brand
+        ) and has_env("MEDIUM_USER_ID", platform="medium", brand=self.active_brand):
             try:
                 from medium_publisher import test_medium_connection
 
@@ -671,9 +741,15 @@ class MultiPlatformPublisher:
         if all(
             [
                 has_env("TWITTER_API_KEY", platform="twitter", brand=self.active_brand),
-                has_env("TWITTER_API_SECRET", platform="twitter", brand=self.active_brand),
-                has_env("TWITTER_ACCESS_TOKEN", platform="twitter", brand=self.active_brand),
-                has_env("TWITTER_ACCESS_SECRET", platform="twitter", brand=self.active_brand),
+                has_env(
+                    "TWITTER_API_SECRET", platform="twitter", brand=self.active_brand
+                ),
+                has_env(
+                    "TWITTER_ACCESS_TOKEN", platform="twitter", brand=self.active_brand
+                ),
+                has_env(
+                    "TWITTER_ACCESS_SECRET", platform="twitter", brand=self.active_brand
+                ),
             ]
         ):
             try:
@@ -688,18 +764,38 @@ class MultiPlatformPublisher:
         # Blogger
         if has_env("BLOGGER_BLOG_ID", platform="blogger", brand=self.active_brand) and (
             has_env("BLOGGER_API_KEY", platform="blogger", brand=self.active_brand)
-            or has_env("BLOGGER_ACCESS_TOKEN", platform="blogger", brand=self.active_brand)
+            or has_env(
+                "BLOGGER_ACCESS_TOKEN", platform="blogger", brand=self.active_brand
+            )
         ):
             try:
                 from blogger_publisher import BloggerPublisher
 
                 publisher = BloggerPublisher(
-                    api_key=env_get("BLOGGER_API_KEY", platform="blogger", brand=self.active_brand),
-                    blog_id=env_get("BLOGGER_BLOG_ID", platform="blogger", brand=self.active_brand),
-                    access_token=env_get("BLOGGER_ACCESS_TOKEN", platform="blogger", brand=self.active_brand),
-                    refresh_token=env_get("BLOGGER_REFRESH_TOKEN", platform="blogger", brand=self.active_brand),
-                    client_id=env_get("BLOGGER_CLIENT_ID", platform="blogger", brand=self.active_brand),
-                    client_secret=env_get("BLOGGER_CLIENT_SECRET", platform="blogger", brand=self.active_brand),
+                    api_key=env_get(
+                        "BLOGGER_API_KEY", platform="blogger", brand=self.active_brand
+                    ),
+                    blog_id=env_get(
+                        "BLOGGER_BLOG_ID", platform="blogger", brand=self.active_brand
+                    ),
+                    access_token=env_get(
+                        "BLOGGER_ACCESS_TOKEN",
+                        platform="blogger",
+                        brand=self.active_brand,
+                    ),
+                    refresh_token=env_get(
+                        "BLOGGER_REFRESH_TOKEN",
+                        platform="blogger",
+                        brand=self.active_brand,
+                    ),
+                    client_id=env_get(
+                        "BLOGGER_CLIENT_ID", platform="blogger", brand=self.active_brand
+                    ),
+                    client_secret=env_get(
+                        "BLOGGER_CLIENT_SECRET",
+                        platform="blogger",
+                        brand=self.active_brand,
+                    ),
                 )
                 result = publisher.test_connection()
                 status["blogger"] = result.get("success", False)
@@ -712,7 +808,9 @@ class MultiPlatformPublisher:
         if all(
             [
                 has_env("REDDIT_CLIENT_ID", platform="reddit", brand=self.active_brand),
-                has_env("REDDIT_CLIENT_SECRET", platform="reddit", brand=self.active_brand),
+                has_env(
+                    "REDDIT_CLIENT_SECRET", platform="reddit", brand=self.active_brand
+                ),
                 has_env("REDDIT_USERNAME", platform="reddit", brand=self.active_brand),
                 has_env("REDDIT_PASSWORD", platform="reddit", brand=self.active_brand),
             ]
@@ -729,13 +827,21 @@ class MultiPlatformPublisher:
             status["reddit"] = False
 
         # Facebook
-        if has_env("FACEBOOK_PAGE_ACCESS_TOKEN", platform="facebook", brand=self.active_brand) and has_env("FACEBOOK_PAGE_ID", platform="facebook", brand=self.active_brand):
+        if has_env(
+            "FACEBOOK_PAGE_ACCESS_TOKEN", platform="facebook", brand=self.active_brand
+        ) and has_env("FACEBOOK_PAGE_ID", platform="facebook", brand=self.active_brand):
             try:
                 from facebook_publisher import FacebookPublisher
 
                 publisher = FacebookPublisher(
-                    access_token=env_get("FACEBOOK_PAGE_ACCESS_TOKEN", platform="facebook", brand=self.active_brand),
-                    page_id=env_get("FACEBOOK_PAGE_ID", platform="facebook", brand=self.active_brand),
+                    access_token=env_get(
+                        "FACEBOOK_PAGE_ACCESS_TOKEN",
+                        platform="facebook",
+                        brand=self.active_brand,
+                    ),
+                    page_id=env_get(
+                        "FACEBOOK_PAGE_ID", platform="facebook", brand=self.active_brand
+                    ),
                 )
                 result = publisher.test_connection()
                 status["facebook"] = result.get("success", False)
@@ -749,7 +855,11 @@ class MultiPlatformPublisher:
             try:
                 from devto_publisher import DevtoPublisher
 
-                publisher = DevtoPublisher(api_key=env_get("DEVTO_API_KEY", platform="devto", brand=self.active_brand))
+                publisher = DevtoPublisher(
+                    api_key=env_get(
+                        "DEVTO_API_KEY", platform="devto", brand=self.active_brand
+                    )
+                )
                 status["devto"] = publisher.is_configured()
             except Exception:
                 status["devto"] = False
