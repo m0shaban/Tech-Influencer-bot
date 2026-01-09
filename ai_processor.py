@@ -98,6 +98,8 @@ DEFAULT_SYSTEM_PROMPT = r"""
 - ❌ "في الختام" أو "الخلاصة"
 - ❌ نسخ جمل كاملة من المواقع
 - ❌ وضع روابط "المصدر الأصلي" (الناس تدخل لحد ما تخلص القراءة عندك أولاً)
+
+🚨 **CRITICAL**: DO NOT write "Source:", "المصدر:", or any link/URL in the JSON output values (telegram_post, facebook_post, blog_content_md, discord_msg). The code will handle links programmatically. Your job is CONTENT ONLY.
 - ❌ تكرار نفس المحتوى بصيغ مختلفة (كل منصة لها رأي فريد)
 
 ---

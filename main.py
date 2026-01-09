@@ -173,6 +173,45 @@ def _get_stats_text() -> str:
     )
 
 
+def prepare_media(post: Dict[str, Any], title: str) -> Dict[str, Optional[str]]:
+    """
+    CRITICAL MediaPipeline: Guarantee image availability with Storj upload.
+    
+    Returns:
+        Dict with 'image_url' (public Storj URL) and 'image_local_path' (for Telegram)
+    """
+    print("🖼️ MediaPipeline: Starting...")
+    
+    # Strategy 1: Use RSS image if available
+    rss_image = post.get("image")
+    if rss_image and isinstance(rss_image, str) and rss_image.startswith("http"):
+        print(f"✅ Strategy 1: Using RSS image: {rss_image[:60]}...")
+        return {"image_url": rss_image, "image_local_path": None}
+    
+    # Strategy 2: Generate OG Image and upload to Storj
+    print("🎨 Strategy 2: Generating OG Image...")
+    try:
+        from image_generator import get_article_image
+        
+        result = get_article_image(title, post.get("link"))
+        if result and result.get("public_url"):
+            print(f"✅ OG Image generated and uploaded: {result['public_url'][:60]}...")
+            return {
+                "image_url": result["public_url"],
+                "image_local_path": result.get("local_path")
+            }
+        else:
+            print("⚠️ OG Image generation returned None")
+    except Exception as e:
+        print(f"❌ OG Image generation failed: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    # Fallback: No image (should be rare)
+    print("⚠️ MediaPipeline: No image available (fallback)")
+    return {"image_url": None, "image_local_path": None}
+
+
 async def fetch_and_publish(
     context: ContextTypes.DEFAULT_TYPE, *, override_status: bool = False
 ) -> PublishResult:
@@ -217,8 +256,11 @@ async def fetch_and_publish(
     caption = facebook_post or telegram_post
     link = str(post.get("link", "") or "").strip()
     title = str(post.get("title", "") or "").strip()
-    image_url = post.get("image")
-    image_local_path = post.get("image_local_path")
+    
+    # 🚀 NEW: Use MediaPipeline to guarantee image availability
+    media_result = prepare_media(post, title)
+    image_url = media_result.get("image_url")
+    image_local_path = media_result.get("image_local_path")
 
     def _compose_text(c: str, l: str, has_photo: bool) -> str:
         base = (

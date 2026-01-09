@@ -45,9 +45,8 @@ class DevtoPublisher:
         # Build body_markdown
         body = caption.strip()
 
-        # Add source link at the end
-        if link and link not in body:
-            body += f"\n\n---\n\n🔗 **المصدر:** [{link}]({link})"
+        # NOTE: DO NOT add source link here - code handles it programmatically
+        # The AI is instructed to NOT write sources in the content
 
         # Trim if needed
         if len(body) > max_length:
