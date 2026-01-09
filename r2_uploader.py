@@ -52,27 +52,45 @@ def upload_file_to_r2(
     if not file_path.exists():
         raise FileNotFoundError(local_path)
 
+    access_key = _env_any("R2_ACCESS_KEY_ID", "STORJ_ACCESS_KEY_ID")
+    secret_key = _env_any("R2_SECRET_ACCESS_KEY", "STORJ_SECRET_ACCESS_KEY")
+    endpoint = _env_any("R2_ENDPOINT_URL", "STORJ_ENDPOINT_URL")
+    bucket = _env_any("R2_BUCKET", "STORJ_BUCKET")
+    
+    print(f"📤 Uploading to S3: {endpoint}/{bucket}/{key}")
+    
     session = Session(
-        aws_access_key_id=_env_any("R2_ACCESS_KEY_ID", "STORJ_ACCESS_KEY_ID"),
-        aws_secret_access_key=_env_any(
-            "R2_SECRET_ACCESS_KEY", "STORJ_SECRET_ACCESS_KEY"
-        ),
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
     )
     s3 = session.client(
         "s3",
-        endpoint_url=_env_any("R2_ENDPOINT_URL", "STORJ_ENDPOINT_URL"),
+        endpoint_url=endpoint,
         region_name="auto",
     )
 
     extra_args = {}
     if content_type:
         extra_args["ContentType"] = content_type
+    # Force public-read ACL for Storj
+    extra_args["ACL"] = "public-read"
 
-    bucket = _env_any("R2_BUCKET", "STORJ_BUCKET")
-    s3.upload_file(str(file_path), bucket, key, ExtraArgs=extra_args or None)
+    try:
+        s3.upload_file(
+            str(file_path), 
+            bucket, 
+            key, 
+            ExtraArgs=extra_args if extra_args else None
+        )
+        print(f"✅ Upload successful: {key}")
+    except Exception as e:
+        print(f"❌ Upload failed: {e}")
+        raise
 
     public_base = _env_any("R2_PUBLIC_BASE_URL", "STORJ_PUBLIC_BASE_URL").rstrip("/")
-    return f"{public_base}/{key.lstrip('/')}"
+    public_url = f"{public_base}/{key.lstrip('/')}"
+    print(f"🌐 Public URL: {public_url}")
+    return public_url
 
 
 def upload_image_if_configured(local_path: str, filename: str) -> Optional[str]:

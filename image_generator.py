@@ -718,18 +718,28 @@ class OGImageGenerator:
                 from r2_uploader import upload_image_if_configured
 
                 public_url = upload_image_if_configured(str(output_path), filename)
+                if public_url:
+                    print(f"✅ Image uploaded to Storj successfully")
+                else:
+                    print(f"⚠️ Storj upload returned None (not configured or failed silently)")
             except Exception as exc:
-                print(f"⚠️ Storj upload failed: {exc}")
+                print(f"❌ Storj upload failed with exception: {exc}")
+                import traceback
+                traceback.print_exc()
 
-            # Fallback: Build public URL if STORJ_PUBLIC_BASE_URL is set
+            # Fallback: Build public URL if upload failed but STORJ_PUBLIC_BASE_URL is set
+            # WARNING: This only works if the file was manually uploaded or accessible
             if not public_url:
                 base_url = os.getenv("STORJ_PUBLIC_BASE_URL", "").rstrip("/")
                 if base_url:
                     public_url = f"{base_url}/{filename}"
+                    print(f"⚠️ Using fallback URL (file may not exist): {public_url}")
                 else:
                     # Final fallback to IMAGE_BASE_URL if still not set
                     base_url = os.getenv("IMAGE_BASE_URL", "").rstrip("/")
                     public_url = f"{base_url}/og/{filename}" if base_url else None
+                    if public_url:
+                        print(f"⚠️ Using IMAGE_BASE_URL fallback: {public_url}")
 
             print(f"✅ Generated: {output_path}")
             if public_url:

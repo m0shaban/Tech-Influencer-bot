@@ -173,11 +173,23 @@ class MultiPlatformPublisher:
                     else ""
                 )
 
-                # Image handling: Use local path for Telegram, public URL for others
+                # Image handling: Use local path for Telegram/Facebook, public URL for others
                 image_for_platform = image_url
+                local_image_path_for_platform = None
+
                 if platform == "telegram" and image_local_path:
                     # Telegram can use local paths
                     image_for_platform = image_local_path
+                elif platform == "facebook":
+                    # Facebook handles both, prefers local if available
+                    if image_local_path:
+                        local_image_path_for_platform = image_local_path
+                    
+                    if image_url and image_url.lower().startswith("http"):
+                        image_for_platform = image_url
+                    else:
+                        image_for_platform = None
+                        
                 elif platform != "telegram":
                     # Other platforms need public URLs only
                     if image_url and image_url.lower().startswith("http"):
@@ -238,7 +250,10 @@ class MultiPlatformPublisher:
 
                 elif platform == "facebook":
                     result = self._publish_facebook(
-                        caption_for_platform, link, image_for_platform
+                        caption_for_platform,
+                        link,
+                        image_for_platform,
+                        image_path=local_image_path_for_platform,
                     )
                     results["facebook"] = result
 
@@ -438,7 +453,11 @@ class MultiPlatformPublisher:
             return publisher.submit_text(subreddit=subreddit, title=title, text=caption)
 
     def _publish_facebook(
-        self, caption: str, link: Optional[str], image_url: Optional[str]
+        self,
+        caption: str,
+        link: Optional[str],
+        image_url: Optional[str],
+        image_path: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Publish to Facebook Page"""
         from facebook_publisher import FacebookPublisher
@@ -446,9 +465,11 @@ class MultiPlatformPublisher:
         publisher = FacebookPublisher()
 
         # Facebook prefers photo posts over link posts for engagement
-        if image_url:
+        if image_path or image_url:
             # Post with photo (caption + image)
-            return publisher.publish_photo(message=caption, image_url=image_url)
+            return publisher.publish_photo(
+                message=caption, image_url=image_url, image_path=image_path
+            )
         elif link:
             # Post with link preview
             return publisher.publish_link(message=caption, link=link)

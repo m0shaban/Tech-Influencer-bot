@@ -126,13 +126,19 @@ class FacebookPublisher:
         except Exception as e:
             return {"success": False, "message": f"Error posting to Facebook: {str(e)}"}
 
-    def publish_photo(self, message: str, image_url: str) -> Dict[str, Any]:
+    def publish_photo(
+        self,
+        message: str,
+        image_url: Optional[str] = None,
+        image_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
         Publish a photo post to Facebook Page
 
         Args:
             message: Post caption/text
             image_url: URL of the image to post
+            image_path: Local filesystem path to image
 
         Returns:
             dict: Result with success status and post ID
@@ -141,12 +147,27 @@ class FacebookPublisher:
             url = f"{self.api_base}/{self.page_id}/photos"
 
             data = {
-                "url": image_url,  # Facebook can fetch from URL
                 "caption": message,
                 "access_token": self.access_token,
             }
+            files = {}
 
-            response = requests.post(url, data=data, timeout=30)
+            # Prefer local file upload if available (more reliable)
+            if image_path and os.path.exists(image_path):
+                # We need to keep the file open during the request
+                with open(image_path, "rb") as img_file:
+                    files = {"source": img_file}
+                    response = requests.post(
+                        url, data=data, files=files, timeout=60
+                    )
+            elif image_url:
+                data["url"] = image_url
+                response = requests.post(url, data=data, timeout=60)
+            else:
+                return {
+                    "success": False,
+                    "message": "No image provided (url or path required)",
+                }
 
             if response.status_code == 200:
                 result = response.json()
