@@ -15,6 +15,7 @@ from telegram import (
     ReplyKeyboardMarkup,
     Update,
 )
+from telegram.error import Conflict
 from telegram.ext import (
     Application,
     ApplicationBuilder,
@@ -48,6 +49,35 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "0") or "0")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 GROUP_ID = os.getenv("GROUP_ID")
+
+_conflict_notified = False
+
+
+async def _error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Global error handler to keep polling stable and avoid noisy tracebacks."""
+    global _conflict_notified  # noqa: PLW0603
+    err = getattr(context, "error", None)
+    if isinstance(err, Conflict):
+        if not _conflict_notified and ADMIN_USER_ID:
+            _conflict_notified = True
+            try:
+                await context.bot.send_message(
+                    chat_id=ADMIN_USER_ID,
+                    text=(
+                        "⚠️ Telegram Conflict: في نسخة تانية شغالة بنفس التوكن. "
+                        "اقفل أي نسخة تانية (local/Render) عشان يمنع getUpdates conflict."
+                    ),
+                )
+            except Exception:
+                pass
+        # Avoid re-raising to prevent repeated stack traces
+        return
+
+    # Fallback logging
+    try:
+        _log(f"Unhandled error: {err}")
+    except Exception:
+        pass
 
 # Broadcast conversation states
 GET_MSG = 1
@@ -1175,6 +1205,9 @@ def main() -> None:
         raise RuntimeError("Missing/invalid ADMIN_USER_ID")
 
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).post_init(post_init).build()
+
+    # Global error handler (prevents noisy tracebacks and handles Conflict gracefully)
+    app.add_error_handler(_error_handler)
 
     # Global commands
     app.add_handler(CommandHandler("start", cmd_start))

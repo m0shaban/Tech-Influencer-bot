@@ -183,6 +183,50 @@ def _parse_json_response(content: str) -> Optional[Dict[str, Any]]:
     if not cleaned:
         return None
 
+    # Some models wrap JSON in markdown fences.
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```\w*\s*\n?", "", cleaned)
+    if cleaned.endswith("```"):
+        cleaned = re.sub(r"\n?```\s*$", "", cleaned)
+    cleaned = cleaned.strip()
+
+    def _escape_controls_inside_strings(text: str) -> str:
+        """Escape raw newlines/tabs inside JSON strings so json.loads can parse."""
+        out: list[str] = []
+        in_string = False
+        escaping = False
+        for ch in text:
+            if in_string:
+                if escaping:
+                    out.append(ch)
+                    escaping = False
+                    continue
+                if ch == "\\":
+                    out.append(ch)
+                    escaping = True
+                    continue
+                if ch == '"':
+                    out.append(ch)
+                    in_string = False
+                    continue
+                if ch == "\n":
+                    out.append("\\n")
+                    continue
+                if ch == "\r":
+                    out.append("\\r")
+                    continue
+                if ch == "\t":
+                    out.append("\\t")
+                    continue
+                out.append(ch)
+            else:
+                if ch == '"':
+                    out.append(ch)
+                    in_string = True
+                    continue
+                out.append(ch)
+        return "".join(out)
+
     def _try_parse(text: str) -> Optional[Dict[str, Any]]:
         try:
             parsed = json.loads(text)
@@ -200,7 +244,12 @@ def _parse_json_response(content: str) -> Optional[Dict[str, Any]]:
     end = cleaned.rfind("}")
     if start == -1 or end == -1 or end <= start:
         return None
-    return _try_parse(cleaned[start : end + 1])
+
+    extracted = cleaned[start : end + 1]
+    parsed = _try_parse(extracted)
+    if parsed is not None:
+        return parsed
+    return _try_parse(_escape_controls_inside_strings(extracted))
 
 
 def _coerce_bool(value: Any) -> Optional[bool]:
@@ -395,6 +444,8 @@ def rewrite_with_ai(
         f"Summary: {summary}\n"
         f"Link: {link}\n\n"
         "Return ONLY the JSON object with the required keys.\n\n"
+        "CRITICAL JSON RULES: Output must be strict valid JSON. Do NOT wrap in ``` fences. "
+        "Do NOT include raw line breaks inside string values; use \\n for new lines.\n\n"
         "⚠️ IMPORTANT: Create ORIGINAL, authentic content. Do NOT copy from the source. "
         "Write as if you're explaining this to a friend - use your own words, examples, and insights."
     )
@@ -407,17 +458,23 @@ def rewrite_with_ai(
             user_prompt=user_content,
             enable_reasoning=platform in ["blogger", "devto"],  # Enable reasoning for long-form
         )
-        
+
         if not result:
             _set_last_error("Empty AI response")
             return None
-        
+
         # Parse JSON response (result is the content string directly)
         parsed = _parse_json_response(result)
         if parsed is None:
             snippet = result.strip().replace("\n", " ")[:200]
             _set_last_error(f"Failed to parse JSON response: {snippet}...")
             return None
+
+        return _normalize_ai_result(parsed, link=link)
+
+    except ValueError as ve:
+        _set_last_error(f"AI Validation Error: {ve}")
+        return None
 
     except Exception as exc:  # noqa: BLE001
         status = getattr(exc, "status_code", None) or getattr(exc, "status", None)
