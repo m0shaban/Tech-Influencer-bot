@@ -323,33 +323,48 @@ class MultiPlatformPublisher:
         if context is None:
             raise ValueError("telegram_context is required for Telegram publishing")
 
-        def _compose_text(c: str, l: Optional[str], has_photo: bool) -> str:
-            base = (
-                c
-                if (l and l in c)
-                else (c + (f"\n\n🔗 لينك الخبر/الأداة: {l}" if l else ""))
-            )
+        def _compose_text(c: str, _l: Optional[str], has_photo: bool) -> str:
+            # DO NOT append links inside the body (handled programmatically)
+            base = c
             limit = 1024 if has_photo else 4096
             if len(base) > limit:
                 ellipsis = "…"
-                if l and l in base:
-                    keep_tail = base[-120:]
-                    head = base[: limit - len(keep_tail) - 1]
-                    return head + ellipsis + keep_tail
                 return base[: limit - 1] + ellipsis
             return base
 
         text = _compose_text(caption, link, bool(image_url))
 
+        reply_markup = None
+        if link:
+            try:
+                from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+                reply_markup = InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("🔗 اقرأ التفاصيل", url=link)]]
+                )
+            except Exception:
+                reply_markup = None
+
         if image_url:
             try:
                 await context.bot.send_photo(
-                    chat_id=channel_id, photo=image_url, caption=text
+                    chat_id=channel_id,
+                    photo=image_url,
+                    caption=text,
+                    reply_markup=reply_markup,
                 )
             except Exception:
-                await context.bot.send_message(chat_id=channel_id, text=text)
+                await context.bot.send_message(
+                    chat_id=channel_id,
+                    text=text,
+                    reply_markup=reply_markup,
+                )
         else:
-            await context.bot.send_message(chat_id=channel_id, text=text)
+            await context.bot.send_message(
+                chat_id=channel_id,
+                text=text,
+                reply_markup=reply_markup,
+            )
 
         return {"status": "success", "platform": "telegram"}
 

@@ -3,7 +3,9 @@ import os
 from datetime import datetime
 import time
 from pathlib import Path
-from typing import Any, Literal, Optional, TypedDict
+from typing import Any, Dict, Literal, Optional, TypedDict
+
+import requests
 
 from dotenv import load_dotenv
 from telegram import (
@@ -182,10 +184,55 @@ def prepare_media(post: Dict[str, Any], title: str) -> Dict[str, Optional[str]]:
     """
     print("🖼️ MediaPipeline: Starting...")
     
-    # Strategy 1: Use RSS image if available
+    def _download_image(url: str) -> Optional[str]:
+        try:
+            images_dir = BASE_DIR / "images" / "downloaded"
+            images_dir.mkdir(parents=True, exist_ok=True)
+
+            resp = requests.get(url, timeout=20, headers={"User-Agent": "Mozilla/5.0"})
+            resp.raise_for_status()
+
+            content_type = (resp.headers.get("content-type") or "").lower()
+            ext = "jpg"
+            if "png" in content_type:
+                ext = "png"
+            elif "jpeg" in content_type or "jpg" in content_type:
+                ext = "jpg"
+            elif url.lower().endswith(".png"):
+                ext = "png"
+            elif url.lower().endswith(".jpg") or url.lower().endswith(".jpeg"):
+                ext = "jpg"
+
+            stamp = int(time.time() * 1000)
+            filename = f"rss_{stamp}.{ext}"
+            out = images_dir / filename
+            out.write_bytes(resp.content)
+            return str(out)
+        except Exception as exc:
+            print(f"⚠️ MediaPipeline: RSS image download failed: {exc}")
+            return None
+
+    def _upload_to_storj(local_path: str) -> Optional[str]:
+        try:
+            from r2_uploader import upload_image_if_configured
+
+            name = Path(local_path).name
+            return upload_image_if_configured(local_path, name)
+        except Exception as exc:
+            print(f"⚠️ MediaPipeline: Storj upload failed: {exc}")
+            return None
+
+    # Strategy 1: Use RSS image if available (download locally then upload to Storj)
     rss_image = post.get("image")
     if rss_image and isinstance(rss_image, str) and rss_image.startswith("http"):
-        print(f"✅ Strategy 1: Using RSS image: {rss_image[:60]}...")
+        print(f"✅ Strategy 1: Found RSS image: {rss_image[:60]}...")
+        local = _download_image(rss_image)
+        if local:
+            public = _upload_to_storj(local)
+            if public:
+                return {"image_url": public, "image_local_path": local}
+            # If upload fails, still return local for Telegram and RSS URL for others
+            return {"image_url": rss_image, "image_local_path": local}
         return {"image_url": rss_image, "image_local_path": None}
     
     # Strategy 2: Generate OG Image and upload to Storj
@@ -194,22 +241,48 @@ def prepare_media(post: Dict[str, Any], title: str) -> Dict[str, Optional[str]]:
         from image_generator import get_article_image
         
         result = get_article_image(title, post.get("link"))
-        if result and result.get("public_url"):
-            print(f"✅ OG Image generated and uploaded: {result['public_url'][:60]}...")
-            return {
-                "image_url": result["public_url"],
-                "image_local_path": result.get("local_path")
-            }
-        else:
-            print("⚠️ OG Image generation returned None")
+        if result:
+            local_path = result.get("local_path")
+            public_url = result.get("public_url")
+            if not public_url and local_path:
+                public_url = _upload_to_storj(str(local_path))
+            if public_url:
+                print(f"✅ OG Image ready: {public_url[:60]}...")
+                return {"image_url": public_url, "image_local_path": local_path}
+        print("⚠️ OG Image generation returned no usable URL")
     except Exception as e:
         print(f"❌ OG Image generation failed: {e}")
         import traceback
         traceback.print_exc()
     
-    # Fallback: No image (should be rare)
-    print("⚠️ MediaPipeline: No image available (fallback)")
-    return {"image_url": None, "image_local_path": None}
+    # Fallback: generate a simple placeholder image locally then upload
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+
+        images_dir = BASE_DIR / "images" / "generated"
+        images_dir.mkdir(parents=True, exist_ok=True)
+        stamp = int(time.time() * 1000)
+        fallback_path = images_dir / f"og_fallback_{stamp}.png"
+
+        img = Image.new("RGB", (1200, 630), color=(15, 23, 42))
+        draw = ImageDraw.Draw(img)
+        text = (title or "RoboVAI").strip()[:120]
+
+        try:
+            font = ImageFont.truetype("C:\\Windows\\Fonts\\tahoma.ttf", 48)
+        except Exception:
+            font = ImageFont.load_default()
+
+        draw.text((60, 260), text, fill=(96, 165, 250), font=font)
+        img.save(fallback_path)
+
+        public = _upload_to_storj(str(fallback_path))
+        if public:
+            return {"image_url": public, "image_local_path": str(fallback_path)}
+        return {"image_url": None, "image_local_path": str(fallback_path)}
+    except Exception as exc:
+        print(f"⚠️ MediaPipeline: fallback image failed: {exc}")
+        return {"image_url": None, "image_local_path": None}
 
 
 async def fetch_and_publish(

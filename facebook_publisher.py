@@ -152,14 +152,22 @@ class FacebookPublisher:
             }
             files = {}
 
+            response = None
+            local_attempted = False
+
             # Prefer local file upload if available (more reliable)
             if image_path and os.path.exists(image_path):
-                # We need to keep the file open during the request
+                local_attempted = True
                 with open(image_path, "rb") as img_file:
                     files = {"source": img_file}
-                    response = requests.post(
-                        url, data=data, files=files, timeout=60
-                    )
+                    response = requests.post(url, data=data, files=files, timeout=60)
+
+                # If local upload fails and we have a URL, try URL upload as fallback
+                if response is not None and response.status_code != 200 and image_url:
+                    data2 = dict(data)
+                    data2["url"] = image_url
+                    response = requests.post(url, data=data2, timeout=60)
+
             elif image_url:
                 data["url"] = image_url
                 response = requests.post(url, data=data, timeout=60)
@@ -167,6 +175,12 @@ class FacebookPublisher:
                 return {
                     "success": False,
                     "message": "No image provided (url or path required)",
+                }
+
+            if response is None:
+                return {
+                    "success": False,
+                    "message": "Failed to prepare Facebook photo request",
                 }
 
             if response.status_code == 200:
@@ -189,13 +203,25 @@ class FacebookPublisher:
                     "url": post_url,
                 }
             else:
-                error_data = response.json()
-                error_msg = error_data.get("error", {}).get("message", response.text)
+                try:
+                    error_data = response.json()
+                except Exception:
+                    error_data = {}
+                err = error_data.get("error", {}) if isinstance(error_data, dict) else {}
+                error_msg = err.get("message") or response.text
+                extra = {
+                    "fb_code": err.get("code"),
+                    "fb_subcode": err.get("error_subcode"),
+                    "fb_type": err.get("type"),
+                    "fb_trace_id": err.get("fbtrace_id"),
+                    "local_upload_attempted": local_attempted,
+                }
 
                 return {
                     "success": False,
                     "message": f"Failed to post photo to Facebook: {error_msg}",
                     "status_code": response.status_code,
+                    "details": extra,
                 }
 
         except requests.RequestException as e:
