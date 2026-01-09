@@ -139,6 +139,7 @@ class AIProviderManager:
                 ],
                 "temperature": config["temperature"],
                 "max_tokens": config["max_tokens"],
+                "response_format": {"type": "json_object"},
             }
 
             # Enable reasoning for deep content (Blogger, Dev.to)

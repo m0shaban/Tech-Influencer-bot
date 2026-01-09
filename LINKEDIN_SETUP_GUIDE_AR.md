@@ -3,10 +3,11 @@
 ## ✅ تم إصلاح المشاكل
 
 تم تحديث نظام LinkedIn ليعمل مع أحدث API (UGC Posts):
-- ✅ إصلاح صيغة Person URN
+- ✅ إصلاح صيغة Person URN (تحويل تلقائي إلى member URN)
 - ✅ تحديث linkedin_publisher.py
 - ✅ إضافة Client ID للإعدادات
 - ✅ أدوات جديدة للاختبار وتحديث التوكن
+- ✅ إصلاح AIProviderManager (إزالة max_tokens من المعاملات)
 
 ## 📋 الخطوات المطلوبة
 
@@ -195,9 +196,18 @@ python get_linkedin_token.py
 **السبب:** الـ scopes غير مفعّلة  
 **الحل:** تأكد من تفعيل `w_member_social` في LinkedIn App
 
+### المشكلة: 422 Unprocessable Entity - URN format error
+**السبب:** LinkedIn API يتوقع `urn:li:member:` وليس `urn:li:person:`  
+**الحل:** ✅ تم الإصلاح! الكود الآن يحول تلقائياً من person إلى member  
+**ملاحظة:** احتفظ بـ `LINKEDIN_PERSON_URN=urn:li:person:569338843` في .env، الكود سيحوله تلقائياً
+
+### المشكلة: TypeError - AIProviderManager got unexpected keyword argument
+**السبب:** استدعاء generate_content بمعاملات خاطئة  
+**الحل:** ✅ تم الإصلاح! generate_content الآن يستخدم max_tokens/temperature من الـ config
+
 ### المشكلة: 400 Bad Request
-**السبب:** صيغة Person URN خاطئة  
-**الحل:** تأكد أن URN بالصيغة: `urn:li:person:569338843`
+**السبب:** صيغة الطلب غير صحيحة  
+**الحل:** تأكد من تحديث الكود لآخر إصدار من GitHub
 
 ### المشكلة: Person URN غير موجود
 **الحل اليدوي:**

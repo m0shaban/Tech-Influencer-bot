@@ -405,27 +405,17 @@ def rewrite_with_ai(
             platform=platform,
             system_prompt=effective_system_prompt,
             user_prompt=user_content,
-            max_tokens=int(os.getenv("GROQ_MAX_TOKENS", "0") or 0)
-            or DEFAULT_MAX_TOKENS,
-            temperature=float(os.getenv("GROQ_TEMPERATURE", "0") or 0)
-            or DEFAULT_TEMPERATURE,
+            enable_reasoning=platform in ["blogger", "devto"],  # Enable reasoning for long-form
         )
-
-        if not result or not result.get("content"):
+        
+        if not result:
             _set_last_error("Empty AI response")
             return None
-
-        # Parse JSON response
-        content = result["content"]
-        parsed = _parse_json_response(content)
+        
+        # Parse JSON response (result is the content string directly)
+        parsed = _parse_json_response(result)
         if parsed is None:
-            snippet = content.strip().replace("\n", " ")
-            _set_last_error(f"Invalid JSON from AI: {snippet[:180]}")
-            return None
-
-        try:
-            normalized = _normalize_ai_result(parsed, link=link)
-            return normalized
+            snippet = result.strip().replace("\n", " ")
         except ValueError as ve:
             _set_last_error(f"AI Validation Error: {ve}")
             return None

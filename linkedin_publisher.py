@@ -28,10 +28,17 @@ class LinkedInPublisher:
         }
 
     def _get_person_urn(self) -> str:
-        """Get the authenticated user's URN"""
+        """Get the authenticated user's URN in member format (required by LinkedIn API)"""
         if LINKEDIN_PERSON_URN:
-            # Use person URN directly (no conversion needed for UGC API)
-            return LINKEDIN_PERSON_URN
+            # LinkedIn UGC API requires urn:li:member: format, not urn:li:person:
+            if "urn:li:person:" in LINKEDIN_PERSON_URN:
+                person_id = LINKEDIN_PERSON_URN.split(":")[-1]
+                return f"urn:li:member:{person_id}"
+            elif "urn:li:member:" in LINKEDIN_PERSON_URN:
+                return LINKEDIN_PERSON_URN
+            else:
+                # Assume it's just the ID
+                return f"urn:li:member:{LINKEDIN_PERSON_URN}"
 
         raise ValueError("LINKEDIN_PERSON_URN not configured in environment")
 
