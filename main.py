@@ -225,31 +225,32 @@ def prepare_media(post: Dict[str, Any], title: str) -> Dict[str, Optional[str]]:
             print(f"⚠️ MediaPipeline: Storj upload failed: {exc}")
         return None
 
-    def _upload_to_imgur(local_path: str) -> Optional[str]:
-        """Upload image to Imgur as fallback (free, stable, no expiry)"""
+    def _upload_to_imgbb(local_path: str) -> Optional[str]:
+        """Upload image to ImgBB as fallback (free, stable, no expiry)"""
         try:
-            client_id = os.getenv("IMGUR_CLIENT_ID")
-            if not client_id:
-                print("⚠️ MediaPipeline: IMGUR_CLIENT_ID not set")
+            api_key = os.getenv("IMGBB_API_KEY")
+            if not api_key:
+                print("⚠️ MediaPipeline: IMGBB_API_KEY not set")
                 return None
 
             with open(local_path, "rb") as img_file:
                 response = requests.post(
-                    "https://api.imgur.com/3/image",
-                    headers={"Authorization": f"Client-ID {client_id}"},
+                    "https://api.imgbb.com/1/upload",
+                    data={"key": api_key},
                     files={"image": img_file},
                     timeout=30,
                 )
 
             if response.status_code == 200:
                 data = response.json()
-                url = data.get("data", {}).get("link")
-                if url:
-                    print(f"✅ Imgur upload successful: {url[:60]}...")
-                    return url
-            print(f"⚠️ Imgur upload failed: {response.status_code}")
+                if data.get("success"):
+                    url = data.get("data", {}).get("url")
+                    if url:
+                        print(f"✅ ImgBB upload successful: {url[:60]}...")
+                        return url
+            print(f"⚠️ ImgBB upload failed: {response.status_code}")
         except Exception as exc:
-            print(f"⚠️ MediaPipeline: Imgur upload failed: {exc}")
+            print(f"⚠️ MediaPipeline: ImgBB upload failed: {exc}")
         return None
 
     # Strategy 1: Use RSS image if available (download locally then upload to Storj)
@@ -260,8 +261,8 @@ def prepare_media(post: Dict[str, Any], title: str) -> Dict[str, Optional[str]]:
         if local:
             public = _upload_to_storj(local)
             if not public:
-                print("🔄 MediaPipeline: Trying Imgur fallback...")
-                public = _upload_to_imgur(local)
+                print("🔄 MediaPipeline: Trying ImgBB fallback...")
+                public = _upload_to_imgbb(local)
             if public:
                 return {"image_url": public, "image_local_path": local}
             # If both fail, return local for Telegram and RSS URL for others
@@ -280,8 +281,8 @@ def prepare_media(post: Dict[str, Any], title: str) -> Dict[str, Optional[str]]:
             if not public_url and local_path:
                 public_url = _upload_to_storj(str(local_path))
                 if not public_url:
-                    print("🔄 MediaPipeline: Trying Imgur fallback...")
-                    public_url = _upload_to_imgur(str(local_path))
+                    print("🔄 MediaPipeline: Trying ImgBB fallback...")
+                    public_url = _upload_to_imgbb(str(local_path))
             if public_url:
                 print(f"✅ OG Image ready: {public_url[:60]}...")
                 return {"image_url": public_url, "image_local_path": local_path}
@@ -314,8 +315,8 @@ def prepare_media(post: Dict[str, Any], title: str) -> Dict[str, Optional[str]]:
 
         public = _upload_to_storj(str(fallback_path))
         if not public:
-            print("🔄 MediaPipeline: Trying Imgur fallback for placeholder...")
-            public = _upload_to_imgur(str(fallback_path))
+            print("🔄 MediaPipeline: Trying ImgBB fallback for placeholder...")
+            public = _upload_to_imgbb(str(fallback_path))
         if public:
             return {"image_url": public, "image_local_path": str(fallback_path)}
         return {"image_url": None, "image_local_path": str(fallback_path)}
