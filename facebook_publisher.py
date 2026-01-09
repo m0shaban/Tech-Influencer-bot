@@ -207,7 +207,9 @@ class FacebookPublisher:
                     error_data = response.json()
                 except Exception:
                     error_data = {}
-                err = error_data.get("error", {}) if isinstance(error_data, dict) else {}
+                err = (
+                    error_data.get("error", {}) if isinstance(error_data, dict) else {}
+                )
                 error_msg = err.get("message") or response.text
                 extra = {
                     "fb_code": err.get("code"),

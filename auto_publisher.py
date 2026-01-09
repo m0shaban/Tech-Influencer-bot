@@ -47,16 +47,21 @@ class AutoPublisher:
             next_run_time = None
             if next_run_seconds:
                 from datetime import timedelta
+
                 next_run_time = (now + timedelta(seconds=next_run_seconds)).isoformat()
 
             data = {
                 "is_running": self.is_running,
                 "posts_today": self.posts_today,
-                "last_post_date": self.last_post_date.isoformat() if self.last_post_date else None,
+                "last_post_date": (
+                    self.last_post_date.isoformat() if self.last_post_date else None
+                ),
                 "updated_at": now.isoformat(),
                 "next_run_estimated": next_run_time,
-                "business_hours_status": "OPEN" if self._is_business_hours() else "CLOSED",
-                "max_posts_per_day": MAX_POSTS_PER_DAY
+                "business_hours_status": (
+                    "OPEN" if self._is_business_hours() else "CLOSED"
+                ),
+                "max_posts_per_day": MAX_POSTS_PER_DAY,
             }
             STATUS_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
         except Exception as e:

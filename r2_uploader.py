@@ -56,9 +56,9 @@ def upload_file_to_r2(
     secret_key = _env_any("R2_SECRET_ACCESS_KEY", "STORJ_SECRET_ACCESS_KEY")
     endpoint = _env_any("R2_ENDPOINT_URL", "STORJ_ENDPOINT_URL")
     bucket = _env_any("R2_BUCKET", "STORJ_BUCKET")
-    
+
     print(f"📤 Uploading to S3: {endpoint}/{bucket}/{key}")
-    
+
     session = Session(
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
@@ -77,10 +77,7 @@ def upload_file_to_r2(
 
     try:
         s3.upload_file(
-            str(file_path), 
-            bucket, 
-            key, 
-            ExtraArgs=extra_args if extra_args else None
+            str(file_path), bucket, key, ExtraArgs=extra_args if extra_args else None
         )
         print(f"✅ Upload successful: {key}")
     except Exception as e:

@@ -123,6 +123,17 @@ def _toggle_status() -> str:
     return new_status
 
 
+def _load_platform_config() -> dict:
+    """Load platform configuration with CTA templates and priorities."""
+    try:
+        config_path = BASE_DIR / "platform_config.json"
+        if config_path.exists():
+            return json.loads(config_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        print(f"⚠️ Failed to load platform_config.json: {e}")
+    return {"platforms": {}, "cross_platform_cta": {"enabled": False}}
+
+
 def get_admin_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         [
@@ -167,6 +178,199 @@ def _get_stats_text() -> str:
     status = "active" if _is_system_active() else "paused"
     status_emoji = "🟢" if status == "active" else "🔴"
 
+
+async def _generate_platform_contents(
+    post: dict,
+    title: str,
+    link: str,
+    system_prompt: Optional[str],
+    telegram_post: str,
+    facebook_post: str,
+    blog_title: str,
+    blog_content_md: str,
+    discord_msg: str,
+) -> dict:
+    """Generate platform-specific content using AI routing."""
+    from ai_processor import rewrite_with_ai
+    
+    # Define platforms that need specific AI generation
+    platforms_to_generate = ["blogger", "devto", "facebook", "telegram"]
+    
+    contents = {}
+    
+    for platform in platforms_to_generate:
+        try:
+            # Generate content with platform-specific AI
+            ai_result = rewrite_with_ai(
+                title=post.get("title", ""),
+                summary=post.get("summary", ""),
+                link=link,
+                system_prompt=system_prompt,
+                platform=platform,
+            )
+            
+            if ai_result:
+                # Map AI results to platform format
+                if platform in ["blogger", "devto"]:
+                    contents[platform] = {
+                        "caption": ai_result.get("blog_content_md", ""),
+                        "title": ai_result.get("blog_title", ""),
+                    }
+                elif platform == "facebook":
+                    contents[platform] = {
+                        "caption": ai_result.get("facebook_post", ""),
+                    }
+                elif platform == "telegram":
+                    contents[platform] = {
+                        "caption": ai_result.get("telegram_post", ""),
+                    }
+            else:
+                # Fallback to original generated content
+                if platform == "blogger":
+                    contents[platform] = {"caption": blog_content_md, "title": blog_title}
+                elif platform == "devto":
+                    contents[platform] = {"caption": blog_content_md, "title": blog_title}
+                elif platform == "facebook":
+                    contents[platform] = {"caption": facebook_post}
+                elif platform == "telegram":
+                    contents[platform] = {"caption": telegram_post}
+        except Exception as e:
+            print(f"⚠️ Failed to generate content for {platform}: {e}")
+            # Use fallback content
+            if platform == "blogger":
+                contents[platform] = {"caption": blog_content_md, "title": blog_title}
+            elif platform == "devto":
+                contents[platform] = {"caption": blog_content_md, "title": blog_title}
+            elif platform == "facebook":
+                contents[platform] = {"caption": facebook_post}
+            elif platform == "telegram":
+                contents[platform] = {"caption": telegram_post}
+    
+    # Add discord with existing content
+    contents["discord"] = {"caption": discord_msg}
+    
+    return contents
+
+
+async def _publish_sequential_with_ctas(
+    publisher,
+    platform_contents: dict,
+    platform_config: dict,
+    image_url: Optional[str],
+    image_local_path: Optional[str],
+    link: Optional[str],
+    telegram_context,
+) -> dict:
+    """Publish platforms sequentially with URL collection and CTA injection."""
+    import asyncio
+    
+    # Get enabled platforms from publisher
+    enabled_platforms = publisher.enabled_platforms
+    
+    # Get platform configurations
+    platforms_config = platform_config.get("platforms", {})
+    cta_config = platform_config.get("cross_platform_cta", {})
+    cta_enabled = cta_config.get("enabled", False)
+    cta_templates = cta_config.get("templates", {})
+    
+    # Sort platforms by priority
+    platform_priority = []
+    for p in enabled_platforms:
+        priority = platforms_config.get(p, {}).get("priority", 99)
+        platform_priority.append((p, priority))
+    
+    platform_priority.sort(key=lambda x: x[1])
+    sorted_platforms = [p[0] for p in platform_priority]
+    
+    print(f"🔄 Sequential publishing order: {sorted_platforms}")
+    
+    # Collect published URLs
+    published_urls = {}
+    results = {}
+    
+    # Publish each platform sequentially
+    for platform in sorted_platforms:
+        try:
+            # Get platform config
+            p_config = platforms_config.get(platform, {})
+            delay_minutes = p_config.get("delay_minutes", 0)
+            enable_cta = p_config.get("enable_cta", False)
+            
+            # Wait for delay (skip for first platform)
+            if published_urls and delay_minutes > 0:
+                print(f"⏳ Waiting {delay_minutes} minutes before publishing to {platform}...")
+                await asyncio.sleep(delay_minutes * 60)
+            
+            # Get content for this platform
+            content_data = platform_contents.get(platform, {})
+            caption = content_data.get("caption", "")
+            title = content_data.get("title")
+            
+            # Inject CTAs if enabled
+            if cta_enabled and enable_cta and caption:
+                cta_template = cta_templates.get(platform, "")
+                if cta_template and published_urls:
+                    cta_text = cta_template.format(
+                        blogger_url=published_urls.get("blogger", ""),
+                        devto_url=published_urls.get("devto", ""),
+                        facebook_url=published_urls.get("facebook", ""),
+                    )
+                    # Remove lines with empty URLs
+                    cta_lines = []
+                    for line in cta_text.split("\n"):
+                        # Skip lines that end with : and have no URL
+                        if ":" in line and not any(url in line for url in published_urls.values()):
+                            continue
+                        cta_lines.append(line)
+                    cta_text = "\n".join(cta_lines)
+                    
+                    if cta_text.strip():
+                        caption = caption + cta_text
+                        print(f"✅ Injected CTA for {platform}")
+            
+            # Prepare payload
+            payload = {platform: {"caption": caption}}
+            if title:
+                payload[platform]["title"] = title
+            
+            # Publish to this platform
+            print(f"📤 Publishing to {platform}...")
+            platform_results = await publisher.publish(
+                caption=caption,
+                link=link,
+                image_url=image_url,
+                image_local_path=image_local_path,
+                platforms=[platform],
+                platform_payloads=payload,
+                telegram_context=telegram_context,
+                send_reports=True,
+            )
+            
+            # Collect result
+            result = platform_results.get(platform, {})
+            results[platform] = result
+            
+            # Extract and store URL if successful
+            if isinstance(result, dict) and (result.get("status") == "success" or result.get("success")):
+                url = result.get("url") or result.get("post_url") or result.get("link")
+                if url:
+                    published_urls[platform] = url
+                    print(f"✅ {platform} published: {url}")
+                else:
+                    print(f"✅ {platform} published (no URL returned)")
+            else:
+                error = result.get("error") or result.get("message", "Unknown error")
+                print(f"❌ {platform} failed: {error}")
+                
+        except Exception as e:
+            print(f"❌ Error publishing to {platform}: {e}")
+            import traceback
+            traceback.print_exc()
+            results[platform] = {"status": "error", "error": str(e)}
+    
+    print(f"\n✅ Published URLs: {published_urls}")
+    return results
+
     return (
         "📊 Stats\n\n"
         f"{status_emoji} Status: {status}\n"
@@ -178,12 +382,12 @@ def _get_stats_text() -> str:
 def prepare_media(post: Dict[str, Any], title: str) -> Dict[str, Optional[str]]:
     """
     CRITICAL MediaPipeline: Guarantee image availability with Storj upload.
-    
+
     Returns:
         Dict with 'image_url' (public Storj URL) and 'image_local_path' (for Telegram)
     """
     print("🖼️ MediaPipeline: Starting...")
-    
+
     def _download_image(url: str) -> Optional[str]:
         try:
             images_dir = BASE_DIR / "images" / "downloaded"
@@ -268,12 +472,12 @@ def prepare_media(post: Dict[str, Any], title: str) -> Dict[str, Optional[str]]:
             # If both fail, return local for Telegram and RSS URL for others
             return {"image_url": rss_image, "image_local_path": local}
         return {"image_url": rss_image, "image_local_path": None}
-    
+
     # Strategy 2: Generate OG Image and upload to Storj
     print("🎨 Strategy 2: Generating OG Image...")
     try:
         from image_generator import get_article_image
-        
+
         result = get_article_image(title, post.get("link"))
         if result:
             local_path = result.get("local_path")
@@ -290,8 +494,9 @@ def prepare_media(post: Dict[str, Any], title: str) -> Dict[str, Optional[str]]:
     except Exception as e:
         print(f"❌ OG Image generation failed: {e}")
         import traceback
+
         traceback.print_exc()
-    
+
     # Fallback: generate a simple placeholder image locally then upload
     try:
         from PIL import Image, ImageDraw, ImageFont
@@ -369,7 +574,7 @@ async def fetch_and_publish(
     caption = facebook_post or telegram_post
     link = str(post.get("link", "") or "").strip()
     title = str(post.get("title", "") or "").strip()
-    
+
     # 🚀 NEW: Use MediaPipeline to guarantee image availability
     media_result = prepare_media(post, title)
     image_url = media_result.get("image_url")
@@ -391,34 +596,30 @@ async def fetch_and_publish(
             return base[: limit - 1] + ellipsis
         return base
 
-    # Multi-platform publish with scheduling support
+    # Multi-platform publish with sequential publishing and URL collection
     try:
         from multi_platform_publisher import MultiPlatformPublisher
+        import asyncio
 
-        payloads = {
-            "telegram": {"caption": telegram_post or caption},
-            "facebook": {"caption": facebook_post or caption},
-            "discord": {"caption": discord_msg or caption},
-            "blogger": {
-                "caption": blog_content_md or caption,
-                "title": blog_title or None,
-            },
-            "devto": {
-                "caption": blog_content_md or caption,
-                "title": blog_title or None,
-            },
-        }
+        # Load platform config for priority-based sequential publishing
+        platform_config = _load_platform_config()
+        
+        # Generate platform-specific content with AI routing
+        platform_contents = await _generate_platform_contents(
+            post, title, link, system_prompt,
+            telegram_post, facebook_post, blog_title, blog_content_md, discord_msg
+        )
 
-        # Publish immediately to all platforms (no fake scheduling)
+        # Publish sequentially with URL collection and CTA injection
         publisher = MultiPlatformPublisher(use_scheduler=False)
-        results = await publisher.publish(
-            caption=caption,
-            link=link or None,
-            image_url=image_url or None,
-            image_local_path=image_local_path or None,
-            platform_payloads=payloads,
+        results = await _publish_sequential_with_ctas(
+            publisher=publisher,
+            platform_contents=platform_contents,
+            platform_config=platform_config,
+            image_url=image_url,
+            image_local_path=image_local_path,
+            link=link,
             telegram_context=context,
-            send_reports=True,  # Enable real-time reports to admin
         )
 
         any_success = any(

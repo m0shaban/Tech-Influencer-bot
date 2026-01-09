@@ -52,6 +52,7 @@ class MultiPlatformPublisher:
         try:
             import json
             from pathlib import Path
+
             config_path = Path(__file__).parent / "platform_config.json"
             if config_path.exists():
                 data = json.loads(config_path.read_text(encoding="utf-8"))
@@ -79,7 +80,11 @@ class MultiPlatformPublisher:
             platforms.append("discord")
 
         # Medium (requires token + user ID)
-        if os.getenv("MEDIUM_INTEGRATION_TOKEN") and os.getenv("MEDIUM_USER_ID") and is_enabled("medium"):
+        if (
+            os.getenv("MEDIUM_INTEGRATION_TOKEN")
+            and os.getenv("MEDIUM_USER_ID")
+            and is_enabled("medium")
+        ):
             platforms.append("medium")
 
         # Twitter/X (requires OAuth 1.0a credentials)
@@ -94,9 +99,11 @@ class MultiPlatformPublisher:
             platforms.append("twitter")
 
         # Blogger (requires Blog ID and API key or OAuth)
-        if os.getenv("BLOGGER_BLOG_ID") and (
-            os.getenv("BLOGGER_API_KEY") or os.getenv("BLOGGER_ACCESS_TOKEN")
-        ) and is_enabled("blogger"):
+        if (
+            os.getenv("BLOGGER_BLOG_ID")
+            and (os.getenv("BLOGGER_API_KEY") or os.getenv("BLOGGER_ACCESS_TOKEN"))
+            and is_enabled("blogger")
+        ):
             platforms.append("blogger")
 
         # Reddit (requires OAuth credentials)
@@ -111,7 +118,11 @@ class MultiPlatformPublisher:
             platforms.append("reddit")
 
         # Facebook (requires Page Access Token and Page ID)
-        if os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN") and os.getenv("FACEBOOK_PAGE_ID") and is_enabled("facebook"):
+        if (
+            os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN")
+            and os.getenv("FACEBOOK_PAGE_ID")
+            and is_enabled("facebook")
+        ):
             platforms.append("facebook")
 
         # Dev.to (requires API key)
@@ -184,12 +195,12 @@ class MultiPlatformPublisher:
                     # Facebook handles both, prefers local if available
                     if image_local_path:
                         local_image_path_for_platform = image_local_path
-                    
+
                     if image_url and image_url.lower().startswith("http"):
                         image_for_platform = image_url
                     else:
                         image_for_platform = None
-                        
+
                 elif platform != "telegram":
                     # Other platforms need public URLs only
                     if image_url and image_url.lower().startswith("http"):

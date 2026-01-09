@@ -61,10 +61,7 @@
     "https://aiparabellum.com/feed/"
   ],
   "welcome_message": "اهلا بيك في الجروب!",
-  "banned_words": [
-    "scam",
-    "crypto"
-  ],
+  "banned_words": ["scam", "crypto"],
   "broadcast_target": "channel",
   "last_manual_post_url": "",
   "model": "llama-3.3-70b-versatile",

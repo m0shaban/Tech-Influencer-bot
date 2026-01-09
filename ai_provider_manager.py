@@ -15,7 +15,7 @@ class AIProviderManager:
     def __init__(self):
         self.groq_keys = self._load_groq_keys()
         self.nvidia_keys = self._load_nvidia_keys()
-        
+
         # Provider configurations
         self.providers = {
             # Deep reasoning for long-form content (Blogger, Dev.to)
@@ -149,13 +149,9 @@ class AIProviderManager:
                         "chat_template_kwargs": {"enable_thinking": True},
                     }
                 elif "deepseek" in config["model"]:
-                    params["extra_body"] = {
-                        "chat_template_kwargs": {"thinking": True}
-                    }
+                    params["extra_body"] = {"chat_template_kwargs": {"thinking": True}}
 
-            print(
-                f"🤖 Using {config['provider']} ({config['model']}) for {platform}"
-            )
+            print(f"🤖 Using {config['provider']} ({config['model']}) for {platform}")
 
             response = client.chat.completions.create(**params)
             content = response.choices[0].message.content

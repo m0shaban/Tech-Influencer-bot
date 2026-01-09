@@ -371,22 +371,22 @@ def rewrite_with_ai(
     platform: str = "telegram",
 ) -> Optional[Dict[str, Any]]:
     """Generate per-platform content using intelligent AI routing.
-    
+
     Args:
         title: Post title
-        summary: Post summary  
+        summary: Post summary
         link: Post link
         system_prompt: Custom system prompt (optional)
         platform: Target platform (blogger, devto, facebook, telegram, etc.)
-    
+
     Returns:
         Dict with platform-specific content or None on failure
     """
     _set_last_error(None)
-    
+
     # Get AI manager
     ai_manager = _get_ai_manager()
-    
+
     # Use custom prompt if provided, otherwise use default
     effective_system_prompt = (system_prompt or "").strip() or DEFAULT_SYSTEM_PROMPT
 
@@ -405,14 +405,16 @@ def rewrite_with_ai(
             platform=platform,
             system_prompt=effective_system_prompt,
             user_prompt=user_content,
-            max_tokens=int(os.getenv("GROQ_MAX_TOKENS", "0") or 0) or DEFAULT_MAX_TOKENS,
-            temperature=float(os.getenv("GROQ_TEMPERATURE", "0") or 0) or DEFAULT_TEMPERATURE,
+            max_tokens=int(os.getenv("GROQ_MAX_TOKENS", "0") or 0)
+            or DEFAULT_MAX_TOKENS,
+            temperature=float(os.getenv("GROQ_TEMPERATURE", "0") or 0)
+            or DEFAULT_TEMPERATURE,
         )
-        
+
         if not result or not result.get("content"):
             _set_last_error("Empty AI response")
             return None
-        
+
         # Parse JSON response
         content = result["content"]
         parsed = _parse_json_response(content)
@@ -427,7 +429,7 @@ def rewrite_with_ai(
         except ValueError as ve:
             _set_last_error(f"AI Validation Error: {ve}")
             return None
-            
+
     except Exception as exc:  # noqa: BLE001
         status = getattr(exc, "status_code", None) or getattr(exc, "status", None)
         msg = str(getattr(exc, "message", "") or "")

@@ -1,4 +1,5 @@
 # 🤖 RoboVAI - منظومة المحتوى الذكي
+
 > **حول علامتك التجارية إلى إمبراطورية محتوى تعمل 24/7 دون تدخل بشري.**
 
 [![Live Demo](https://img.shields.io/badge/Live-Demo_Channel-229ED9?style=for-the-badge&logo=telegram)](https://t.me/nextlevelegypt)
@@ -12,17 +13,19 @@
 ## 💎 القيمة للأعمال (Business Value)
 
 ### لماذا RoboVAI؟
+
 في عالم الـ Marketing اليوم، **الاستمرارية (Consistency)** هي العملة الصعبة.
+
 - **بدون RoboVAI:** تحتاج لفريق (كاتب محتوى + باحث + مدير سوشيال ميديا) بتكلفة لا تقل عن $1,000/شهرياً.
 - **مع RoboVAI:** تحصل على 50+ منشور يومياً، بجودة "خبير"، وتكلفة تشغيل تقارب **الصفر**.
 
-| الميزة | الطريقة التقليدية | مع RoboVAI |
-| :--- | :--- | :--- |
-| **التكلفة** | $1000+/شهرياً | $0 (Free Tier) |
-| **الإنتاجية** | 2-3 منشورات/يوم | 50+ منشور/يوم |
-| **التغطية** | منصة واحدة أو اثنتين | 9 منصات (قريباً) |
-| **التواجد** | 8 ساعات عمل | 24/7 (حتى وأنت نائم) |
-| **الجودة** | متذبذبة حسب المزاج | "Guru" Standard دائماً |
+| الميزة        | الطريقة التقليدية    | مع RoboVAI             |
+| :------------ | :------------------- | :--------------------- |
+| **التكلفة**   | $1000+/شهرياً        | $0 (Free Tier)         |
+| **الإنتاجية** | 2-3 منشورات/يوم      | 50+ منشور/يوم          |
+| **التغطية**   | منصة واحدة أو اثنتين | 9 منصات (قريباً)       |
+| **التواجد**   | 8 ساعات عمل          | 24/7 (حتى وأنت نائم)   |
+| **الجودة**    | متذبذبة حسب المزاج   | "Guru" Standard دائماً |
 
 ---
 
@@ -50,10 +53,12 @@
 ## 🛠️ التثبيت والتشغيل
 
 ### 1. المتطلبات
+
 - Python 3.11+
-- مفتاح API من Google Gemini 
+- مفتاح API من Google Gemini
 
 ### 2. التثبيت المحلي
+
 ```bash
 git clone https://github.com/m0shaban/RoboVAI.git
 cd RoboVAI
@@ -61,7 +66,9 @@ pip install -r requirements.txt
 ```
 
 ### 3. إعداد البيئة
+
 قم بإنشاء ملف `.env`:
+
 ```env
 GEMINI_API_KEY=your_key_here
 TELEGRAM_BOT_TOKEN=your_bot_token
@@ -69,11 +76,15 @@ TELEGRAM_CHANNEL_ID=@your_channel_id
 ```
 
 ### 4. التشغيل
+
 لتشغيل الناشر الآلي:
+
 ```bash
 python auto_publisher.py
 ```
+
 لتشغيل لوحة التحكم:
+
 ```bash
 streamlit run dashboard.py
 ```
@@ -83,8 +94,10 @@ streamlit run dashboard.py
 ## 📞 تواصل معنا
 
 للاستفسارات التجارية أو طلب نسخ مخصصة للشركات:
+
 - **Telegram:** [@m0shaban](https://t.me/m0shaban)
 - **Email:** m.shaban@smart-solutions.com
 
 ---
-*Built with ❤️ in Egypt for the World.*
+
+_Built with ❤️ in Egypt for the World._

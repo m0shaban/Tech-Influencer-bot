@@ -181,7 +181,15 @@ with st.sidebar:
                 "📋 Live Terminal",
                 "📢 Manual Broadcast",
             ],
-            icons=["house", "cpu", "link", "globe", "calendar", "terminal", "megaphone"],
+            icons=[
+                "house",
+                "cpu",
+                "link",
+                "globe",
+                "calendar",
+                "terminal",
+                "megaphone",
+            ],
             menu_icon="list",
             default_index=0,
         )
@@ -225,7 +233,7 @@ if menu_choice == "🏠 The Cockpit":
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Status", f"{status_color} {status_label}")
     c2.metric("Active Feeds", feeds_count)
-    
+
     posts_today = ap_status.get("posts_today", 0)
     max_posts = ap_status.get("max_posts_per_day", 50)
     c3.metric("Posts Today", f"{posts_today} / {max_posts}")
@@ -237,7 +245,7 @@ if menu_choice == "🏠 The Cockpit":
     # Row 2: Timing
     st.markdown("---")
     k1, k2 = st.columns(2)
-    
+
     # Last Run
     last_run_ts = ap_status.get("last_post_date")
     if last_run_ts:
@@ -248,7 +256,7 @@ if menu_choice == "🏠 The Cockpit":
             last_run_pretty = str(last_run_ts)
     else:
         last_run_pretty = last_run or "No Data"
-    
+
     k1.metric("Last Publish Time", last_run_pretty)
 
     # Next Run
@@ -261,7 +269,7 @@ if menu_choice == "🏠 The Cockpit":
             next_run_pretty = str(next_run_ts)
     else:
         next_run_pretty = "Calculating / Sleeping"
-        
+
     k2.metric("Next Estimated Run", next_run_pretty)
 
     st.markdown("---")
@@ -458,9 +466,7 @@ elif menu_choice == "🌐 Platform Status":
         # Test button
         if st.button("🧪 Test All Platforms", type="primary", use_container_width=True):
             st.info("🔄 Testing platforms... (check bot logs for results)")
-            st.caption(
-                "Use Telegram bot command '🧪 Test Platforms' for full testing"
-            )
+            st.caption("Use Telegram bot command '🧪 Test Platforms' for full testing")
 
     except Exception as exc:
         st.error(f"❌ Error loading platform status: {exc}")
@@ -474,72 +480,87 @@ elif menu_choice == "📅 Schedule Settings":
     try:
         import json
         from pathlib import Path
-        
+
         config_path = Path(__file__).parent / "platform_config.json"
-        
+
         # Load platform config
         if config_path.exists():
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 platform_config = json.load(f)
         else:
             st.error("❌ platform_config.json not found")
             st.stop()
-        
+
         # Global settings
         st.subheader("⚙️ Global Settings")
-        
+
         global_settings = platform_config.get("global_settings", {})
-        
+
         col1, col2 = st.columns(2)
         with col1:
             enable_reports = st.checkbox(
                 "Enable Admin Reports",
                 value=global_settings.get("enable_reports", True),
-                help="Send real-time reports to admin via Telegram"
+                help="Send real-time reports to admin via Telegram",
             )
-        
+
         with col2:
             distribution_mode = st.selectbox(
                 "Distribution Mode",
                 options=["shared", "unique"],
                 index=0 if global_settings.get("distribution_mode") == "shared" else 1,
-                help="shared: same content to all platforms | unique: different content per platform"
+                help="shared: same content to all platforms | unique: different content per platform",
             )
-        
+
         global_settings["enable_reports"] = enable_reports
         global_settings["distribution_mode"] = distribution_mode
-        
+
         st.markdown("---")
-        
+
         # Platform-specific settings
         st.subheader("📱 Platform Settings")
-        
+
         platforms_data = platform_config.get("platforms", {})
-        
-        for platform_key in ["telegram", "discord", "blogger", "facebook", "linkedin", "twitter", "reddit", "medium", "devto"]:
+
+        for platform_key in [
+            "telegram",
+            "discord",
+            "blogger",
+            "facebook",
+            "linkedin",
+            "twitter",
+            "reddit",
+            "medium",
+            "devto",
+        ]:
             if platform_key not in platforms_data:
                 continue
-                
+
             platform_info = platforms_data[platform_key]
-            
-            with st.expander(f"{'✅' if platform_info.get('enabled') else '❌'} {platform_key.upper()}", expanded=False):
+
+            with st.expander(
+                f"{'✅' if platform_info.get('enabled') else '❌'} {platform_key.upper()}",
+                expanded=False,
+            ):
                 col1, col2, col3 = st.columns([1, 1, 1])
-                
+
                 with col1:
                     enabled = st.checkbox(
                         "Enabled",
                         value=platform_info.get("enabled", False),
-                        key=f"{platform_key}_enabled"
+                        key=f"{platform_key}_enabled",
                     )
-                
+
                 with col2:
                     publish_mode = st.selectbox(
                         "Publish Mode",
                         options=["immediate", "delayed"],
-                        index=0 if platform_info.get("publish_mode") == "immediate" else 1,
-                        key=f"{platform_key}_mode"
+                        index=(
+                            0 if platform_info.get("publish_mode") == "immediate" else 1
+                        ),
+                        key=f"{platform_key}_mode",
                     )
-                
+
                 with col3:
                     delay_minutes = st.number_input(
                         "Delay (minutes)",
@@ -548,44 +569,48 @@ elif menu_choice == "📅 Schedule Settings":
                         value=platform_info.get("delay_minutes", 0),
                         step=5,
                         key=f"{platform_key}_delay",
-                        disabled=(publish_mode == "immediate")
+                        disabled=(publish_mode == "immediate"),
                     )
-                
+
                 custom_prompt = st.text_area(
                     "Custom AI Prompt",
                     value=platform_info.get("custom_prompt", ""),
                     height=100,
                     key=f"{platform_key}_prompt",
-                    help="Platform-specific instructions for AI content generation"
+                    help="Platform-specific instructions for AI content generation",
                 )
-                
+
                 # Update values
                 platform_info["enabled"] = enabled
                 platform_info["publish_mode"] = publish_mode
-                platform_info["delay_minutes"] = delay_minutes if publish_mode == "delayed" else 0
+                platform_info["delay_minutes"] = (
+                    delay_minutes if publish_mode == "delayed" else 0
+                )
                 platform_info["custom_prompt"] = custom_prompt
-        
+
         st.markdown("---")
-        
+
         # Save button
-        if st.button("💾 Save Schedule Settings", type="primary", use_container_width=True):
+        if st.button(
+            "💾 Save Schedule Settings", type="primary", use_container_width=True
+        ):
             platform_config["global_settings"] = global_settings
             platform_config["platforms"] = platforms_data
-            
+
             try:
-                with open(config_path, 'w', encoding='utf-8') as f:
+                with open(config_path, "w", encoding="utf-8") as f:
                     json.dump(platform_config, f, ensure_ascii=False, indent=2)
                 st.success("✅ Settings saved successfully!")
                 st.balloons()
             except Exception as e:
                 st.error(f"❌ Failed to save: {e}")
-        
+
         # Quick presets
         st.markdown("---")
         st.subheader("⚡ Quick Presets")
-        
+
         col1, col2, col3 = st.columns(3)
-        
+
         with col1:
             if st.button("🚀 Instant All", use_container_width=True):
                 for platform_key in platforms_data:
@@ -593,7 +618,7 @@ elif menu_choice == "📅 Schedule Settings":
                     platforms_data[platform_key]["delay_minutes"] = 0
                 st.success("Set all platforms to immediate mode")
                 st.experimental_rerun()
-        
+
         with col2:
             if st.button("⏱️ Staggered 5min", use_container_width=True):
                 delays = [0, 5, 10, 15, 20, 25, 30, 35]
@@ -603,7 +628,7 @@ elif menu_choice == "📅 Schedule Settings":
                         platforms_data[platform_key]["delay_minutes"] = delays[i]
                 st.success("Set staggered 5-minute delays")
                 st.experimental_rerun()
-        
+
         with col3:
             if st.button("🕐 Staggered 10min", use_container_width=True):
                 delays = [0, 10, 20, 30, 40, 50, 60, 70]

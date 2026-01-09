@@ -721,10 +721,13 @@ class OGImageGenerator:
                 if public_url:
                     print(f"✅ Image uploaded to Storj successfully")
                 else:
-                    print(f"⚠️ Storj upload returned None (not configured or failed silently)")
+                    print(
+                        f"⚠️ Storj upload returned None (not configured or failed silently)"
+                    )
             except Exception as exc:
                 print(f"❌ Storj upload failed with exception: {exc}")
                 import traceback
+
                 traceback.print_exc()
 
             # Fallback: Build public URL if upload failed but STORJ_PUBLIC_BASE_URL is set
