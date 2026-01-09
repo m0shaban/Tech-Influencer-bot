@@ -84,17 +84,28 @@ class BloggerPublisher:
                 f"</div>"
             )
 
-        # Add caption as paragraphs
-        paragraphs = caption.split("\n")
-        for para in paragraphs:
-            if para.strip():
-                html_parts.append(f"<p>{para.strip()}</p>")
+        # Render caption (prefer Markdown -> HTML for good Blogger formatting)
+        rendered_html = ""
+        try:
+            from markdown import markdown  # type: ignore
 
-        # Add link if provided and not in caption
-        if link and link not in caption:
-            html_parts.append(
-                f'<p><a href="{link}" target="_blank" rel="noopener">Read more</a></p>'
+            rendered_html = markdown(
+                caption or "",
+                extensions=["extra", "sane_lists", "nl2br"],
+                output_format="html",
             )
+        except Exception:
+            # Minimal fallback: preserve line breaks without destroying formatting.
+            safe = (caption or "").strip()
+            if safe:
+                # Keep paragraphs separated by blank lines
+                blocks = [b.strip() for b in safe.split("\n\n") if b.strip()]
+                rendered_html = "\n".join(
+                    f"<p>{b.replace(chr(10), '<br/>')}</p>" for b in blocks
+                )
+
+        if rendered_html.strip():
+            html_parts.append(f'<div class="post-body">{rendered_html}</div>')
 
         return "\n".join(html_parts)
 
@@ -124,14 +135,15 @@ class BloggerPublisher:
             html_content = self._build_html_content(caption, link, image_url)
 
             # Prepare post data
-            post_data = {
+            post_data: Dict[str, Any] = {
                 "kind": "blogger#post",
                 "title": title[:200],  # Blogger title limit
                 "content": html_content,
             }
 
             if labels:
-                post_data["labels"] = labels[:20]  # Blogger allows up to 20 labels
+                safe_labels = [str(x) for x in labels if str(x).strip()]
+                post_data["labels"] = safe_labels[:20]  # Blogger allows up to 20 labels
 
             # Build URL with authentication
             url = f"{self.api_base}/blogs/{self.blog_id}/posts"

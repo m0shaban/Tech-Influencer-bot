@@ -1,6 +1,9 @@
 import os
+import base64
 from pathlib import Path
 from typing import Optional
+
+import requests
 
 
 def _env(name: str) -> str:
@@ -26,6 +29,38 @@ def r2_is_configured() -> bool:
     ]
 
     return all(bool(_env_any(*names)) for names in required_vars)
+
+
+def imgbb_is_configured() -> bool:
+    return bool(_env("IMGBB_API_KEY"))
+
+
+def upload_file_to_imgbb(local_path: str) -> str:
+    """Upload a local file to ImgBB and return its public URL."""
+    api_key = _env("IMGBB_API_KEY")
+    if not api_key:
+        raise RuntimeError("IMGBB_API_KEY is not configured")
+
+    file_path = Path(local_path)
+    if not file_path.exists():
+        raise FileNotFoundError(local_path)
+
+    # ImgBB expects base64 content in `image` or a multipart file.
+    # Base64 is very reliable across environments.
+    image_b64 = base64.b64encode(file_path.read_bytes()).decode("utf-8")
+    resp = requests.post(
+        "https://api.imgbb.com/1/upload",
+        data={"key": api_key, "image": image_b64},
+        timeout=45,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    if not data.get("success"):
+        raise RuntimeError(f"ImgBB upload failed: {data}")
+    url = (data.get("data") or {}).get("url")
+    if not url:
+        raise RuntimeError("ImgBB upload returned no URL")
+    return str(url)
 
 
 def upload_file_to_r2(
@@ -107,6 +142,16 @@ def upload_file_to_r2(
 
 def upload_image_if_configured(local_path: str, filename: str) -> Optional[str]:
     """Best-effort uploader. Returns public URL if uploaded, else None."""
+    # Preferred: ImgBB (per project decision)
+    if imgbb_is_configured():
+        try:
+            url = upload_file_to_imgbb(local_path)
+            print(f"✅ ImgBB upload successful: {url[:60]}...")
+            return url
+        except Exception as e:
+            print(f"⚠️ ImgBB upload failed: {e}")
+
+    # Fallback: R2/Storj (S3-compatible)
     if not r2_is_configured():
         return None
 

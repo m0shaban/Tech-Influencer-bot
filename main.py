@@ -487,16 +487,16 @@ def prepare_media(post: Dict[str, Any], title: str) -> Dict[str, Optional[str]]:
             print(f"⚠️ MediaPipeline: ImgBB upload failed: {exc}")
         return None
 
-    # Strategy 1: Use RSS image if available (download locally then upload to Storj)
+    # Strategy 1: Use RSS image if available (download locally then upload to ImgBB)
     rss_image = post.get("image")
     if rss_image and isinstance(rss_image, str) and rss_image.startswith("http"):
         print(f"✅ Strategy 1: Found RSS image: {rss_image[:60]}...")
         local = _download_image(rss_image)
         if local:
-            public = _upload_to_storj(local)
+            public = _upload_to_imgbb(local)
             if not public:
-                print("🔄 MediaPipeline: Trying ImgBB fallback...")
-                public = _upload_to_imgbb(local)
+                print("🔄 MediaPipeline: Trying Storj fallback...")
+                public = _upload_to_storj(local)
             if public:
                 return {"image_url": public, "image_local_path": local}
             # If both fail, return local for Telegram and RSS URL for others
@@ -513,10 +513,10 @@ def prepare_media(post: Dict[str, Any], title: str) -> Dict[str, Optional[str]]:
             local_path = result.get("local_path")
             public_url = result.get("public_url")
             if not public_url and local_path:
-                public_url = _upload_to_storj(str(local_path))
+                public_url = _upload_to_imgbb(str(local_path))
                 if not public_url:
-                    print("🔄 MediaPipeline: Trying ImgBB fallback...")
-                    public_url = _upload_to_imgbb(str(local_path))
+                    print("🔄 MediaPipeline: Trying Storj fallback...")
+                    public_url = _upload_to_storj(str(local_path))
             if public_url:
                 print(f"✅ OG Image ready: {public_url[:60]}...")
                 return {"image_url": public_url, "image_local_path": local_path}
@@ -548,10 +548,10 @@ def prepare_media(post: Dict[str, Any], title: str) -> Dict[str, Optional[str]]:
         draw.text((60, 260), text, fill=(96, 165, 250), font=font)
         img.save(fallback_path)
 
-        public = _upload_to_storj(str(fallback_path))
+        public = _upload_to_imgbb(str(fallback_path))
         if not public:
-            print("🔄 MediaPipeline: Trying ImgBB fallback for placeholder...")
-            public = _upload_to_imgbb(str(fallback_path))
+            print("🔄 MediaPipeline: Trying Storj fallback for placeholder...")
+            public = _upload_to_storj(str(fallback_path))
         if public:
             return {"image_url": public, "image_local_path": str(fallback_path)}
         return {"image_url": None, "image_local_path": str(fallback_path)}
