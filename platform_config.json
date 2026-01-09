@@ -4,7 +4,7 @@
       "enabled": true,
       "publish_mode": "immediate",
       "delay_minutes": 0,
-      "custom_prompt": "اكتب بأسلوب سريع ومباشر مناسب لقناة تليجرام. استخدم إيموجي واجعل المحتوى جذاب وسهل القراءة.",
+      "custom_prompt": "أنت المصدر. اكتب رأي شخصي حاد وسريع (Voice of a Friend). لا تذكر مصادر خارجية.",
       "max_length": 1024,
       "priority": 1
     },
@@ -12,7 +12,7 @@
       "enabled": true,
       "publish_mode": "delayed",
       "delay_minutes": 5,
-      "custom_prompt": "اكتب بأسلوب تقني مناسب لمجتمع Discord. ركز على التفاصيل التقنية واستخدم markdown formatting.",
+      "custom_prompt": "أنت الهاكر الشاطر. اكتب معلومة تقنية وتحدي للنقاش (Voice of Hype). لا تذكر مصادر.",
       "max_length": 1900,
       "priority": 2
     },
@@ -20,7 +20,7 @@
       "enabled": true,
       "publish_mode": "delayed",
       "delay_minutes": 10,
-      "custom_prompt": "اكتب مقال تفصيلي وشامل مناسب لمدونة Blogger. استخدم عناوين فرعية وفقرات منظمة. اجعله SEO-friendly.",
+      "custom_prompt": "أنت المعلم. اكتب مقال مرجعي شامل بالعربية الفصحى البسيطة. أنت المرجع الأساسي للمعلومة.",
       "max_length": 5000,
       "priority": 3
     },
@@ -28,7 +28,7 @@
       "enabled": true,
       "publish_mode": "delayed",
       "delay_minutes": 15,
-      "custom_prompt": "اكتب منشور تفاعلي يشجع على التعليقات والمشاركة. استخدم أسلوب ودود وسؤال في النهاية.",
+      "custom_prompt": "أنت الداعية التقني. اكتب قصة وتحليل عميق للمشكلة والحل. تفاعل مع الجمهور ولا تذكر مصادر.",
       "max_length": 2000,
       "priority": 4
     },
@@ -36,7 +36,7 @@
       "enabled": false,
       "publish_mode": "delayed",
       "delay_minutes": 20,
-      "custom_prompt": "اكتب بأسلوب احترافي مناسب لـ LinkedIn. ركز على القيمة المهنية والرؤى الاستراتيجية.",
+      "custom_prompt": "أنت الخبير الاستراتيجي. اكتب بأسلوب احترافي يركز على العائد (ROI) والمستقبل المهني. أنت المصدر.",
       "max_length": 3000,
       "priority": 5
     },
@@ -44,7 +44,7 @@
       "enabled": false,
       "publish_mode": "delayed",
       "delay_minutes": 25,
-      "custom_prompt": "اكتب تغريدة قصيرة ومؤثرة. استخدم هاشتاجات ذكية واجعلها قابلة لإعادة التغريد.",
+      "custom_prompt": "أنت المؤثر. تغريدة نارية واحدة تلخص الحدث وتعطي الرأي القاطع. بدون روابط مصادر.",
       "max_length": 280,
       "priority": 6
     },
@@ -52,7 +52,7 @@
       "enabled": false,
       "publish_mode": "delayed",
       "delay_minutes": 30,
-      "custom_prompt": "اكتب بأسلوب مباشر وصادق مناسب لـ Reddit. ركز على المحتوى وتجنب الترويج المباشر.",
+      "custom_prompt": "أنت واحد من المجتمع. ادخل في الموضوع مباشرة بدون مقدمات تسويقية. قدم قيمة حقيقية.",
       "max_length": 2500,
       "priority": 7
     },
@@ -60,7 +60,7 @@
       "enabled": false,
       "publish_mode": "delayed",
       "delay_minutes": 35,
-      "custom_prompt": "اكتب مقال عميق وتحليلي مناسب لـ Medium. استخدم storytelling والأمثلة الواقعية.",
+      "custom_prompt": "أنت المفكر. مقال تحليلي عميق يربط التكنولوجيا بالمجتمع والمستقبل. أنت المرجع.",
       "max_length": 8000,
       "priority": 8
     },
@@ -68,7 +68,7 @@
       "enabled": true,
       "publish_mode": "delayed",
       "delay_minutes": 40,
-      "custom_prompt": "اكتب مقال تقني للمطورين على Dev.to. استخدم code snippets والأمثلة العملية. ركز على الـ how-to والشروحات التفصيلية.",
+      "custom_prompt": "أنت المهندس السينيور. شرح تقني عملي (How-to) مع خطوات واضحة. أنت الخبير.",
       "max_length": 25000,
       "priority": 9
     }
