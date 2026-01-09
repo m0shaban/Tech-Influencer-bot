@@ -3,6 +3,7 @@
 ## ✅ تم إصلاح المشاكل
 
 تم تحديث نظام LinkedIn ليعمل مع أحدث API (UGC Posts):
+
 - ✅ إصلاح صيغة Person URN (تحويل تلقائي إلى member URN)
 - ✅ تحديث linkedin_publisher.py
 - ✅ إضافة Client ID للإعدادات
@@ -37,6 +38,7 @@ python get_linkedin_token.py
 ```
 
 **ماذا سيحدث:**
+
 1. سيفتح متصفح فيه صفحة LinkedIn للموافقة
 2. اضغط **Allow** للموافقة
 3. بعد الموافقة، ستُحوّل لصفحة redirect
@@ -45,6 +47,7 @@ python get_linkedin_token.py
 6. السكريبت سيجيب لك Token جديد و Person URN
 
 **النتيجة:** ستحصل على قيم جديدة لإضافتها في `.env`:
+
 ```env
 LINKEDIN_ACCESS_TOKEN=AQxxxxxxxxxxxx...
 LINKEDIN_PERSON_URN=urn:li:person:569338843
@@ -57,12 +60,14 @@ python test_linkedin.py
 ```
 
 **الاختبارات:**
+
 1. ✅ فحص الإعدادات (Client ID, Secret, Token, URN)
 2. ✅ فحص صيغة التوكن
 3. ✅ نشر بوست تجريبي (⚠️ سينشر بوست حقيقي على بروفايلك)
 4. ✅ مشاركة مقال (اختياري)
 
 **إذا نجحت كل الاختبارات:**
+
 ```
 🎉 All tests passed! LinkedIn is ready to use
 ```
@@ -89,11 +94,13 @@ python test_linkedin.py
 **التطبيق:** robovai bot  
 **Client ID:** `78llmg4hvagid4` ✅  
 **Scopes المفعّلة:**
+
 - ✅ `r_verify` - التحقق من البروفايل
 - ✅ `w_member_social` - إنشاء البوستات
 - ✅ `r_profile_basicinfo` - معلومات البروفايل الأساسية
 
 **Redirect URL:**
+
 ```
 https://www.linkedin.com/developers/tools/oauth/redirect
 ```
@@ -101,6 +108,7 @@ https://www.linkedin.com/developers/tools/oauth/redirect
 ## 🔄 كيف يعمل النظام
 
 ### 1. نشر بوست نصي
+
 ```python
 from linkedin_publisher import LinkedInPublisher
 
@@ -114,6 +122,7 @@ print(f"Post ID: {result['post_id']}")
 ```
 
 ### 2. مشاركة مقال
+
 ```python
 result = publisher.publish_article(
     caption="تعليق على المقال...",
@@ -123,6 +132,7 @@ result = publisher.publish_article(
 ```
 
 ### 3. نشر صورة
+
 ```python
 result = publisher.publish_image_post(
     caption="وصف الصورة...",
@@ -134,11 +144,13 @@ result = publisher.publish_image_post(
 ## 📊 API Endpoints المستخدمة
 
 **LinkedIn UGC Posts API:**
+
 ```
 POST https://api.linkedin.com/v2/ugcPosts
 ```
 
 **هيدر مطلوب:**
+
 ```
 X-Restli-Protocol-Version: 2.0.0
 Authorization: Bearer {access_token}
@@ -146,6 +158,7 @@ Content-Type: application/json
 ```
 
 **صيغة الطلب:**
+
 ```json
 {
   "author": "urn:li:person:569338843",
@@ -167,50 +180,61 @@ Content-Type: application/json
 ## ⚠️ معلومات مهمة
 
 ### صلاحية Access Token
+
 - **المدة:** 60 يوم (~2 شهر)
 - **عند الانتهاء:** شغّل `python get_linkedin_token.py`
 - **الأعراض:** خطأ 401 Unauthorized
 
 ### حدود النشر (Rate Limits)
+
 - **عضو واحد:** 150 طلب/يوم
 - **التطبيق:** 100,000 طلب/يوم
 
 ### أنواع المحتوى
-| النوع | shareMediaCategory | الوصف |
-|-------|-------------------|-------|
-| نص فقط | `NONE` | بوست نصي بدون وسائط |
-| مقال | `ARTICLE` | رابط مع preview |
-| صورة | `IMAGE` | بوست مع صورة |
-| فيديو | `VIDEO` | بوست مع فيديو |
+
+| النوع  | shareMediaCategory | الوصف               |
+| ------ | ------------------ | ------------------- |
+| نص فقط | `NONE`             | بوست نصي بدون وسائط |
+| مقال   | `ARTICLE`          | رابط مع preview     |
+| صورة   | `IMAGE`            | بوست مع صورة        |
+| فيديو  | `VIDEO`            | بوست مع فيديو       |
 
 ## 🐛 حل المشاكل الشائعة
 
 ### المشكلة: 401 Unauthorized
+
 **السبب:** التوكن منتهي أو غير صحيح  
 **الحل:**
+
 ```bash
 python get_linkedin_token.py
 ```
 
 ### المشكلة: 403 Forbidden
+
 **السبب:** الـ scopes غير مفعّلة  
 **الحل:** تأكد من تفعيل `w_member_social` في LinkedIn App
 
 ### المشكلة: 422 Unprocessable Entity - URN format error
+
 **السبب:** LinkedIn API يتوقع `urn:li:member:` وليس `urn:li:person:`  
 **الحل:** ✅ تم الإصلاح! الكود الآن يحول تلقائياً من person إلى member  
 **ملاحظة:** احتفظ بـ `LINKEDIN_PERSON_URN=urn:li:person:569338843` في .env، الكود سيحوله تلقائياً
 
 ### المشكلة: TypeError - AIProviderManager got unexpected keyword argument
+
 **السبب:** استدعاء generate_content بمعاملات خاطئة  
 **الحل:** ✅ تم الإصلاح! generate_content الآن يستخدم max_tokens/temperature من الـ config
 
 ### المشكلة: 400 Bad Request
+
 **السبب:** صيغة الطلب غير صحيحة  
 **الحل:** تأكد من تحديث الكود لآخر إصدار من GitHub
 
 ### المشكلة: Person URN غير موجود
+
 **الحل اليدوي:**
+
 1. افتح: https://www.linkedin.com/in/YOUR-PROFILE/
 2. افتح Chrome DevTools (F12)
 3. ابحث في Network عن طلبات تحتوي على `urn:li:person`
@@ -219,33 +243,41 @@ python get_linkedin_token.py
 ## 📁 الملفات الجديدة
 
 ### `get_linkedin_token.py`
+
 **الوظيفة:** تحديث Access Token التلقائي  
 **الاستخدام:**
+
 ```bash
 python get_linkedin_token.py
 ```
 
 **الخطوات:**
+
 1. يفتح صفحة Authorization في المتصفح
 2. تضغط Allow
 3. تنسخ redirect URL
 4. يجيب لك Token جديد + Person URN
 
 ### `test_linkedin.py`
+
 **الوظيفة:** اختبار شامل للنشر على LinkedIn  
 **الاستخدام:**
+
 ```bash
 python test_linkedin.py
 ```
 
 **الاختبارات:**
+
 - ✅ فحص الإعدادات
 - ✅ فحص التوكن
 - ✅ نشر بوست تجريبي
 - ✅ مشاركة مقال (اختياري)
 
 ### `linkedin_publisher.py`
+
 **التحديثات:**
+
 - إصلاح Person URN format
 - دعم UGC Posts API
 - تحسين معالجة الأخطاء
@@ -257,9 +289,10 @@ python test_linkedin.py
 **الأولوية:** Priority 5 (بعد Telegram, Discord, Blogger, Facebook)  
 **التأخير:** 20 دقيقة من بداية النشر  
 **الـ AI المستخدم:** Groq Fast (Llama 3.3-70B)  
-**نوع المحتوى:** Professional business-focused  
+**نوع المحتوى:** Professional business-focused
 
 **Flow النشر:**
+
 ```
 Blogger (0 min) → Dev.to (2 min) → Facebook (4 min) → Telegram (6 min)
     ↓
@@ -279,6 +312,7 @@ LinkedIn (20 min) ← استراتيجي، احترافي، ROI-focused
 ## 🎉 النتيجة المتوقعة
 
 عند Force Fetch:
+
 ```
 🔄 Sequential publishing order: ['blogger', 'devto', 'facebook', 'telegram', 'linkedin']
 ...

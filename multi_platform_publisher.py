@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from brand_context import get_active_brand, env_get, has_env
+
 PlatformType = Literal[
     "telegram",
     "linkedin",
@@ -33,6 +35,7 @@ class MultiPlatformPublisher:
 
     def __init__(self, use_scheduler: bool = False):
         # use_scheduler is ignored - we always publish immediately now
+        self.active_brand = get_active_brand()
         self.enabled_platforms = self._get_enabled_platforms()
         self.reporter = None
 
@@ -60,6 +63,19 @@ class MultiPlatformPublisher:
                 if "platforms" in data:
                     for k, v in data["platforms"].items():
                         config_enabled[k] = v.get("enabled", True)
+
+            # Apply brand overrides from config.json (if present)
+            cfg_path = Path(__file__).parent / "config.json"
+            if cfg_path.exists():
+                cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+                if isinstance(cfg, dict):
+                    active_key = str(cfg.get("active_brand") or "").strip()
+                    brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+                    brand = brands.get(active_key) if active_key and isinstance(brands, dict) else None
+                    if isinstance(brand, dict) and isinstance(brand.get("platforms"), dict):
+                        for k, v in brand["platforms"].items():
+                            if isinstance(v, dict) and "enabled" in v:
+                                config_enabled[k] = bool(v.get("enabled"))
         except Exception as e:
             print(f"⚠️ Failed to load platform_config.json: {e}")
 
@@ -68,21 +84,21 @@ class MultiPlatformPublisher:
             return config_enabled.get(name, True)
 
         # Telegram is always enabled (base platform)
-        if os.getenv("TELEGRAM_TOKEN") and is_enabled("telegram"):
+        if has_env("TELEGRAM_TOKEN", platform="telegram", brand=self.active_brand) and is_enabled("telegram"):
             platforms.append("telegram")
 
         # LinkedIn is optional
-        if os.getenv("LINKEDIN_ACCESS_TOKEN") and is_enabled("linkedin"):
+        if has_env("LINKEDIN_ACCESS_TOKEN", platform="linkedin", brand=self.active_brand) and is_enabled("linkedin"):
             platforms.append("linkedin")
 
         # Discord (webhook-based)
-        if os.getenv("DISCORD_WEBHOOK_URL") and is_enabled("discord"):
+        if has_env("DISCORD_WEBHOOK_URL", platform="discord", brand=self.active_brand) and is_enabled("discord"):
             platforms.append("discord")
 
         # Medium (requires token + user ID)
         if (
-            os.getenv("MEDIUM_INTEGRATION_TOKEN")
-            and os.getenv("MEDIUM_USER_ID")
+            has_env("MEDIUM_INTEGRATION_TOKEN", platform="medium", brand=self.active_brand)
+            and has_env("MEDIUM_USER_ID", platform="medium", brand=self.active_brand)
             and is_enabled("medium")
         ):
             platforms.append("medium")
@@ -90,18 +106,21 @@ class MultiPlatformPublisher:
         # Twitter/X (requires OAuth 1.0a credentials)
         if all(
             [
-                os.getenv("TWITTER_API_KEY"),
-                os.getenv("TWITTER_API_SECRET"),
-                os.getenv("TWITTER_ACCESS_TOKEN"),
-                os.getenv("TWITTER_ACCESS_SECRET"),
+                has_env("TWITTER_API_KEY", platform="twitter", brand=self.active_brand),
+                has_env("TWITTER_API_SECRET", platform="twitter", brand=self.active_brand),
+                has_env("TWITTER_ACCESS_TOKEN", platform="twitter", brand=self.active_brand),
+                has_env("TWITTER_ACCESS_SECRET", platform="twitter", brand=self.active_brand),
             ]
         ) and is_enabled("twitter"):
             platforms.append("twitter")
 
         # Blogger (requires Blog ID and API key or OAuth)
         if (
-            os.getenv("BLOGGER_BLOG_ID")
-            and (os.getenv("BLOGGER_API_KEY") or os.getenv("BLOGGER_ACCESS_TOKEN"))
+            has_env("BLOGGER_BLOG_ID", platform="blogger", brand=self.active_brand)
+            and (
+                has_env("BLOGGER_API_KEY", platform="blogger", brand=self.active_brand)
+                or has_env("BLOGGER_ACCESS_TOKEN", platform="blogger", brand=self.active_brand)
+            )
             and is_enabled("blogger")
         ):
             platforms.append("blogger")
@@ -109,24 +128,24 @@ class MultiPlatformPublisher:
         # Reddit (requires OAuth credentials)
         if all(
             [
-                os.getenv("REDDIT_CLIENT_ID"),
-                os.getenv("REDDIT_CLIENT_SECRET"),
-                os.getenv("REDDIT_USERNAME"),
-                os.getenv("REDDIT_PASSWORD"),
+                has_env("REDDIT_CLIENT_ID", platform="reddit", brand=self.active_brand),
+                has_env("REDDIT_CLIENT_SECRET", platform="reddit", brand=self.active_brand),
+                has_env("REDDIT_USERNAME", platform="reddit", brand=self.active_brand),
+                has_env("REDDIT_PASSWORD", platform="reddit", brand=self.active_brand),
             ]
         ) and is_enabled("reddit"):
             platforms.append("reddit")
 
         # Facebook (requires Page Access Token and Page ID)
         if (
-            os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN")
-            and os.getenv("FACEBOOK_PAGE_ID")
+            has_env("FACEBOOK_PAGE_ACCESS_TOKEN", platform="facebook", brand=self.active_brand)
+            and has_env("FACEBOOK_PAGE_ID", platform="facebook", brand=self.active_brand)
             and is_enabled("facebook")
         ):
             platforms.append("facebook")
 
         # Dev.to (requires API key)
-        if os.getenv("DEVTO_API_KEY") and is_enabled("devto"):
+        if has_env("DEVTO_API_KEY", platform="devto", brand=self.active_brand) and is_enabled("devto"):
             platforms.append("devto")
 
         return platforms
@@ -184,6 +203,19 @@ class MultiPlatformPublisher:
                     else ""
                 )
 
+                link_for_platform: Optional[str] = link
+                cta_buttons = None
+                force_link_post = False
+                if isinstance(payload, dict):
+                    if payload.get("disable_link"):
+                        link_for_platform = None
+                    elif payload.get("link_override") is not None:
+                        link_for_platform = (
+                            str(payload.get("link_override") or "").strip() or None
+                        )
+                    cta_buttons = payload.get("cta_buttons")
+                    force_link_post = bool(payload.get("force_link_post"))
+
                 # Image handling: Use local path for Telegram/Facebook, public URL for others
                 image_for_platform = image_url
                 local_image_path_for_platform = None
@@ -201,6 +233,11 @@ class MultiPlatformPublisher:
                     else:
                         image_for_platform = None
 
+                    # Some workflows want link-preview posts even when an image exists.
+                    if force_link_post:
+                        image_for_platform = None
+                        local_image_path_for_platform = None
+
                 elif platform != "telegram":
                     # Other platforms need public URLs only
                     if image_url and image_url.lower().startswith("http"):
@@ -216,38 +253,47 @@ class MultiPlatformPublisher:
                 # Publish immediately to this platform
                 if platform == "telegram":
                     result = await self._publish_telegram(
-                        caption_for_platform, link, image_for_platform, telegram_context
+                        caption_for_platform,
+                        link_for_platform,
+                        image_for_platform,
+                        telegram_context,
+                        cta_buttons=cta_buttons,
+                        channel_id_override=(
+                            str(payload.get("channel_id") or "").strip()
+                            if isinstance(payload, dict)
+                            else None
+                        ),
                     )
                     results["telegram"] = result
 
                 elif platform == "linkedin":
                     result = self._publish_linkedin(
-                        caption_for_platform, link, image_for_platform
+                        caption_for_platform, link_for_platform, image_for_platform
                     )
                     results["linkedin"] = result
 
                 elif platform == "discord":
                     result = self._publish_discord(
-                        caption_for_platform, link, image_for_platform
+                        caption_for_platform, link_for_platform, image_for_platform
                     )
                     results["discord"] = result
 
                 elif platform == "medium":
                     result = self._publish_medium(
-                        caption_for_platform, link, image_for_platform
+                        caption_for_platform, link_for_platform, image_for_platform
                     )
                     results["medium"] = result
 
                 elif platform == "twitter":
                     result = self._publish_twitter(
-                        caption_for_platform, link, image_for_platform
+                        caption_for_platform, link_for_platform, image_for_platform
                     )
                     results["twitter"] = result
 
                 elif platform == "blogger":
                     result = self._publish_blogger(
                         caption_for_platform,
-                        link,
+                        link_for_platform,
                         image_for_platform,
                         title_override=title_for_platform or None,
                     )
@@ -255,14 +301,14 @@ class MultiPlatformPublisher:
 
                 elif platform == "reddit":
                     result = self._publish_reddit(
-                        caption_for_platform, link, image_for_platform
+                        caption_for_platform, link_for_platform, image_for_platform
                     )
                     results["reddit"] = result
 
                 elif platform == "facebook":
                     result = self._publish_facebook(
                         caption_for_platform,
-                        link,
+                        link_for_platform,
                         image_for_platform,
                         image_path=local_image_path_for_platform,
                     )
@@ -271,7 +317,7 @@ class MultiPlatformPublisher:
                 elif platform == "devto":
                     result = self._publish_devto(
                         caption_for_platform,
-                        link,
+                        link_for_platform,
                         image_for_platform,
                         title_override=title_for_platform or None,
                     )
@@ -325,14 +371,34 @@ class MultiPlatformPublisher:
         return results
 
     async def _publish_telegram(
-        self, caption: str, link: Optional[str], image_url: Optional[str], context: Any
+        self,
+        caption: str,
+        link: Optional[str],
+        image_url: Optional[str],
+        context: Any,
+        *,
+        cta_buttons: Optional[Any] = None,
+        channel_id_override: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Publish to Telegram (existing logic)"""
-        channel_id = os.getenv("CHANNEL_ID")
+        channel_id = (channel_id_override or os.getenv("CHANNEL_ID") or "").strip()
         if not channel_id:
             raise ValueError("CHANNEL_ID is not set")
-        if context is None:
-            raise ValueError("telegram_context is required for Telegram publishing")
+
+        # Multi-account support: allow a per-brand TELEGRAM_TOKEN_<SUFFIX>.
+        token_override = env_get("TELEGRAM_TOKEN", platform="telegram", brand=self.active_brand)
+        bot = None
+        if token_override and str(token_override).strip():
+            try:
+                from telegram import Bot
+
+                bot = Bot(token=str(token_override).strip())
+            except Exception:
+                bot = None
+        if bot is None:
+            if context is None or not hasattr(context, "bot"):
+                raise ValueError("telegram_context is required for Telegram publishing")
+            bot = context.bot
 
         def _compose_text(c: str, _l: Optional[str], has_photo: bool) -> str:
             # DO NOT append links inside the body (handled programmatically)
@@ -346,32 +412,58 @@ class MultiPlatformPublisher:
         text = _compose_text(caption, link, bool(image_url))
 
         reply_markup = None
-        if link:
-            try:
-                from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+        try:
+            from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
+            buttons = []
+            if isinstance(cta_buttons, list):
+                for item in cta_buttons:
+                    if isinstance(item, dict):
+                        text = str(item.get("text", "")).strip()
+                        url = str(item.get("url", "")).strip()
+                        if text and url:
+                            buttons.append((text, url))
+                    elif isinstance(item, (list, tuple)) and len(item) >= 2:
+                        text = str(item[0]).strip()
+                        url = str(item[1]).strip()
+                        if text and url:
+                            buttons.append((text, url))
+
+            if buttons:
+                rows = []
+                for i in range(0, len(buttons), 2):
+                    row = [InlineKeyboardButton(buttons[i][0], url=buttons[i][1])]
+                    if i + 1 < len(buttons):
+                        row.append(
+                            InlineKeyboardButton(
+                                buttons[i + 1][0], url=buttons[i + 1][1]
+                            )
+                        )
+                    rows.append(row)
+                reply_markup = InlineKeyboardMarkup(rows)
+            elif link:
                 reply_markup = InlineKeyboardMarkup(
                     [[InlineKeyboardButton("🔗 اقرأ التفاصيل", url=link)]]
                 )
-            except Exception:
-                reply_markup = None
+        except Exception:
+            reply_markup = None
 
         if image_url:
             try:
-                await context.bot.send_photo(
+                await bot.send_photo(
                     chat_id=channel_id,
                     photo=image_url,
                     caption=text,
                     reply_markup=reply_markup,
                 )
             except Exception:
-                await context.bot.send_message(
+                await bot.send_message(
                     chat_id=channel_id,
                     text=text,
                     reply_markup=reply_markup,
                 )
         else:
-            await context.bot.send_message(
+            await bot.send_message(
                 chat_id=channel_id,
                 text=text,
                 reply_markup=reply_markup,
@@ -404,7 +496,10 @@ class MultiPlatformPublisher:
         """Publish to Discord via webhook"""
         from discord_publisher import DiscordPublisher
 
-        publisher = DiscordPublisher()
+        webhook = env_get("DISCORD_WEBHOOK_URL", platform="discord", brand=self.active_brand)
+        username = env_get("DISCORD_USERNAME", platform="discord", brand=self.active_brand)
+        avatar = env_get("DISCORD_AVATAR_URL", platform="discord", brand=self.active_brand)
+        publisher = DiscordPublisher(webhook_url=webhook, username=username, avatar_url=avatar)
         return publisher.publish(caption=caption, link=link, image_url=image_url)
 
     def _publish_medium(
@@ -444,7 +539,14 @@ class MultiPlatformPublisher:
         """Publish to Blogger"""
         from blogger_publisher import BloggerPublisher
 
-        publisher = BloggerPublisher()
+        publisher = BloggerPublisher(
+            api_key=env_get("BLOGGER_API_KEY", platform="blogger", brand=self.active_brand),
+            blog_id=env_get("BLOGGER_BLOG_ID", platform="blogger", brand=self.active_brand),
+            access_token=env_get("BLOGGER_ACCESS_TOKEN", platform="blogger", brand=self.active_brand),
+            refresh_token=env_get("BLOGGER_REFRESH_TOKEN", platform="blogger", brand=self.active_brand),
+            client_id=env_get("BLOGGER_CLIENT_ID", platform="blogger", brand=self.active_brand),
+            client_secret=env_get("BLOGGER_CLIENT_SECRET", platform="blogger", brand=self.active_brand),
+        )
         # Extract title from caption (first line or first 100 chars)
         if title_override and title_override.strip():
             title = title_override.strip()[:100]
@@ -488,7 +590,10 @@ class MultiPlatformPublisher:
         """Publish to Facebook Page"""
         from facebook_publisher import FacebookPublisher
 
-        publisher = FacebookPublisher()
+        publisher = FacebookPublisher(
+            access_token=env_get("FACEBOOK_PAGE_ACCESS_TOKEN", platform="facebook", brand=self.active_brand),
+            page_id=env_get("FACEBOOK_PAGE_ID", platform="facebook", brand=self.active_brand),
+        )
 
         # Facebook prefers photo posts over link posts for engagement
         if image_path or image_url:
@@ -506,19 +611,19 @@ class MultiPlatformPublisher:
     def _publish_devto(
         self,
         caption: str,
-        link: str,
-        image_url: str,
+        link: Optional[str],
+        image_url: Optional[str],
         *,
         title_override: Optional[str] = None,
     ):
         """Publish to Dev.to"""
         from devto_publisher import DevtoPublisher
 
-        publisher = DevtoPublisher()
+        publisher = DevtoPublisher(api_key=env_get("DEVTO_API_KEY", platform="devto", brand=self.active_brand))
         return publisher.publish(
             caption=caption,
             title=title_override,
-            link=link,
+            link=link or "",
             image_url=image_url,
         )
 
@@ -527,10 +632,10 @@ class MultiPlatformPublisher:
         status = {}
 
         # Telegram
-        status["telegram"] = bool(os.getenv("TELEGRAM_TOKEN"))
+        status["telegram"] = has_env("TELEGRAM_TOKEN", platform="telegram", brand=self.active_brand)
 
         # LinkedIn
-        if os.getenv("LINKEDIN_ACCESS_TOKEN"):
+        if has_env("LINKEDIN_ACCESS_TOKEN", platform="linkedin", brand=self.active_brand):
             try:
                 from linkedin_publisher import test_linkedin_connection
 
@@ -541,7 +646,7 @@ class MultiPlatformPublisher:
             status["linkedin"] = False
 
         # Discord
-        if os.getenv("DISCORD_WEBHOOK_URL"):
+        if has_env("DISCORD_WEBHOOK_URL", platform="discord", brand=self.active_brand):
             try:
                 from discord_publisher import test_discord_connection
 
@@ -552,7 +657,7 @@ class MultiPlatformPublisher:
             status["discord"] = False
 
         # Medium
-        if os.getenv("MEDIUM_INTEGRATION_TOKEN") and os.getenv("MEDIUM_USER_ID"):
+        if has_env("MEDIUM_INTEGRATION_TOKEN", platform="medium", brand=self.active_brand) and has_env("MEDIUM_USER_ID", platform="medium", brand=self.active_brand):
             try:
                 from medium_publisher import test_medium_connection
 
@@ -565,10 +670,10 @@ class MultiPlatformPublisher:
         # Twitter
         if all(
             [
-                os.getenv("TWITTER_API_KEY"),
-                os.getenv("TWITTER_API_SECRET"),
-                os.getenv("TWITTER_ACCESS_TOKEN"),
-                os.getenv("TWITTER_ACCESS_SECRET"),
+                has_env("TWITTER_API_KEY", platform="twitter", brand=self.active_brand),
+                has_env("TWITTER_API_SECRET", platform="twitter", brand=self.active_brand),
+                has_env("TWITTER_ACCESS_TOKEN", platform="twitter", brand=self.active_brand),
+                has_env("TWITTER_ACCESS_SECRET", platform="twitter", brand=self.active_brand),
             ]
         ):
             try:
@@ -581,13 +686,21 @@ class MultiPlatformPublisher:
             status["twitter"] = False
 
         # Blogger
-        if os.getenv("BLOGGER_BLOG_ID") and (
-            os.getenv("BLOGGER_API_KEY") or os.getenv("BLOGGER_ACCESS_TOKEN")
+        if has_env("BLOGGER_BLOG_ID", platform="blogger", brand=self.active_brand) and (
+            has_env("BLOGGER_API_KEY", platform="blogger", brand=self.active_brand)
+            or has_env("BLOGGER_ACCESS_TOKEN", platform="blogger", brand=self.active_brand)
         ):
             try:
                 from blogger_publisher import BloggerPublisher
 
-                publisher = BloggerPublisher()
+                publisher = BloggerPublisher(
+                    api_key=env_get("BLOGGER_API_KEY", platform="blogger", brand=self.active_brand),
+                    blog_id=env_get("BLOGGER_BLOG_ID", platform="blogger", brand=self.active_brand),
+                    access_token=env_get("BLOGGER_ACCESS_TOKEN", platform="blogger", brand=self.active_brand),
+                    refresh_token=env_get("BLOGGER_REFRESH_TOKEN", platform="blogger", brand=self.active_brand),
+                    client_id=env_get("BLOGGER_CLIENT_ID", platform="blogger", brand=self.active_brand),
+                    client_secret=env_get("BLOGGER_CLIENT_SECRET", platform="blogger", brand=self.active_brand),
+                )
                 result = publisher.test_connection()
                 status["blogger"] = result.get("success", False)
             except Exception:
@@ -598,10 +711,10 @@ class MultiPlatformPublisher:
         # Reddit
         if all(
             [
-                os.getenv("REDDIT_CLIENT_ID"),
-                os.getenv("REDDIT_CLIENT_SECRET"),
-                os.getenv("REDDIT_USERNAME"),
-                os.getenv("REDDIT_PASSWORD"),
+                has_env("REDDIT_CLIENT_ID", platform="reddit", brand=self.active_brand),
+                has_env("REDDIT_CLIENT_SECRET", platform="reddit", brand=self.active_brand),
+                has_env("REDDIT_USERNAME", platform="reddit", brand=self.active_brand),
+                has_env("REDDIT_PASSWORD", platform="reddit", brand=self.active_brand),
             ]
         ):
             try:
@@ -616,11 +729,14 @@ class MultiPlatformPublisher:
             status["reddit"] = False
 
         # Facebook
-        if os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN") and os.getenv("FACEBOOK_PAGE_ID"):
+        if has_env("FACEBOOK_PAGE_ACCESS_TOKEN", platform="facebook", brand=self.active_brand) and has_env("FACEBOOK_PAGE_ID", platform="facebook", brand=self.active_brand):
             try:
                 from facebook_publisher import FacebookPublisher
 
-                publisher = FacebookPublisher()
+                publisher = FacebookPublisher(
+                    access_token=env_get("FACEBOOK_PAGE_ACCESS_TOKEN", platform="facebook", brand=self.active_brand),
+                    page_id=env_get("FACEBOOK_PAGE_ID", platform="facebook", brand=self.active_brand),
+                )
                 result = publisher.test_connection()
                 status["facebook"] = result.get("success", False)
             except Exception:
@@ -629,11 +745,11 @@ class MultiPlatformPublisher:
             status["facebook"] = False
 
         # Dev.to
-        if os.getenv("DEVTO_API_KEY"):
+        if has_env("DEVTO_API_KEY", platform="devto", brand=self.active_brand):
             try:
                 from devto_publisher import DevtoPublisher
 
-                publisher = DevtoPublisher()
+                publisher = DevtoPublisher(api_key=env_get("DEVTO_API_KEY", platform="devto", brand=self.active_brand))
                 status["devto"] = publisher.is_configured()
             except Exception:
                 status["devto"] = False

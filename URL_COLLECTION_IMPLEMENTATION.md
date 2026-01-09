@@ -7,6 +7,7 @@ Successfully implemented a comprehensive URL collection system with sequential p
 ## 🏗️ Architecture Overview
 
 ### Publishing Flow
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. RSS Feed Fetch → Extract Post Data                      │
@@ -62,9 +63,11 @@ Successfully implemented a comprehensive URL collection system with sequential p
 ## 📄 New Functions
 
 ### 1. `_load_platform_config()` - main.py
+
 **Purpose**: Load platform configuration with priorities and CTA templates
 
-**Returns**: 
+**Returns**:
+
 ```python
 {
     "platforms": {
@@ -85,9 +88,11 @@ Successfully implemented a comprehensive URL collection system with sequential p
 ```
 
 ### 2. `_generate_platform_contents()` - main.py
+
 **Purpose**: Generate platform-specific content using AI routing
 
 **Process**:
+
 1. Iterates through platforms: blogger, devto, facebook, telegram
 2. Calls `rewrite_with_ai()` with platform parameter
 3. AI Provider Manager selects optimal model:
@@ -97,6 +102,7 @@ Successfully implemented a comprehensive URL collection system with sequential p
 4. Returns structured content dict with captions and titles
 
 **Returns**:
+
 ```python
 {
     "blogger": {"caption": "Full business article...", "title": "Title"},
@@ -108,9 +114,11 @@ Successfully implemented a comprehensive URL collection system with sequential p
 ```
 
 ### 3. `_publish_sequential_with_ctas()` - main.py
+
 **Purpose**: Orchestrate sequential publishing with URL collection and CTA injection
 
 **Algorithm**:
+
 ```python
 1. Sort platforms by priority (blogger=1, devto=2, facebook=3, telegram=4)
 2. Initialize empty URL collection dict
@@ -129,6 +137,7 @@ Successfully implemented a comprehensive URL collection system with sequential p
 ```
 
 **Key Features**:
+
 - ✅ Async/await for non-blocking delays
 - ✅ Smart CTA filtering (removes empty URL placeholders)
 - ✅ Error handling per platform (continues on failure)
@@ -138,13 +147,16 @@ Successfully implemented a comprehensive URL collection system with sequential p
 ## 🔄 Updated Functions
 
 ### `fetch_and_publish()` - main.py
+
 **Changes**:
+
 - Now calls `_load_platform_config()` to get configuration
 - Calls `_generate_platform_contents()` for AI-routed content generation
 - Calls `_publish_sequential_with_ctas()` instead of direct publisher.publish()
 - Removed old multi-platform payload structure
 
 **Before**:
+
 ```python
 payloads = {
     "telegram": {"caption": telegram_post},
@@ -155,6 +167,7 @@ publisher.publish(..., platform_payloads=payloads)
 ```
 
 **After**:
+
 ```python
 platform_config = _load_platform_config()
 platform_contents = await _generate_platform_contents(...)
@@ -169,6 +182,7 @@ results = await _publish_sequential_with_ctas(
 ## 📊 CTA Templates (from platform_config.json)
 
 ### Telegram (Gets ALL URLs)
+
 ```
 📚 اقرأ المقال الكامل:
 https://robovai.blogspot.com/2026/01/...
@@ -181,18 +195,21 @@ https://facebook.com/posts/456...
 ```
 
 ### Facebook (Gets Blogger + Dev.to)
+
 ```
 📖 المزيد من التفاصيل: https://robovai.blogspot.com/...
 💻 تطبيق عملي: https://dev.to/username/...
 ```
 
 ### Blogger (Gets Dev.to + Facebook)
+
 ```
 💻 **للمطورين**: شرح تقني كامل على [Dev.to](https://dev.to/...)
 💬 **ناقش معانا** على [Facebook](https://facebook.com/...)
 ```
 
 ### Dev.to (Gets Blogger + Facebook)
+
 ```
 📊 **للبيزنس**: تحليل القيمة التجارية على [Blog](https://robovai.blogspot.com/...)
 💬 **شاركنا رأيك** على [Facebook](https://facebook.com/...)
@@ -201,12 +218,14 @@ https://facebook.com/posts/456...
 ## 🧪 Testing Instructions
 
 ### 1. Test Sequential Publishing Order
+
 ```bash
 # Force fetch to trigger publishing
 curl -X POST http://localhost:5000/force-fetch
 ```
 
 **Expected Console Output**:
+
 ```
 🔄 Sequential publishing order: ['blogger', 'devto', 'facebook', 'telegram']
 📤 Publishing to blogger...
@@ -228,31 +247,41 @@ curl -X POST http://localhost:5000/force-fetch
 ```
 
 ### 2. Verify CTA Injection
+
 **Check Telegram Post**:
+
 - Should contain 3 URLs (Blogger, Dev.to, Facebook)
 - Each URL should be valid (not empty)
 
 **Check Facebook Post**:
+
 - Should contain 2 URLs (Blogger, Dev.to)
 
 **Check Blogger/Dev.to Posts**:
+
 - Should contain markdown links to other platforms
 
 ### 3. Test AI Routing
+
 **Blogger/Dev.to Posts**:
+
 - Should be longer, more detailed
 - Check console for: `🤖 Using provider: nvidia`
 
 **Facebook Post**:
+
 - Should be engaging, trendy
 - Check console for: `🤖 Using provider: groq` with `llama-3.3-70b`
 
 **Telegram Post**:
+
 - Should be short teaser
 - Check console for: `🤖 Using provider: groq` with `llama-3.1-8b`
 
 ### 4. Test Failure Handling
+
 **Scenario**: One platform fails
+
 ```python
 # Disable Blogger temporarily
 # Expected: System continues with Dev.to, Facebook, Telegram
@@ -262,7 +291,9 @@ curl -X POST http://localhost:5000/force-fetch
 ## 🎨 Smart Features
 
 ### 1. **Empty URL Filtering**
+
 If a platform hasn't published yet, its URL placeholder is removed:
+
 ```python
 # Before filtering:
 "📚 اقرأ المقال الكامل:\n{blogger_url}\n\n💻 شرح تقني:"
@@ -272,7 +303,9 @@ If a platform hasn't published yet, its URL placeholder is removed:
 ```
 
 ### 2. **URL Format Detection**
+
 Extracts URLs from multiple result formats:
+
 ```python
 url = (
     result.get("url") or           # Standard format
@@ -282,6 +315,7 @@ url = (
 ```
 
 ### 3. **Async Delay Management**
+
 ```python
 # Non-blocking delays between platforms
 await asyncio.sleep(delay_minutes * 60)
@@ -289,6 +323,7 @@ await asyncio.sleep(delay_minutes * 60)
 ```
 
 ### 4. **Per-Platform Error Isolation**
+
 ```python
 # If Blogger fails, others continue
 try:
@@ -301,6 +336,7 @@ except Exception as e:
 ## 📈 Performance Metrics
 
 ### Expected Timeline (with default delays)
+
 - **0:00** - Blogger publishes (NVIDIA reasoning: ~60-90s)
 - **2:00** - Dev.to publishes (NVIDIA reasoning: ~60-90s)
 - **4:00** - Facebook publishes (Groq fast: ~10-15s)
@@ -308,6 +344,7 @@ except Exception as e:
 - **Total**: ~8 minutes for complete cross-platform publishing
 
 ### Resource Usage
+
 - **API Calls**: 4 platform-specific AI generations
 - **Groq Tokens**: ~3,000-5,000 per post (Facebook + Telegram)
 - **NVIDIA Tokens**: ~10,000-20,000 per post (Blogger + Dev.to)
@@ -316,11 +353,13 @@ except Exception as e:
 ## 🔒 Security Notes
 
 ### API Keys Protection
+
 - ✅ API keys stored in `.env` (not committed)
 - ✅ Documentation uses placeholder values (`gsk_xxx...`, `nvapi-xxx...`)
 - ✅ GitHub secret scanning enabled
 
 ### URL Validation
+
 ```python
 # URLs are extracted from trusted platform APIs
 # No user input in URL construction
@@ -330,37 +369,42 @@ except Exception as e:
 ## 🚀 Benefits Achieved
 
 ### User Experience
+
 ✅ **Seamless Discovery**: Readers find related content across platforms  
 ✅ **Professional Branding**: Consistent, interconnected presence  
-✅ **Traffic Flow**: Blogger → Dev.to ← Facebook ← Telegram  
+✅ **Traffic Flow**: Blogger → Dev.to ← Facebook ← Telegram
 
 ### Technical Excellence
+
 ✅ **Smart AI Routing**: Each platform uses optimal model  
 ✅ **Automatic URL Management**: No manual linking needed  
 ✅ **Error Resilience**: Continues publishing if one platform fails  
-✅ **Async Performance**: Non-blocking delays, responsive bot  
+✅ **Async Performance**: Non-blocking delays, responsive bot
 
 ### Content Strategy
+
 ✅ **Blogger as Hub**: Published first, becomes reference point  
 ✅ **Platform-Specific Tone**: Business/Tech/Trendy/Quick per audience  
 ✅ **Cross-Promotion**: Every post promotes others  
-✅ **SEO Benefits**: Backlinks between owned properties  
+✅ **SEO Benefits**: Backlinks between owned properties
 
 ## 📝 Configuration Reference
 
 ### Enable/Disable CTA per Platform
+
 ```json
 // platform_config.json
 {
   "platforms": {
     "blogger": {
-      "enable_cta": true  // Set false to disable CTA injection
+      "enable_cta": true // Set false to disable CTA injection
     }
   }
 }
 ```
 
 ### Customize CTA Templates
+
 ```json
 {
   "cross_platform_cta": {
@@ -372,13 +416,14 @@ except Exception as e:
 ```
 
 ### Adjust Delays
+
 ```json
 {
   "platforms": {
-    "blogger": {"delay_minutes": 0},   // First (no delay)
-    "devto": {"delay_minutes": 5},     // After 5 min
-    "facebook": {"delay_minutes": 10}, // After 10 min
-    "telegram": {"delay_minutes": 15}  // After 15 min
+    "blogger": { "delay_minutes": 0 }, // First (no delay)
+    "devto": { "delay_minutes": 5 }, // After 5 min
+    "facebook": { "delay_minutes": 10 }, // After 10 min
+    "telegram": { "delay_minutes": 15 } // After 15 min
   }
 }
 ```
@@ -386,20 +431,24 @@ except Exception as e:
 ## 🐛 Troubleshooting
 
 ### Issue: URLs Not Appearing in CTAs
+
 **Cause**: Platform didn't return URL in result  
 **Fix**: Check platform publisher returns `{"url": "..."}` or `{"post_url": "..."}`
 
 ### Issue: Empty CTA Lines
+
 **Cause**: URL not captured from previous platform  
 **Expected**: System automatically filters empty lines  
 **Check**: Console logs for `✅ {platform} published: {url}`
 
 ### Issue: Wrong AI Model Used
+
 **Cause**: Platform parameter not passed correctly  
 **Check**: Console logs for `🤖 Using provider: ...`  
 **Fix**: Verify `rewrite_with_ai(..., platform="blogger")`
 
 ### Issue: Publishing Too Fast
+
 **Cause**: Delays not respected  
 **Check**: Console logs for `⏳ Waiting X minutes...`  
 **Fix**: Verify `await asyncio.sleep(delay * 60)`

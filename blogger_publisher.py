@@ -15,14 +15,23 @@ load_dotenv()
 class BloggerPublisher:
     """Publisher for posting to Blogger blogs"""
 
-    def __init__(self):
+    def __init__(
+        self,
+        *,
+        api_key: Optional[str] = None,
+        blog_id: Optional[str] = None,
+        access_token: Optional[str] = None,
+        refresh_token: Optional[str] = None,
+        client_id: Optional[str] = None,
+        client_secret: Optional[str] = None,
+    ):
         """Initialize Blogger API client with OAuth credentials"""
-        self.api_key = os.getenv("BLOGGER_API_KEY")
-        self.blog_id = os.getenv("BLOGGER_BLOG_ID")
-        self.access_token = os.getenv("BLOGGER_ACCESS_TOKEN")
-        self.refresh_token = os.getenv("BLOGGER_REFRESH_TOKEN")
-        self.client_id = os.getenv("BLOGGER_CLIENT_ID")
-        self.client_secret = os.getenv("BLOGGER_CLIENT_SECRET")
+        self.api_key = api_key or os.getenv("BLOGGER_API_KEY")
+        self.blog_id = blog_id or os.getenv("BLOGGER_BLOG_ID")
+        self.access_token = access_token or os.getenv("BLOGGER_ACCESS_TOKEN")
+        self.refresh_token = refresh_token or os.getenv("BLOGGER_REFRESH_TOKEN")
+        self.client_id = client_id or os.getenv("BLOGGER_CLIENT_ID")
+        self.client_secret = client_secret or os.getenv("BLOGGER_CLIENT_SECRET")
 
         self.api_base = "https://www.googleapis.com/blogger/v3"
 

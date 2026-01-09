@@ -118,6 +118,7 @@ DEFAULT_SYSTEM_PROMPT = r"""
 {
   "telegram_post": "منشور تليجرام أصلي بدون إشارة لمصدر",
   "facebook_post": "منشور فيسبوك عميق وجذاب",
+    "linkedin_post": "منشور لينكدإن احترافي (بدون مصادر/روابط)",
   "blog_title": "عنوان مقالة قوي وSEO-friendly",
   "blog_content_md": "مقالة كاملة بصيغة Markdown (500+ كلمة)",
   "discord_msg": "رسالة ديسكورد قصيرة وقوية",
@@ -332,17 +333,53 @@ def _ensure_string(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _strip_urls(text: str) -> str:
+    # Remove any URLs; CTAs and links are handled outside the body.
+    cleaned = re.sub(r"https?://\S+", "", text or "")
+
+    lines: list[str] = []
+    for line in cleaned.splitlines():
+        if re.search(
+            r"\b(source|original\s+article|المصدر|مصدر|المقال\s+الأصلي)\b",
+            line,
+            flags=re.IGNORECASE,
+        ):
+            continue
+        lines.append(line.rstrip())
+
+    out = "\n".join(lines).strip()
+    out = re.sub(r"\n{3,}", "\n\n", out)
+    return out
+
+
 def _normalize_ai_result(parsed: Dict[str, Any], *, link: str) -> Dict[str, Any]:
-    telegram_post = _strip_code_fences(_ensure_string(parsed.get("telegram_post")))
-    facebook_post = _strip_code_fences(_ensure_string(parsed.get("facebook_post")))
+    telegram_post = _strip_urls(
+        _strip_code_fences(_ensure_string(parsed.get("telegram_post")))
+    )
+    facebook_post = _strip_urls(
+        _strip_code_fences(_ensure_string(parsed.get("facebook_post")))
+    )
+    linkedin_post = _strip_urls(
+        _strip_code_fences(_ensure_string(parsed.get("linkedin_post")))
+    )
     blog_title = _ensure_string(parsed.get("blog_title"))
     blog_content_md = _strip_code_fences(_ensure_string(parsed.get("blog_content_md")))
-    discord_msg = _strip_code_fences(_ensure_string(parsed.get("discord_msg")))
+    discord_msg = _strip_urls(
+        _strip_code_fences(_ensure_string(parsed.get("discord_msg")))
+    )
 
     # --- FLUID FALLBACKS (Robust Recovery) ---
     # 1. Gather any valid text content found
     sources = [
-        t for t in [telegram_post, facebook_post, blog_content_md, discord_msg] if t
+        t
+        for t in [
+            telegram_post,
+            facebook_post,
+            blog_content_md,
+            discord_msg,
+            linkedin_post,
+        ]
+        if t
     ]
 
     # 2. If completely empty, try looking at ALL dict values (in case of wrong keys)
@@ -365,6 +402,8 @@ def _normalize_ai_result(parsed: Dict[str, Any], *, link: str) -> Dict[str, Any]
         blog_content_md = telegram_post
     if not discord_msg:
         discord_msg = telegram_post
+    if not linkedin_post:
+        linkedin_post = facebook_post or telegram_post
     if not blog_title:
         # Extract potential title from first line of content
         first_line = fallback_text.split("\n")[0].strip()
@@ -372,7 +411,14 @@ def _normalize_ai_result(parsed: Dict[str, Any], *, link: str) -> Dict[str, Any]
         blog_title = re.sub(r"^[\#\*]+", "", first_line).strip() or "Tech Update"
 
     joined = "\n".join(
-        [telegram_post, facebook_post, blog_title, blog_content_md, discord_msg]
+        [
+            telegram_post,
+            facebook_post,
+            linkedin_post,
+            blog_title,
+            blog_content_md,
+            discord_msg,
+        ]
     )
     if _contains_banned_phrases(joined):
         raise ValueError("Content contains banned phrases")
@@ -382,14 +428,6 @@ def _normalize_ai_result(parsed: Dict[str, Any], *, link: str) -> Dict[str, Any]
         raise ValueError(
             f"Language skew detected (latin ratio: {latin_fraction:.2f} > 0.75)"
         )
-
-    # Ensure the link exists (main pipeline may append again safely).
-    if link and link not in telegram_post:
-        telegram_post = telegram_post.rstrip() + f"\n\n{link}"
-    if link and link not in facebook_post:
-        facebook_post = facebook_post.rstrip() + f"\n\n{link}"
-    if link and link not in discord_msg:
-        discord_msg = discord_msg.rstrip() + f"\n{link}"
 
     has_poll = _coerce_bool(parsed.get("has_poll"))
     if has_poll is None:
@@ -403,6 +441,7 @@ def _normalize_ai_result(parsed: Dict[str, Any], *, link: str) -> Dict[str, Any]
     return {
         "telegram_post": telegram_post,
         "facebook_post": facebook_post,
+        "linkedin_post": linkedin_post,
         "blog_title": blog_title,
         "blog_content_md": blog_content_md,
         "discord_msg": discord_msg,
@@ -456,7 +495,8 @@ def rewrite_with_ai(
             platform=platform,
             system_prompt=effective_system_prompt,
             user_prompt=user_content,
-            enable_reasoning=platform in ["blogger", "devto"],  # Enable reasoning for long-form
+            enable_reasoning=platform
+            in ["blogger", "devto"],  # Enable reasoning for long-form
         )
 
         if not result:

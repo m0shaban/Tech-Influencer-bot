@@ -721,7 +721,9 @@ class OGImageGenerator:
                 if public_url:
                     print("✅ Image uploaded successfully")
                 else:
-                    print("⚠️ Image upload returned None (not configured or failed silently)")
+                    print(
+                        "⚠️ Image upload returned None (not configured or failed silently)"
+                    )
             except Exception as exc:
                 print(f"❌ Image upload failed with exception: {exc}")
                 import traceback

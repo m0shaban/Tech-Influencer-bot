@@ -79,6 +79,7 @@ async def _error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> 
     except Exception:
         pass
 
+
 # Broadcast conversation states
 GET_MSG = 1
 CONFIRM = 2
@@ -139,6 +140,16 @@ def _get_system_prompt_from_config() -> Optional[str]:
     return None
 
 
+def _get_channel_id_from_config() -> Optional[str]:
+    cfg = _load_config()
+    cid = cfg.get("channel_id")
+    if isinstance(cid, str) and cid.strip():
+        return cid.strip()
+    if CHANNEL_ID and str(CHANNEL_ID).strip():
+        return str(CHANNEL_ID).strip()
+    return None
+
+
 def _is_system_active() -> bool:
     cfg = _load_config()
     return cfg.get("status", "active") == "active"
@@ -158,7 +169,33 @@ def _load_platform_config() -> dict:
     try:
         config_path = BASE_DIR / "platform_config.json"
         if config_path.exists():
-            return json.loads(config_path.read_text(encoding="utf-8"))
+            data = json.loads(config_path.read_text(encoding="utf-8"))
+
+            # Apply active brand overrides from config.json (non-secret, dashboard-managed)
+            try:
+                cfg = _load_config()
+                active_key = str(cfg.get("active_brand") or "").strip()
+                brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+                brand = brands.get(active_key) if active_key and isinstance(brands, dict) else None
+                if isinstance(brand, dict):
+                    overrides = brand.get("platforms")
+                    if isinstance(overrides, dict):
+                        data.setdefault("platforms", {})
+                        for k, v in overrides.items():
+                            if not isinstance(v, dict):
+                                continue
+                            data["platforms"].setdefault(k, {})
+                            data["platforms"][k].update(v)
+
+                    fb_url = str(brand.get("facebook_page_url") or "").strip()
+                    if fb_url:
+                        data.setdefault("platforms", {})
+                        data["platforms"].setdefault("facebook", {})
+                        data["platforms"]["facebook"]["page_url"] = fb_url
+            except Exception:
+                pass
+
+            return data
     except Exception as e:
         print(f"⚠️ Failed to load platform_config.json: {e}")
     return {"platforms": {}, "cross_platform_cta": {"enabled": False}}
@@ -208,6 +245,13 @@ def _get_stats_text() -> str:
     status = "active" if _is_system_active() else "paused"
     status_emoji = "🟢" if status == "active" else "🔴"
 
+    return (
+        "📊 Stats\n\n"
+        f"{status_emoji} Status: {status}\n"
+        f"🧩 Feeds: {feeds_count}\n"
+        f"💾 Seen posts: {seen_count}"
+    )
+
 
 async def _generate_platform_contents(
     post: dict,
@@ -222,15 +266,20 @@ async def _generate_platform_contents(
 ) -> dict:
     """Generate platform-specific content using AI routing."""
     from ai_processor import rewrite_with_ai
-    
-    # Define platforms that need specific AI generation
-    platforms_to_generate = ["blogger", "devto", "facebook", "telegram"]
-    
-    contents = {}
-    
+
+    platforms_to_generate = [
+        "blogger",
+        "devto",
+        "facebook",
+        "telegram",
+        "linkedin",
+        "discord",
+    ]
+
+    contents: dict = {}
+
     for platform in platforms_to_generate:
         try:
-            # Generate content with platform-specific AI
             ai_result = rewrite_with_ai(
                 title=post.get("title", ""),
                 summary=post.get("summary", ""),
@@ -238,35 +287,33 @@ async def _generate_platform_contents(
                 system_prompt=system_prompt,
                 platform=platform,
             )
-            
+
             if ai_result:
-                # Map AI results to platform format
                 if platform in ["blogger", "devto"]:
                     contents[platform] = {
                         "caption": ai_result.get("blog_content_md", ""),
                         "title": ai_result.get("blog_title", ""),
                     }
                 elif platform == "facebook":
-                    contents[platform] = {
-                        "caption": ai_result.get("facebook_post", ""),
-                    }
+                    contents[platform] = {"caption": ai_result.get("facebook_post", "")}
                 elif platform == "telegram":
+                    contents[platform] = {"caption": ai_result.get("telegram_post", "")}
+                elif platform == "linkedin":
                     contents[platform] = {
-                        "caption": ai_result.get("telegram_post", ""),
+                        "caption": ai_result.get("linkedin_post")
+                        or ai_result.get("facebook_post", "")
                     }
-            else:
-                # Fallback to original generated content
-                if platform == "blogger":
-                    contents[platform] = {"caption": blog_content_md, "title": blog_title}
-                elif platform == "devto":
-                    contents[platform] = {"caption": blog_content_md, "title": blog_title}
-                elif platform == "facebook":
-                    contents[platform] = {"caption": facebook_post}
-                elif platform == "telegram":
-                    contents[platform] = {"caption": telegram_post}
+                elif platform == "discord":
+                    contents[platform] = {
+                        "caption": ai_result.get("discord_msg")
+                        or ai_result.get("telegram_post", "")
+                    }
+                continue
+
+            raise ValueError("Empty AI result")
+
         except Exception as e:
             print(f"⚠️ Failed to generate content for {platform}: {e}")
-            # Use fallback content
             if platform == "blogger":
                 contents[platform] = {"caption": blog_content_md, "title": blog_title}
             elif platform == "devto":
@@ -275,10 +322,14 @@ async def _generate_platform_contents(
                 contents[platform] = {"caption": facebook_post}
             elif platform == "telegram":
                 contents[platform] = {"caption": telegram_post}
-    
-    # Add discord with existing content
-    contents["discord"] = {"caption": discord_msg}
-    
+            elif platform == "linkedin":
+                contents[platform] = {"caption": facebook_post or telegram_post}
+            elif platform == "discord":
+                contents[platform] = {"caption": discord_msg or telegram_post}
+
+    contents.setdefault("discord", {"caption": discord_msg or telegram_post})
+    contents.setdefault("linkedin", {"caption": facebook_post or telegram_post})
+
     return contents
 
 
@@ -293,94 +344,143 @@ async def _publish_sequential_with_ctas(
 ) -> dict:
     """Publish platforms sequentially with URL collection and CTA injection."""
     import asyncio
-    
-    # Get enabled platforms from publisher
+
     enabled_platforms = publisher.enabled_platforms
-    
-    # Get platform configurations
     platforms_config = platform_config.get("platforms", {})
     cta_config = platform_config.get("cross_platform_cta", {})
-    cta_enabled = cta_config.get("enabled", False)
+    cta_enabled = bool(cta_config.get("enabled", False))
     cta_templates = cta_config.get("templates", {})
-    
-    # Sort platforms by priority
-    platform_priority = []
+
+    platform_priority: list[tuple[str, int]] = []
     for p in enabled_platforms:
         priority = platforms_config.get(p, {}).get("priority", 99)
         platform_priority.append((p, priority))
-    
     platform_priority.sort(key=lambda x: x[1])
     sorted_platforms = [p[0] for p in platform_priority]
-    
+
     print(f"🔄 Sequential publishing order: {sorted_platforms}")
-    
-    # Collect published URLs
-    published_urls = {}
-    results = {}
-    
-    # Publish each platform sequentially
+
+    published_urls: dict[str, str] = {}
+    results: dict[str, Any] = {}
+
+    def _canonical_url() -> Optional[str]:
+        return published_urls.get("blogger") or published_urls.get("devto")
+
+    def _facebook_page_url() -> str:
+        cfg_url = str(platforms_config.get("facebook", {}).get("page_url", "") or "").strip()
+        if cfg_url:
+            return cfg_url
+        fb_page_id = (os.getenv("FACEBOOK_PAGE_ID") or "").strip()
+        if fb_page_id:
+            return f"https://www.facebook.com/{fb_page_id}"
+        return ""
+
+    def _cta_buttons() -> list[dict[str, str]]:
+        buttons: list[dict[str, str]] = []
+        if published_urls.get("blogger"):
+            buttons.append({"text": "📝 المقال كامل", "url": published_urls["blogger"]})
+        if published_urls.get("devto"):
+            buttons.append({"text": "📌 نسخة Dev.to", "url": published_urls["devto"]})
+        if published_urls.get("facebook"):
+            buttons.append({"text": "💬 ناقش على فيسبوك", "url": published_urls["facebook"]})
+        return buttons
+
+    def _filter_cta_text(cta_text: str, url_candidates: list[str]) -> str:
+        lines: list[str] = []
+        for raw in cta_text.split("\n"):
+            line = raw.rstrip()
+            stripped = line.strip()
+            if not stripped:
+                continue
+            # Empty markdown links like [X]() or ( )
+            if "]()" in stripped or stripped.endswith("()"):
+                continue
+            if stripped.endswith(":"):
+                continue
+            if ":" in stripped and url_candidates and not any(u in stripped for u in url_candidates):
+                continue
+            lines.append(line)
+        return "\n".join(lines).strip()
+
     for platform in sorted_platforms:
         try:
-            # Get platform config
             p_config = platforms_config.get(platform, {})
-            delay_minutes = p_config.get("delay_minutes", 0)
-            enable_cta = p_config.get("enable_cta", False)
-            
-            # Wait for delay (skip for first platform)
+            delay_minutes = int(p_config.get("delay_minutes", 0) or 0)
+            enable_cta = bool(p_config.get("enable_cta", False))
+
             if published_urls and delay_minutes > 0:
                 print(f"⏳ Waiting {delay_minutes} minutes before publishing to {platform}...")
                 await asyncio.sleep(delay_minutes * 60)
-            
-            # Get content for this platform
+
             content_data = platform_contents.get(platform, {})
-            caption = content_data.get("caption", "")
+            caption = str(content_data.get("caption") or "").strip()
             title = content_data.get("title")
-            
-            # Inject CTAs if enabled
-            if cta_enabled and enable_cta and caption:
-                cta_template = cta_templates.get(platform, "")
+
+            # TEXT CTAs only where it makes sense (blog/devto). Not Telegram/Facebook.
+            if cta_enabled and enable_cta and caption and platform not in {"telegram", "facebook"}:
+                cta_template = str(cta_templates.get(platform, "") or "")
                 if cta_template and published_urls:
-                    cta_text = cta_template.format(
-                        blogger_url=published_urls.get("blogger", ""),
-                        devto_url=published_urls.get("devto", ""),
-                        facebook_url=published_urls.get("facebook", ""),
+                    blogger_url = published_urls.get("blogger", "")
+                    devto_url = published_urls.get("devto", "")
+                    # Dev.to wants stable page URL even before FB post exists
+                    facebook_url = _facebook_page_url() or published_urls.get("facebook", "")
+                    url_candidates = [u for u in [blogger_url, devto_url, facebook_url] if u]
+
+                    raw_cta = cta_template.format(
+                        blogger_url=blogger_url,
+                        devto_url=devto_url,
+                        facebook_url=facebook_url,
                     )
-                    # Remove lines with empty URLs
-                    cta_lines = []
-                    for line in cta_text.split("\n"):
-                        # Skip lines that end with : and have no URL
-                        if ":" in line and not any(url in line for url in published_urls.values()):
-                            continue
-                        cta_lines.append(line)
-                    cta_text = "\n".join(cta_lines)
-                    
-                    if cta_text.strip():
-                        caption = caption + cta_text
+                    filtered = _filter_cta_text(raw_cta, url_candidates)
+                    if filtered:
+                        caption = caption.rstrip() + "\n\n" + filtered
                         print(f"✅ Injected CTA for {platform}")
-            
-            # Prepare payload
-            payload = {platform: {"caption": caption}}
+
+            payload_for_platform: dict[str, Any] = {"caption": caption}
             if title:
-                payload[platform]["title"] = title
-            
-            # Publish to this platform
+                payload_for_platform["title"] = title
+
+            canonical = _canonical_url()
+            if platform in {"facebook", "linkedin"} and canonical:
+                payload_for_platform["link_override"] = canonical
+            if platform == "facebook" and canonical:
+                payload_for_platform["force_link_post"] = True
+            if platform == "devto" and canonical:
+                payload_for_platform["link_override"] = canonical
+
+            if platform == "telegram":
+                payload_for_platform["disable_link"] = True
+                payload_for_platform["cta_buttons"] = _cta_buttons()
+                try:
+                    cfg = _load_config()
+                    cid = cfg.get("channel_id")
+                    if isinstance(cid, str) and cid.strip():
+                        payload_for_platform["channel_id"] = cid.strip()
+                except Exception:
+                    pass
+
+            if platform == "discord" and canonical:
+                payload_for_platform["caption"] = (
+                    caption.rstrip() + f"\n\nاقرأ المزيد: {canonical}" if caption else f"اقرأ المزيد: {canonical}"
+                )
+
+            payloads = {platform: payload_for_platform}
+
             print(f"📤 Publishing to {platform}...")
             platform_results = await publisher.publish(
                 caption=caption,
-                link=link,
+                link=None,
                 image_url=image_url,
                 image_local_path=image_local_path,
                 platforms=[platform],
-                platform_payloads=payload,
+                platform_payloads=payloads,
                 telegram_context=telegram_context,
                 send_reports=True,
             )
-            
-            # Collect result
+
             result = platform_results.get(platform, {})
             results[platform] = result
-            
-            # Extract and store URL if successful
+
             if isinstance(result, dict) and (result.get("status") == "success" or result.get("success")):
                 url = result.get("url") or result.get("post_url") or result.get("link")
                 if url:
@@ -391,22 +491,16 @@ async def _publish_sequential_with_ctas(
             else:
                 error = result.get("error") or result.get("message", "Unknown error")
                 print(f"❌ {platform} failed: {error}")
-                
+
         except Exception as e:
             print(f"❌ Error publishing to {platform}: {e}")
             import traceback
+
             traceback.print_exc()
             results[platform] = {"status": "error", "error": str(e)}
-    
+
     print(f"\n✅ Published URLs: {published_urls}")
     return results
-
-    return (
-        "📊 Stats\n\n"
-        f"{status_emoji} Status: {status}\n"
-        f"🧩 Feeds: {feeds_count}\n"
-        f"💾 Seen posts: {seen_count}"
-    )
 
 
 def prepare_media(post: Dict[str, Any], title: str) -> Dict[str, Optional[str]]:
@@ -574,8 +668,9 @@ async def fetch_and_publish(
     except Exception as exc:  # noqa: BLE001
         return {"status": "error", "error": f"Import error: {exc}"}
 
-    if not CHANNEL_ID:
-        return {"status": "error", "error": "CHANNEL_ID is not set"}
+    channel_id = _get_channel_id_from_config()
+    if not channel_id:
+        return {"status": "error", "error": "CHANNEL_ID is not set (env or config.json)"}
 
     if not override_status and not _is_system_active():
         return {"status": "error", "error": "System is paused"}
@@ -633,11 +728,18 @@ async def fetch_and_publish(
 
         # Load platform config for priority-based sequential publishing
         platform_config = _load_platform_config()
-        
+
         # Generate platform-specific content with AI routing
         platform_contents = await _generate_platform_contents(
-            post, title, link, system_prompt,
-            telegram_post, facebook_post, blog_title, blog_content_md, discord_msg
+            post,
+            title,
+            link,
+            system_prompt,
+            telegram_post,
+            facebook_post,
+            blog_title,
+            blog_content_md,
+            discord_msg,
         )
 
         # Publish sequentially with URL collection and CTA injection
@@ -1157,11 +1259,12 @@ async def post_init(app: Application) -> None:
         await app.bot.delete_webhook(drop_pending_updates=True)
         # Give Telegram API time to process
         import asyncio
+
         await asyncio.sleep(1)
         print("✅ Webhooks cleaned successfully")
     except Exception as e:
         print(f"⚠️ Warning during webhook cleanup: {e}")
-    
+
     # Set bot commands
     await app.bot.set_my_commands(
         [

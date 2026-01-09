@@ -14,15 +14,18 @@ load_dotenv()
 class FacebookPublisher:
     """Publisher for posting to Facebook Pages"""
 
-    def __init__(self):
+    def __init__(self, access_token: Optional[str] = None, page_id: Optional[str] = None):
         """Initialize Facebook Graph API client"""
-        self.access_token = os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN")
-        self.page_id = os.getenv("FACEBOOK_PAGE_ID")
+        access_token_value = access_token or os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN")
+        page_id_value = page_id or os.getenv("FACEBOOK_PAGE_ID")
 
-        if not self.access_token:
+        if not access_token_value:
             raise ValueError("FACEBOOK_PAGE_ACCESS_TOKEN is required")
-        if not self.page_id:
+        if not page_id_value:
             raise ValueError("FACEBOOK_PAGE_ID is required")
+
+        self.access_token: str = str(access_token_value)
+        self.page_id: str = str(page_id_value)
 
         self.api_base = "https://graph.facebook.com/v18.0"
 

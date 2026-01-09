@@ -24,6 +24,7 @@
       "enabled": true,
       "publish_mode": "delayed",
       "delay_minutes": 2,
+      "page_url": "https://www.facebook.com/robovaisolutions",
       "custom_prompt": "أنت مؤثر تقني trendy. اكتب مقال **جذاب** (500-800 كلمة) يثير الفضول ويشجع التفاعل. استخدم: قصة شخصية + إحصائيات صادمة + أسئلة تفاعلية + دعوة للنقاش. أسلوب حماسي ومباشر.",
       "max_length": 2000,
       "priority": 3,
@@ -34,7 +35,7 @@
       "enabled": true,
       "publish_mode": "delayed",
       "delay_minutes": 3,
-      "custom_prompt": "أنت صديق خبير. اكتب **تيزر** قصير (150-250 كلمة) يلخص الموضوع بطريقة مشوقة ويحفز القارئ على قراءة المقال الكامل. استخدم: Hook قوي + نقاط رئيسية + CTA واضح للمقالات. بدون تفاصيل كثيرة.",
+      "custom_prompt": "أنت صديق خبير. اكتب **منشور تيليجرام أطول** (250-400 كلمة) يلخص الموضوع بطريقة مشوقة ويحفز القارئ على قراءة المقال الكامل. استخدم: Hook قوي + نقاط رئيسية + مثال/تطبيق عملي سريع + سؤال تفاعلي. ممنوع وضع أي روابط داخل النص نهائياً.",
       "max_length": 1024,
       "priority": 4,
       "content_type": "teaser",
@@ -51,7 +52,7 @@
       "enable_cta": false
     },
     "linkedin": {
-      "enabled": true,
+      "enabled": false,
       "publish_mode": "delayed",
       "delay_minutes": 8,
       "custom_prompt": "أنت الخبير الاستراتيجي. اكتب بأسلوب احترافي يركز على العائد (ROI) والمستقبل المهني. أنت المصدر.",

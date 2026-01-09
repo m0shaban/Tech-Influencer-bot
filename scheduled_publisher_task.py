@@ -34,6 +34,10 @@ class ScheduledPublisherTask:
     async def _publish_post(self, post):
         """Publish a single scheduled post"""
         try:
+            from brand_context import get_active_brand, env_get
+
+            active_brand = get_active_brand()
+
             # Import here to avoid circular imports
             from multi_platform_publisher import MultiPlatformPublisher
 
@@ -48,7 +52,23 @@ class ScheduledPublisherTask:
             elif post.platform == "discord":
                 from discord_publisher import DiscordPublisher
 
-                pub = DiscordPublisher()
+                pub = DiscordPublisher(
+                    webhook_url=env_get(
+                        "DISCORD_WEBHOOK_URL",
+                        platform="discord",
+                        brand=active_brand,
+                    ),
+                    username=env_get(
+                        "DISCORD_USERNAME",
+                        platform="discord",
+                        brand=active_brand,
+                    ),
+                    avatar_url=env_get(
+                        "DISCORD_AVATAR_URL",
+                        platform="discord",
+                        brand=active_brand,
+                    ),
+                )
                 result = pub.publish(
                     caption=post.caption, link=post.link, image_url=post.image_url
                 )
@@ -56,7 +76,22 @@ class ScheduledPublisherTask:
             elif post.platform == "blogger":
                 from blogger_publisher import BloggerPublisher
 
-                pub = BloggerPublisher()
+                pub = BloggerPublisher(
+                    api_key=env_get("BLOGGER_API_KEY", platform="blogger", brand=active_brand),
+                    blog_id=env_get("BLOGGER_BLOG_ID", platform="blogger", brand=active_brand),
+                    access_token=env_get(
+                        "BLOGGER_ACCESS_TOKEN", platform="blogger", brand=active_brand
+                    ),
+                    refresh_token=env_get(
+                        "BLOGGER_REFRESH_TOKEN", platform="blogger", brand=active_brand
+                    ),
+                    client_id=env_get(
+                        "BLOGGER_CLIENT_ID", platform="blogger", brand=active_brand
+                    ),
+                    client_secret=env_get(
+                        "BLOGGER_CLIENT_SECRET", platform="blogger", brand=active_brand
+                    ),
+                )
                 # Extract title from caption
                 lines = post.caption.split("\n")
                 title = lines[0][:100] if lines else post.caption[:100]
@@ -71,7 +106,18 @@ class ScheduledPublisherTask:
             elif post.platform == "facebook":
                 from facebook_publisher import FacebookPublisher
 
-                pub = FacebookPublisher()
+                pub = FacebookPublisher(
+                    access_token=env_get(
+                        "FACEBOOK_PAGE_ACCESS_TOKEN",
+                        platform="facebook",
+                        brand=active_brand,
+                    ),
+                    page_id=env_get(
+                        "FACEBOOK_PAGE_ID",
+                        platform="facebook",
+                        brand=active_brand,
+                    ),
+                )
                 if post.image_url:
                     result = pub.publish_photo(
                         message=post.caption, image_url=post.image_url
@@ -136,7 +182,9 @@ class ScheduledPublisherTask:
             elif post.platform == "devto":
                 from devto_publisher import DevtoPublisher
 
-                pub = DevtoPublisher()
+                pub = DevtoPublisher(
+                    api_key=env_get("DEVTO_API_KEY", platform="devto", brand=active_brand)
+                )
                 result = pub.publish(
                     caption=post.caption,
                     link=post.link,

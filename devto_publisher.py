@@ -15,8 +15,8 @@ load_dotenv()
 class DevtoPublisher:
     """Publisher for Dev.to platform"""
 
-    def __init__(self):
-        self.api_key = os.getenv("DEVTO_API_KEY")
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.getenv("DEVTO_API_KEY")
         self.base_url = "https://dev.to/api"
 
     def is_configured(self) -> bool:

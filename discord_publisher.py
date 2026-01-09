@@ -18,8 +18,16 @@ DISCORD_AVATAR_URL = os.getenv("DISCORD_AVATAR_URL")
 class DiscordPublisher:
     """Publish content to Discord using an incoming webhook"""
 
-    def __init__(self, webhook_url: Optional[str] = None):
+    def __init__(
+        self,
+        webhook_url: Optional[str] = None,
+        *,
+        username: Optional[str] = None,
+        avatar_url: Optional[str] = None,
+    ):
         self.webhook_url = webhook_url or DISCORD_WEBHOOK_URL
+        self.username = username or DISCORD_USERNAME
+        self.avatar_url = avatar_url if avatar_url is not None else DISCORD_AVATAR_URL
         if not self.webhook_url:
             raise ValueError("Discord webhook URL not configured")
 
@@ -34,11 +42,11 @@ class DiscordPublisher:
 
         payload: Dict[str, Any] = {
             "content": content,
-            "username": DISCORD_USERNAME,
+            "username": self.username,
         }
 
-        if DISCORD_AVATAR_URL:
-            payload["avatar_url"] = DISCORD_AVATAR_URL
+        if self.avatar_url:
+            payload["avatar_url"] = self.avatar_url
 
         embed: Dict[str, Any] = {"title": caption[:150], "description": caption[:2000]}
         if link:

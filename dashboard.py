@@ -32,6 +32,10 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "system_prompt": "",
     "model": "llama-3.3-70b-versatile",
     "feeds": [],
+    "channel_id": "",
+    "group_id": "",
+    "active_brand": "",
+    "brands": {},
     "last_run": None,
 }
 
@@ -68,6 +72,13 @@ def save_config(data: Dict[str, Any]) -> None:
         CONFIG_PATH.write_text(
             json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
         )
+
+
+def _rerun() -> None:
+    # Streamlit renamed experimental_rerun -> rerun in newer versions.
+    rerun_fn = getattr(st, "rerun", None) or getattr(st, "experimental_rerun", None)
+    if callable(rerun_fn):
+        rerun_fn()
 
 
 def load_feeds_from_code() -> List[str]:
@@ -162,7 +173,7 @@ if DEFAULT_PASSWORD:
 
 # Sidebar menu
 try:
-    from streamlit_option_menu import option_menu
+    from streamlit_option_menu import option_menu  # type: ignore[import-not-found]
 except Exception:
     option_menu = None
 
@@ -175,6 +186,7 @@ with st.sidebar:
             [
                 "🏠 The Cockpit",
                 "🧠 AI Brain Surgery",
+                "🏷️ Brand Manager",
                 "🔗 Feed Manager",
                 "🌐 Platform Status",
                 "� Schedule Settings",
@@ -199,6 +211,7 @@ with st.sidebar:
             (
                 "🏠 The Cockpit",
                 "🧠 AI Brain Surgery",
+                "🏷️ Brand Manager",
                 "🔗 Feed Manager",
                 "🌐 Platform Status",
                 "📅 Schedule Settings",
@@ -208,10 +221,34 @@ with st.sidebar:
         )
     )
 
+def _get_brands(cfg: Dict[str, Any]) -> Dict[str, Any]:
+    brands = cfg.get("brands")
+    return brands if isinstance(brands, dict) else {}
+
+
+def _sync_active_brand_into_runtime(cfg: Dict[str, Any]) -> None:
+    """Keep backward compatibility: main runtime reads top-level keys."""
+    active_key = str(cfg.get("active_brand") or "").strip()
+    brands = _get_brands(cfg)
+    active = brands.get(active_key) if active_key else None
+    if not isinstance(active, dict):
+        return
+    if isinstance(active.get("system_prompt"), str):
+        cfg["system_prompt"] = active.get("system_prompt", "")
+    if isinstance(active.get("feeds"), list):
+        cfg["feeds"] = active.get("feeds", [])
+    if isinstance(active.get("channel_id"), str):
+        cfg["channel_id"] = active.get("channel_id", "")
+    if isinstance(active.get("group_id"), str):
+        cfg["group_id"] = active.get("group_id", "")
+
+
 config = load_config()
+_sync_active_brand_into_runtime(config)
 feeds_list = config.get("feeds") or load_feeds_from_code()
 config["feeds"] = feeds_list
 save_config(config)
+
 
 # Shared metrics
 is_active = config.get("status", "paused") == "active"
@@ -298,6 +335,180 @@ if menu_choice == "🏠 The Cockpit":
         log_placeholder.code("\n".join(logs), language="")
 
 
+# ------------- Brand Manager -------------
+elif menu_choice == "🏷️ Brand Manager":
+    st.title("🏷️ Brand Manager")
+    st.caption("Multiple brands/profiles: feeds + prompts + channel destinations")
+
+    cfg = load_config()
+    brands = _get_brands(cfg)
+    active_brand = str(cfg.get("active_brand") or "").strip()
+
+    st.markdown("### Active Brand")
+    brand_keys = sorted(brands.keys())
+    active_index = brand_keys.index(active_brand) if active_brand in brand_keys else 0
+    selected = st.selectbox(
+        "Choose active brand",
+        options=brand_keys if brand_keys else [""],
+        index=active_index if brand_keys else 0,
+        help="The bot runtime will use this brand's feeds/prompt/channel_id.",
+    )
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        new_key = st.text_input(
+            "New brand key (e.g. robovai_ar / nextstep_en)",
+            value="",
+        ).strip()
+    with col_b:
+        new_name = st.text_input("Display name", value="").strip()
+
+    if st.button("➕ Create Brand"):
+        if not new_key:
+            st.error("Brand key is required")
+        elif new_key in brands:
+            st.error("Brand key already exists")
+        else:
+            # Platform defaults from platform_config.json
+            platform_defaults: Dict[str, Any] = {}
+            try:
+                p = Path(__file__).parent / "platform_config.json"
+                if p.exists():
+                    pdata = json.loads(p.read_text(encoding="utf-8"))
+                    if isinstance(pdata, dict) and isinstance(pdata.get("platforms"), dict):
+                        for k, v in pdata["platforms"].items():
+                            if isinstance(v, dict):
+                                platform_defaults[k] = {"enabled": bool(v.get("enabled", True))}
+            except Exception:
+                platform_defaults = {}
+
+            brands[new_key] = {
+                "display_name": new_name or new_key,
+                "language": "ar",
+                "system_prompt": "",
+                "feeds": [],
+                "channel_id": "",
+                "group_id": "",
+                "platforms": platform_defaults,
+                "facebook_page_url": "",
+                "accounts": {
+                    "facebook": "",
+                    "devto": "",
+                    "blogger": "",
+                    "discord": "",
+                    "telegram": "",
+                },
+            }
+            cfg["brands"] = brands
+            if not cfg.get("active_brand"):
+                cfg["active_brand"] = new_key
+            _sync_active_brand_into_runtime(cfg)
+            save_config(cfg)
+            st.success("Brand created")
+
+    if selected and selected in brands and isinstance(brands[selected], dict):
+        st.markdown("---")
+        st.markdown(f"### Edit: `{selected}`")
+        b = dict(brands[selected])
+
+        b["display_name"] = st.text_input(
+            "Display name",
+            value=str(b.get("display_name") or selected),
+        )
+        b["language"] = st.selectbox(
+            "Language",
+            options=["ar", "en"],
+            index=0 if str(b.get("language") or "ar") == "ar" else 1,
+        )
+        b["channel_id"] = st.text_input(
+            "Telegram channel_id (e.g. -100123...)",
+            value=str(b.get("channel_id") or cfg.get("channel_id") or CHANNEL_ID or ""),
+        )
+        b["group_id"] = st.text_input(
+            "Telegram group_id (optional)",
+            value=str(b.get("group_id") or cfg.get("group_id") or GROUP_ID or ""),
+        )
+        b["system_prompt"] = st.text_area(
+            "System prompt",
+            value=str(b.get("system_prompt") or ""),
+            height=220,
+        )
+
+        b["facebook_page_url"] = st.text_input(
+            "Facebook Page URL for CTA (optional)",
+            value=str(b.get("facebook_page_url") or ""),
+            help="If empty, the global platform_config.json facebook.page_url will be used.",
+        ).strip()
+
+        st.markdown("#### Platforms for this brand")
+        try:
+            p = Path(__file__).parent / "platform_config.json"
+            pdata = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+            available_platforms = (
+                list(pdata.get("platforms", {}).keys())
+                if isinstance(pdata, dict)
+                else []
+            )
+        except Exception:
+            available_platforms = []
+
+        platform_state_raw = b.get("platforms")
+        platform_state: Dict[str, Any] = platform_state_raw if isinstance(platform_state_raw, dict) else {}
+        updated_platforms: Dict[str, Any] = dict(platform_state)
+        cols = st.columns(4)
+        for idx, key in enumerate(available_platforms):
+            current_enabled = True
+            entry = platform_state.get(key)
+            if isinstance(entry, dict) and "enabled" in entry:
+                current_enabled = bool(entry.get("enabled"))
+            with cols[idx % 4]:
+                checked = st.checkbox(key, value=current_enabled, key=f"brand_{selected}_plat_{key}")
+            updated_platforms[key] = {"enabled": bool(checked)}
+        b["platforms"] = updated_platforms
+
+        st.markdown("#### Accounts (multi-accounts per platform)")
+        st.caption(
+            "اكتب suffix للحساب (مثال: RBV). ساعتها هنستخدم متغيرات Render بالشكل: FACEBOOK_PAGE_ID_RBV, DEVTO_API_KEY_RBV ..."
+        )
+        accounts_raw = b.get("accounts")
+        accounts = accounts_raw if isinstance(accounts_raw, dict) else {}
+        a_fb = st.text_input("Facebook account suffix", value=str(accounts.get("facebook") or "")).strip()
+        a_dev = st.text_input("Dev.to account suffix", value=str(accounts.get("devto") or "")).strip()
+        a_blog = st.text_input("Blogger account suffix", value=str(accounts.get("blogger") or "")).strip()
+        a_dis = st.text_input("Discord account suffix", value=str(accounts.get("discord") or "")).strip()
+        a_tg = st.text_input("Telegram bot token suffix (optional)", value=str(accounts.get("telegram") or "")).strip()
+        b["accounts"] = {
+            "facebook": a_fb,
+            "devto": a_dev,
+            "blogger": a_blog,
+            "discord": a_dis,
+            "telegram": a_tg,
+        }
+        feeds_text = "\n".join([str(x) for x in (b.get("feeds") or []) if isinstance(x, str)])
+        feeds_text = st.text_area("Feeds (one per line)", value=feeds_text, height=220)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save Brand"):
+                b["feeds"] = [ln.strip() for ln in feeds_text.splitlines() if ln.strip()]
+                brands[selected] = b
+                cfg["brands"] = brands
+                save_config(cfg)
+                st.success("Saved")
+        with col2:
+            if st.button("✅ Set as Active"):
+                cfg["active_brand"] = selected
+                cfg["brands"] = brands
+                _sync_active_brand_into_runtime(cfg)
+                save_config(cfg)
+                st.success("Active brand updated")
+
+    st.info(
+        "ملاحظة: حالياً بنزامن بيانات البراند النشط إلى المفاتيح الأساسية (feeds/system_prompt/channel_id). "
+        "ده يخلي البوت يشتغل بدون تعديل كبير. بعد كده نقدر نفصل Tokens/Accounts لكل براند لو محتاج."
+    )
+
+
 # ------------- AI Brain -------------
 elif menu_choice == "🧠 AI Brain Surgery":
     st.title("AI Brain Surgery")
@@ -365,7 +576,7 @@ elif menu_choice == "🔗 Feed Manager":
         config["feeds"] = feeds_from_code
         save_config(config)
         st.success(f"Loaded {len(feeds_from_code)} feeds from code")
-        st.experimental_rerun()
+        _rerun()
 
 
 # ------------- Platform Status -------------
@@ -617,7 +828,7 @@ elif menu_choice == "📅 Schedule Settings":
                     platforms_data[platform_key]["publish_mode"] = "immediate"
                     platforms_data[platform_key]["delay_minutes"] = 0
                 st.success("Set all platforms to immediate mode")
-                st.experimental_rerun()
+                _rerun()
 
         with col2:
             if st.button("⏱️ Staggered 5min", use_container_width=True):
@@ -627,7 +838,7 @@ elif menu_choice == "📅 Schedule Settings":
                         platforms_data[platform_key]["publish_mode"] = "delayed"
                         platforms_data[platform_key]["delay_minutes"] = delays[i]
                 st.success("Set staggered 5-minute delays")
-                st.experimental_rerun()
+                _rerun()
 
         with col3:
             if st.button("🕐 Staggered 10min", use_container_width=True):
@@ -637,7 +848,7 @@ elif menu_choice == "📅 Schedule Settings":
                         platforms_data[platform_key]["publish_mode"] = "delayed"
                         platforms_data[platform_key]["delay_minutes"] = delays[i]
                 st.success("Set staggered 10-minute delays")
-                st.experimental_rerun()
+                _rerun()
 
     except Exception as exc:
         st.error(f"❌ Error: {exc}")

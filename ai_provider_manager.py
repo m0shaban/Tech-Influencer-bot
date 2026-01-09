@@ -144,7 +144,7 @@ class AIProviderManager:
                 "temperature": config["temperature"],
                 "max_tokens": config["max_tokens"],
             }
-            
+
             # Only NVIDIA supports response_format json_object
             # Groq doesn't support this parameter
             if config["provider"] == "nvidia":

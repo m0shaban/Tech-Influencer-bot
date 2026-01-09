@@ -96,6 +96,24 @@ STORJ_PUBLIC_BASE_URL=https://link.storjshare.io/raw/<share-token>/<bucket>
 | `GROQ_API_KEY`          | https://console.groq.com/keys                 |
 | `STORJ_PUBLIC_BASE_URL` | Public base URL (anonymous GET must work)     |
 
+#### Multi-Accounts per platform (اختياري)
+
+لو عندك أكتر من Brand وكل واحد له حسابات مختلفة (Facebook/Dev.to/Blogger/Discord…):
+
+1. في Dashboard → Brand Manager → Accounts: حط suffix (مثال: `RBV`) لكل منصة.
+2. في Render env variables ضيف نفس المتغيرات لكن بسفينكس:
+
+```
+FACEBOOK_PAGE_ID_RBV=...
+FACEBOOK_PAGE_ACCESS_TOKEN_RBV=...
+DEVTO_API_KEY_RBV=...
+BLOGGER_BLOG_ID_RBV=...
+BLOGGER_ACCESS_TOKEN_RBV=...
+DISCORD_WEBHOOK_URL_RBV=...
+```
+
+لو المتغيرات بالسفينكس مش موجودة، البوت هيرجع تلقائيًا للـ default بدون suffix.
+
 ### 2.5 Review & Deploy
 
 1. Review the configuration
