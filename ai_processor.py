@@ -244,7 +244,6 @@ _BANNED_PHRASES = [
     "المقال يقول",
     "كما ورد في",
     "وفقاً لـ",
-    
     # Weak conclusions
     "in conclusion",
     "في الختام",
@@ -252,7 +251,6 @@ _BANNED_PHRASES = [
     "to summarize",
     "للخلاصة",
     "in summary",
-    
     # Indicators of plagiarism
     "copied from",
     "taken from",
@@ -273,9 +271,7 @@ def _ensure_string(value: Any) -> str:
     return str(value or "").strip()
 
 
-def _normalize_ai_result(
-    parsed: Dict[str, Any], *, link: str
-) -> Dict[str, Any]:
+def _normalize_ai_result(parsed: Dict[str, Any], *, link: str) -> Dict[str, Any]:
     telegram_post = _strip_code_fences(_ensure_string(parsed.get("telegram_post")))
     facebook_post = _strip_code_fences(_ensure_string(parsed.get("facebook_post")))
     blog_title = _ensure_string(parsed.get("blog_title"))
@@ -284,27 +280,35 @@ def _normalize_ai_result(
 
     # --- FLUID FALLBACKS (Robust Recovery) ---
     # 1. Gather any valid text content found
-    sources = [t for t in [telegram_post, facebook_post, blog_content_md, discord_msg] if t]
+    sources = [
+        t for t in [telegram_post, facebook_post, blog_content_md, discord_msg] if t
+    ]
 
     # 2. If completely empty, try looking at ALL dict values (in case of wrong keys)
     if not sources:
         sources = [str(v) for v in parsed.values() if isinstance(v, str) and v.strip()]
 
     if not sources:
-        raise ValueError(f"AI output contained no usable text content. Keys: {list(parsed.keys())}")
+        raise ValueError(
+            f"AI output contained no usable text content. Keys: {list(parsed.keys())}"
+        )
 
     fallback_text = sources[0]
 
     # 3. Fill missing fields with fallback content
-    if not telegram_post: telegram_post = fallback_text
-    if not facebook_post: facebook_post = telegram_post
-    if not blog_content_md: blog_content_md = telegram_post
-    if not discord_msg: discord_msg = telegram_post
+    if not telegram_post:
+        telegram_post = fallback_text
+    if not facebook_post:
+        facebook_post = telegram_post
+    if not blog_content_md:
+        blog_content_md = telegram_post
+    if not discord_msg:
+        discord_msg = telegram_post
     if not blog_title:
         # Extract potential title from first line of content
-        first_line = fallback_text.split('\n')[0].strip()
+        first_line = fallback_text.split("\n")[0].strip()
         # Remove markdown headers if present
-        blog_title = re.sub(r'^[\#\*]+', '', first_line).strip() or "Tech Update"
+        blog_title = re.sub(r"^[\#\*]+", "", first_line).strip() or "Tech Update"
 
     joined = "\n".join(
         [telegram_post, facebook_post, blog_title, blog_content_md, discord_msg]
@@ -314,7 +318,9 @@ def _normalize_ai_result(
 
     latin_fraction = _latin_ratio(joined)
     if latin_fraction > 0.75:
-        raise ValueError(f"Language skew detected (latin ratio: {latin_fraction:.2f} > 0.75)")
+        raise ValueError(
+            f"Language skew detected (latin ratio: {latin_fraction:.2f} > 0.75)"
+        )
 
     # Ensure the link exists (main pipeline may append again safely).
     if link and link not in telegram_post:

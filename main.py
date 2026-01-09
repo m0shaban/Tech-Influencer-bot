@@ -32,6 +32,7 @@ from scheduled_publisher_task import start_scheduler_task
 # Start keep-alive HTTP server (for Render web service)
 try:
     from keep_alive import keep_alive
+
     keep_alive()
 except ImportError:
     print("⚠️ keep_alive not available (OK for local dev)")
@@ -266,8 +267,7 @@ async def fetch_and_publish(
         )
 
         any_success = any(
-            isinstance(v, dict)
-            and (v.get("status") == "success" or v.get("success"))
+            isinstance(v, dict) and (v.get("status") == "success" or v.get("success"))
             for v in results.values()
         )
         if not any_success:
@@ -783,20 +783,20 @@ async def post_init(app: Application) -> None:
     try:
         from auto_publisher import get_auto_publisher
         import asyncio
-        
+
         auto_pub = get_auto_publisher()
-        
+
         # Create a wrapper that captures the context
         async def publish_wrapper(ctx, override_status=False):
             return await fetch_and_publish(ctx, override_status=override_status)
-        
+
         # Create a fake context object that can access the bot
         class BotContext:
             def __init__(self, bot):
                 self.bot = bot
-        
+
         ctx = BotContext(app.bot)
-        
+
         # Start auto publishing in background
         asyncio.create_task(auto_pub.run(publish_wrapper, ctx))
         print("✅ Auto Publisher started successfully")

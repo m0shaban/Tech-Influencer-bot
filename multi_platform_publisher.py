@@ -38,6 +38,7 @@ class MultiPlatformPublisher:
 
         try:
             from publishing_reporter import get_reporter
+
             self.reporter = get_reporter()
         except Exception as e:
             print(f"Failed to initialize reporter: {e}")
@@ -46,20 +47,39 @@ class MultiPlatformPublisher:
         """Detect which platforms are configured"""
         platforms: list[PlatformType] = []
 
+        # Load dynamic config from dashboard if available
+        config_enabled = {}
+        try:
+            import json
+            from pathlib import Path
+            config_path = Path(__file__).parent / "platform_config.json"
+            if config_path.exists():
+                data = json.loads(config_path.read_text(encoding="utf-8"))
+                # Map 'platforms' -> 'telegram' -> 'enabled'
+                if "platforms" in data:
+                    for k, v in data["platforms"].items():
+                        config_enabled[k] = v.get("enabled", True)
+        except Exception as e:
+            print(f"⚠️ Failed to load platform_config.json: {e}")
+
+        def is_enabled(name):
+            # Default to True if not in config, otherwise use config value
+            return config_enabled.get(name, True)
+
         # Telegram is always enabled (base platform)
-        if os.getenv("TELEGRAM_TOKEN"):
+        if os.getenv("TELEGRAM_TOKEN") and is_enabled("telegram"):
             platforms.append("telegram")
 
         # LinkedIn is optional
-        if os.getenv("LINKEDIN_ACCESS_TOKEN"):
+        if os.getenv("LINKEDIN_ACCESS_TOKEN") and is_enabled("linkedin"):
             platforms.append("linkedin")
 
         # Discord (webhook-based)
-        if os.getenv("DISCORD_WEBHOOK_URL"):
+        if os.getenv("DISCORD_WEBHOOK_URL") and is_enabled("discord"):
             platforms.append("discord")
 
         # Medium (requires token + user ID)
-        if os.getenv("MEDIUM_INTEGRATION_TOKEN") and os.getenv("MEDIUM_USER_ID"):
+        if os.getenv("MEDIUM_INTEGRATION_TOKEN") and os.getenv("MEDIUM_USER_ID") and is_enabled("medium"):
             platforms.append("medium")
 
         # Twitter/X (requires OAuth 1.0a credentials)
@@ -70,13 +90,13 @@ class MultiPlatformPublisher:
                 os.getenv("TWITTER_ACCESS_TOKEN"),
                 os.getenv("TWITTER_ACCESS_SECRET"),
             ]
-        ):
+        ) and is_enabled("twitter"):
             platforms.append("twitter")
 
         # Blogger (requires Blog ID and API key or OAuth)
         if os.getenv("BLOGGER_BLOG_ID") and (
             os.getenv("BLOGGER_API_KEY") or os.getenv("BLOGGER_ACCESS_TOKEN")
-        ):
+        ) and is_enabled("blogger"):
             platforms.append("blogger")
 
         # Reddit (requires OAuth credentials)
@@ -87,15 +107,15 @@ class MultiPlatformPublisher:
                 os.getenv("REDDIT_USERNAME"),
                 os.getenv("REDDIT_PASSWORD"),
             ]
-        ):
+        ) and is_enabled("reddit"):
             platforms.append("reddit")
 
         # Facebook (requires Page Access Token and Page ID)
-        if os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN") and os.getenv("FACEBOOK_PAGE_ID"):
+        if os.getenv("FACEBOOK_PAGE_ACCESS_TOKEN") and os.getenv("FACEBOOK_PAGE_ID") and is_enabled("facebook"):
             platforms.append("facebook")
 
         # Dev.to (requires API key)
-        if os.getenv("DEVTO_API_KEY"):
+        if os.getenv("DEVTO_API_KEY") and is_enabled("devto"):
             platforms.append("devto")
 
         return platforms

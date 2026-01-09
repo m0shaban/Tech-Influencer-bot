@@ -786,7 +786,7 @@ class ImageStrategy:
             try:
                 from feed_manager import extract_image_from_html
                 import requests as req
-                
+
                 response = req.get(article_url, timeout=10)
                 image_url = extract_image_from_html(response.text)
                 if image_url:

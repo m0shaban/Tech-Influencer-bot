@@ -18,6 +18,7 @@ A beautiful, professional landing page for your Render web service.
 ## How It Looks
 
 The landing page includes:
+
 - 🤖 Bot name and tagline
 - 🟢 Live status badge
 - 📊 Stats (24/7 uptime, platforms, AI)
@@ -28,6 +29,7 @@ The landing page includes:
 ## URLs
 
 After deployment on Render:
+
 - **Landing Page**: `https://robovai-bot.onrender.com/`
 - **Health Check**: `https://robovai-bot.onrender.com/health`
 - **API Status**: `https://robovai-bot.onrender.com/api/status`
@@ -35,6 +37,7 @@ After deployment on Render:
 ## For UptimeRobot
 
 Use any of these URLs for monitoring:
+
 - `https://robovai-bot.onrender.com/health` (recommended)
 - `https://robovai-bot.onrender.com/` (landing page)
 
@@ -47,6 +50,7 @@ Both will keep your service awake!
 To customize the landing page, edit: `templates/index.html`
 
 You can change:
+
 - Colors (search for `#667eea` and `#764ba2` for gradients)
 - Stats and features
 - Social media links

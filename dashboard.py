@@ -98,6 +98,17 @@ def tail_log(path: Path, lines: int = 50) -> List[str]:
         return ["Could not read log file."]
 
 
+def load_autopublisher_status() -> Dict[str, Any]:
+    """Load the live status from auto_publisher.py"""
+    try:
+        status_path = BASE_DIR / "autopublisher_status.json"
+        if status_path.exists():
+            return json.loads(status_path.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {}
+
+
 def extract_last_run() -> Optional[str]:
     if not LOG_PATH.exists():
         return None
@@ -207,10 +218,51 @@ if menu_choice == "🏠 The Cockpit":
     st.title("The Cockpit")
     st.caption("High-level overview and master controls")
 
-    c1, c2, c3 = st.columns(3)
+    # Load fresh status from AutoPublisher
+    ap_status = load_autopublisher_status()
+
+    # Row 1: Key Metrics
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric("Status", f"{status_color} {status_label}")
     c2.metric("Active Feeds", feeds_count)
-    c3.metric("Last Run", last_run)
+    
+    posts_today = ap_status.get("posts_today", 0)
+    max_posts = ap_status.get("max_posts_per_day", 50)
+    c3.metric("Posts Today", f"{posts_today} / {max_posts}")
+
+    biz_status = ap_status.get("business_hours_status", "UNKNOWN")
+    biz_icon = "🌞" if biz_status == "OPEN" else "🌙"
+    c4.metric("Biz Hours", f"{biz_icon} {biz_status}")
+
+    # Row 2: Timing
+    st.markdown("---")
+    k1, k2 = st.columns(2)
+    
+    # Last Run
+    last_run_ts = ap_status.get("last_post_date")
+    if last_run_ts:
+        try:
+            dt = datetime.fromisoformat(last_run_ts)
+            last_run_pretty = dt.strftime("%H:%M:%S")
+        except Exception:
+            last_run_pretty = str(last_run_ts)
+    else:
+        last_run_pretty = last_run or "No Data"
+    
+    k1.metric("Last Publish Time", last_run_pretty)
+
+    # Next Run
+    next_run_ts = ap_status.get("next_run_estimated")
+    if next_run_ts:
+        try:
+            ndt = datetime.fromisoformat(next_run_ts)
+            next_run_pretty = ndt.strftime("%H:%M:%S")
+        except Exception:
+            next_run_pretty = str(next_run_ts)
+    else:
+        next_run_pretty = "Calculating / Sleeping"
+        
+    k2.metric("Next Estimated Run", next_run_pretty)
 
     st.markdown("---")
     colA, colB = st.columns([2, 1])
