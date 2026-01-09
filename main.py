@@ -1120,11 +1120,19 @@ async def broadcast_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 
 async def post_init(app: Application) -> None:
-    # Ensure polling mode (not webhook) and clean pending updates
+    """Initialize bot after startup - clean webhooks and set commands"""
+    # Force delete webhook and clear any pending updates to avoid conflicts
     try:
+        print("🔧 Cleaning up old webhooks and pending updates...")
         await app.bot.delete_webhook(drop_pending_updates=True)
-    except Exception:
-        pass
+        # Give Telegram API time to process
+        import asyncio
+        await asyncio.sleep(1)
+        print("✅ Webhooks cleaned successfully")
+    except Exception as e:
+        print(f"⚠️ Warning during webhook cleanup: {e}")
+    
+    # Set bot commands
     await app.bot.set_my_commands(
         [
             BotCommand("start", "Start the bot"),

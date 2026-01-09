@@ -415,9 +415,8 @@ def rewrite_with_ai(
         # Parse JSON response (result is the content string directly)
         parsed = _parse_json_response(result)
         if parsed is None:
-            snippet = result.strip().replace("\n", " ")
-        except ValueError as ve:
-            _set_last_error(f"AI Validation Error: {ve}")
+            snippet = result.strip().replace("\n", " ")[:200]
+            _set_last_error(f"Failed to parse JSON response: {snippet}...")
             return None
 
     except Exception as exc:  # noqa: BLE001
