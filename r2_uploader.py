@@ -47,6 +47,7 @@ def upload_file_to_r2(
         raise RuntimeError("R2 is not configured")
 
     from boto3.session import Session
+    from botocore.config import Config
 
     file_path = Path(local_path)
     if not file_path.exists():
@@ -63,17 +64,31 @@ def upload_file_to_r2(
         aws_access_key_id=access_key,
         aws_secret_access_key=secret_key,
     )
+
+    # Cloudflare R2 (and some S3-compatible providers) may reject AWS chunked streaming
+    # signatures and require a real Content-Length. Disabling payload signing prevents
+    # botocore from using streaming uploads.
+    client_config = Config(
+        signature_version="s3v4",
+        s3={
+            "addressing_style": "path",
+            "payload_signing_enabled": False,
+        },
+    )
     s3 = session.client(
         "s3",
         endpoint_url=endpoint,
         region_name="auto",
+        config=client_config,
     )
 
     extra_args = {}
     if content_type:
         extra_args["ContentType"] = content_type
-    # Force public-read ACL for Storj
-    extra_args["ACL"] = "public-read"
+    # Storj may require object ACL; Cloudflare R2 typically doesn't support ACLs.
+    use_storj = bool(os.getenv("STORJ_ACCESS_KEY_ID"))
+    if use_storj:
+        extra_args["ACL"] = "public-read"
 
     try:
         s3.upload_file(
