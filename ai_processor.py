@@ -333,12 +333,14 @@ _STRICT_BANNED_PHRASES = [
     "the article states",
     "the article mentions",
     "as mentioned in the article",
+    # Arabic: keep ONLY explicit source-attribution phrasing (avoid common false positives)
     "بناءً على المقالة",
+    "بناءً على المقال",
     "المصدر يقول",
     "حسب المصدر",
     "المقال يقول",
-    "كما ورد في",
-    "وفقاً لـ",
+    "كما ورد في المقال",
+    "كما جاء في المقال",
     "copied from",
     "taken from",
     "quoted from",
@@ -348,12 +350,27 @@ _STRICT_BANNED_PHRASES = [
 
 # Phrases banned only for Arabic content (weak conclusions)
 _ARABIC_BANNED_PHRASES = [
-    "بناء على",
     "في الختام",
     "للخلاصة",
     "مثلما قالوا",
     "مثلما قال",
 ]
+
+
+def _find_banned_phrase(text: str, brand_language: str = "ar") -> Optional[str]:
+    """Return the first matched banned phrase (or None)."""
+    lowered = (text or "").lower()
+
+    for phrase in _STRICT_BANNED_PHRASES:
+        if phrase in lowered:
+            return phrase
+
+    if brand_language == "ar":
+        for phrase in _ARABIC_BANNED_PHRASES:
+            if phrase in lowered:
+                return phrase
+
+    return None
 
 
 def _contains_banned_phrases(text: str, brand_language: str = "ar") -> bool:
@@ -363,18 +380,7 @@ def _contains_banned_phrases(text: str, brand_language: str = "ar") -> bool:
         text: Content to check
         brand_language: 'ar' for Arabic (stricter), 'en' for English (more lenient)
     """
-    lowered = (text or "").lower()
-
-    # Always check strict phrases
-    if any(p in lowered for p in _STRICT_BANNED_PHRASES):
-        return True
-
-    # Check Arabic-specific phrases only for Arabic brands
-    if brand_language == "ar":
-        if any(p in lowered for p in _ARABIC_BANNED_PHRASES):
-            return True
-
-    return False
+    return _find_banned_phrase(text, brand_language) is not None
 
 
 def _ensure_string(value: Any) -> str:
@@ -477,9 +483,10 @@ def _normalize_ai_result(
             discord_msg,
         ]
     )
-    if _contains_banned_phrases(joined, brand_language):
+    banned_phrase = _find_banned_phrase(joined, brand_language)
+    if banned_phrase:
         raise ValueError(
-            "Content contains banned phrases (copying from source detected)"
+            f"Content contains banned phrase: {banned_phrase!r} (source/copying attribution detected)"
         )
 
     # Language validation - only check for Arabic brands
