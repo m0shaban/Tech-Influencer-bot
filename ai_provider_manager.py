@@ -17,6 +17,7 @@ class AIProviderManager:
     """Manages multiple AI providers with intelligent routing"""
 
     def __init__(self):
+        self.last_error: Optional[str] = None
         self.groq_keys = self._load_groq_keys()
         self.nvidia_keys = self._load_nvidia_keys()
         self.groq_rotation_index = 0  # For round-robin
@@ -45,7 +46,6 @@ class AIProviderManager:
                 "provider": "groq",
                 "models": [
                     "llama-3.3-70b-versatile",
-                    "llama-3.1-70b-versatile",
                 ],
                 "base_url": "https://api.groq.com/openai/v1",
                 "max_tokens": 3000,
@@ -186,13 +186,15 @@ class AIProviderManager:
         Returns:
             Generated content or None if failed
         """
+        self.last_error = None
         config = self.get_provider_for_platform(platform, brand_language)
 
         if not config["api_key"]:
             print(f"⚠️ No API key available for {config['provider']}")
+            self.last_error = f"No API key available for {config['provider']}"
             return None
 
-        try:
+        def _call_model(model_name: str) -> str:
             client = OpenAI(
                 base_url=config["base_url"],
                 api_key=config["api_key"],
@@ -200,7 +202,7 @@ class AIProviderManager:
 
             # Build request params
             params = {
-                "model": config["model"],
+                "model": model_name,
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
@@ -224,10 +226,13 @@ class AIProviderManager:
                 elif "deepseek" in config["model"]:
                     params["extra_body"] = {"chat_template_kwargs": {"thinking": True}}
 
-            print(f"🤖 Using {config['provider']} ({config['model']}) for {platform} [{brand_language}]")
+            print(f"🤖 Using {config['provider']} ({model_name}) for {platform} [{brand_language}]")
 
             response = client.chat.completions.create(**params)
-            content = response.choices[0].message.content
+            return response.choices[0].message.content
+
+        try:
+            content = _call_model(config["model"])
             
             # Track success
             if config["api_key"] in self.key_health:
@@ -238,12 +243,34 @@ class AIProviderManager:
         except Exception as e:
             error_msg = str(e)
             print(f"❌ AI generation failed for {platform}: {error_msg}")
+            self.last_error = error_msg
             
             # Track error for health monitoring
             if config["api_key"] in self.key_health:
                 self.key_health[config["api_key"]]["errors"] += 1
                 self.key_health[config["api_key"]]["last_error"] = error_msg
             
+            # Model decommissioned/unsupported -> retry with known-good Groq models.
+            lowered = error_msg.lower()
+            if (
+                config.get("provider") == "groq"
+                and (
+                    "decommissioned" in lowered
+                    or "no longer supported" in lowered
+                    or "model_decommissioned" in lowered
+                )
+            ):
+                for m in ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]:
+                    if m == config.get("model"):
+                        continue
+                    try:
+                        print(f"🔄 Retrying with Groq model: {m}")
+                        return _call_model(m)
+                    except Exception as e2:
+                        error2 = str(e2)
+                        print(f"❌ Retry failed ({m}): {error2}")
+                        self.last_error = error2
+
             # Check if rate limit error - try fallback
             if "429" in error_msg or "rate" in error_msg.lower():
                 print("🔄 Rate limit detected - attempting fallback")

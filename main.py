@@ -1782,9 +1782,15 @@ async def admin_view_logs(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         log_text = "".join(last_lines)
         if len(log_text) > 4000:
             log_text = "..." + log_text[-4000:]
-        await update.message.reply_text(
-            f"📋 **Recent Logs:**\n\n```\n{log_text}\n```", parse_mode="Markdown"
-        )
+        # NOTE: Telegram parse_mode="Markdown" does not support fenced code blocks (```),
+        # and log lines can contain characters that break entity parsing.
+        # Send as plain text to avoid "Can't parse entities" errors.
+        header = "📋 Recent Logs:\n\n"
+        body = (log_text or "").strip() or "(empty)"
+        msg = header + body
+        if len(msg) > 4000:
+            msg = msg[:3990] + "…"
+        await update.message.reply_text(msg)
     except Exception as e:
         await update.message.reply_text(f"❌ Error reading logs: {e}")
 

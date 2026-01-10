@@ -132,8 +132,14 @@ class SequentialPublisher:
                 )
                 
                 if not content_data:
-                    print(f"❌ Content generation failed for {platform}")
-                    self.last_errors.append({"platform": platform, "error": "content generation failed"})
+                    try:
+                        from ai_processor import get_last_ai_error
+
+                        last_err = get_last_ai_error() or "content generation failed"
+                    except Exception:
+                        last_err = "content generation failed"
+                    print(f"❌ Content generation failed for {platform}: {last_err}")
+                    self.last_errors.append({"platform": platform, "error": str(last_err)})
                     continue
                 
                 # Get platform-specific content field

@@ -511,7 +511,7 @@ def rewrite_with_ai(
         )
 
         if not result:
-            _set_last_error("Empty AI response")
+            _set_last_error(getattr(ai_manager, "last_error", None) or "Empty AI response")
             return None
 
         # Parse JSON response (result is the content string directly)
