@@ -354,6 +354,261 @@ def get_sales_keyboard() -> InlineKeyboardMarkup:
     )
 
 
+def get_brand_keyboard() -> ReplyKeyboardMarkup:
+    """Keyboard for brand-specific bots (admin-only)."""
+    return ReplyKeyboardMarkup(
+        [
+            ["⚡ Force Fetch", "📊 Stats"],
+            ["📡 Feeds", "🧪 Test Platforms"],
+            ["🌐 Platform Status", "ℹ️ System Info"],
+            ["📋 Logs"],
+        ],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+
+
+def _get_brand_stats_text(brand_key: str) -> str:
+    cfg = _load_config()
+    brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+    brand_cfg = brands.get(brand_key) if isinstance(brands, dict) else None
+    if not isinstance(brand_cfg, dict):
+        return f"❌ Unknown brand: {brand_key}"
+
+    feeds = brand_cfg.get("feeds")
+    feeds_count = len(feeds) if isinstance(feeds, list) else 0
+
+    enabled_cfg: list[str] = []
+    if isinstance(brand_cfg.get("platforms"), dict):
+        for p, v in (brand_cfg.get("platforms") or {}).items():
+            if isinstance(v, dict) and v.get("enabled") is True:
+                enabled_cfg.append(str(p))
+
+    sched = _brand_awake_status(brand_key, brand_cfg)
+    if sched.get("awake") is True:
+        sched_txt = f"Awake ({sched.get('timezone')} {sched.get('now')}, {sched.get('start')}-{sched.get('end')})"
+    else:
+        mins = max(1, int((sched.get("until_seconds") or 0) / 60))
+        sched_txt = f"Sleeping ({sched.get('timezone')} {sched.get('now')}, wakes in ~{mins}m)"
+
+    st = _read_brand_stats()
+    row_any = st.get(brand_key)
+    row = row_any if isinstance(row_any, dict) else {}
+    posts = int(row.get("posts", 0) or 0)
+    last_at = str(row.get("last_published_at") or "")
+    last_title = str(row.get("last_title") or "")
+
+    channel_id = str(brand_cfg.get("channel_id") or "").strip() or "None"
+    lang = str(brand_cfg.get("language") or "").strip() or "?"
+    name = str(brand_cfg.get("display_name") or brand_key)
+
+    msg = (
+        f"📊 Stats ({name} | {brand_key} | {lang})\n\n"
+        f"🕒 {sched_txt}\n"
+        f"🧩 Feeds: {feeds_count}\n"
+        f"📱 Platforms(cfg): {', '.join(enabled_cfg) if enabled_cfg else 'none'}\n"
+        f"📣 Channel: {channel_id}\n"
+        f"✅ Published: {posts}\n"
+    )
+    if last_at:
+        msg += f"🕐 Last: {last_at}\n"
+    if last_title:
+        msg += f"📝 Last title: {last_title[:120]}"
+    return msg
+
+
+async def admin_list_feeds_for_brand(
+    update: Update, context: ContextTypes.DEFAULT_TYPE, *, brand_key: str
+) -> None:
+    if not update.message:
+        return
+    cfg = _load_config()
+    brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+    brand_cfg = brands.get(brand_key) if isinstance(brands, dict) else None
+    feeds = brand_cfg.get("feeds") if isinstance(brand_cfg, dict) else None
+    if not isinstance(feeds, list) or not feeds:
+        await update.message.reply_text(f"📡 Active Feeds (0) for {brand_key}")
+        return
+
+    cleaned = [str(x).strip() for x in feeds if isinstance(x, str) and str(x).strip()]
+    preview = cleaned[:20]
+    lines = [f"📡 Active Feeds ({len(cleaned)}) for {brand_key}:\n"]
+    for i, url in enumerate(preview, 1):
+        short = (url[:60] + "...") if len(url) > 60 else url
+        lines.append(f"{i}. {short}")
+    if len(cleaned) > len(preview):
+        lines.append(f"\n...and {len(cleaned) - len(preview)} more.")
+    await update.message.reply_text("\n".join(lines))
+
+
+def _is_admin(update: Update) -> bool:
+    return bool(update.effective_user and update.effective_user.id == ADMIN_USER_ID)
+
+
+def _start_brand_bots() -> None:
+    """Start one polling bot per configured brand that has a TELEGRAM_TOKEN_<SUFFIX>.
+
+    Controlled by env ENABLE_BRAND_BOTS=1.
+    """
+    if str(os.getenv("ENABLE_BRAND_BOTS", "") or "").strip().lower() not in {"1", "true", "yes", "on"}:
+        print("ℹ️ Brand bots are disabled (set ENABLE_BRAND_BOTS=1 to enable)")
+        return
+
+    try:
+        import threading
+        import traceback
+        from brand_context import env_get
+
+        cfg = _load_config()
+        brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+        if not isinstance(brands, dict) or not brands:
+            print("ℹ️ No brands configured; skipping brand bots")
+            return
+
+        for brand_key, brand_cfg in brands.items():
+            if not isinstance(brand_key, str) or not isinstance(brand_cfg, dict):
+                continue
+            token = env_get("TELEGRAM_TOKEN", platform="telegram", brand=brand_cfg)
+            token = str(token or "").strip()
+            if not token:
+                continue
+
+            # Do not start a duplicate of the supervisor bot
+            if TELEGRAM_TOKEN and token == TELEGRAM_TOKEN:
+                continue
+
+            def _runner(bk: str, tkn: str) -> None:
+                try:
+                    app_b = ApplicationBuilder().token(tkn).build()
+
+                    async def _start_brand(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+                        if not update.message:
+                            return
+                        if not _is_admin(update):
+                            await update.message.reply_text("❌ غير مصرح")
+                            return
+                        await update.message.reply_text(
+                            f"✅ {bk} bot ready.",
+                            reply_markup=get_brand_keyboard(),
+                        )
+
+                    async def _brand_force_fetch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+                        if not update.message:
+                            return
+                        if not _is_admin(update):
+                            await update.message.reply_text("❌ غير مصرح")
+                            return
+                        msg = await update.message.reply_text("🕵️‍♂️ جاري الفحص: بتصل بالمصادر...")
+                        try:
+                            import asyncio
+
+                            result = await asyncio.wait_for(
+                                fetch_and_publish(
+                                    context,
+                                    override_status=True,
+                                    brand_override=bk,
+                                ),
+                                timeout=180,
+                            )
+                            status = result.get("status")
+                            if status == "published":
+                                await msg.edit_text(f"✅ تم النشر! {result.get('title','')}")
+                                return
+                            if status == "no_news":
+                                await msg.edit_text("⚠️ مفيش أخبار جديدة.")
+                                return
+                            if status == "sleeping":
+                                await msg.edit_text(f"😴 نايم دلوقتي. {result.get('error','')}")
+                                return
+                            await msg.edit_text(f"❌ خطأ: {result.get('error','Unknown error')}")
+                        except asyncio.TimeoutError:
+                            await msg.edit_text("⏱️ العملية طولت (تحميل صورة/AI). جرّب تاني.")
+                        except Exception as exc:  # noqa: BLE001
+                            await msg.edit_text(f"❌ خطأ: {exc}")
+
+                    async def _brand_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+                        if not update.message:
+                            return
+                        if not _is_admin(update):
+                            await update.message.reply_text("❌ غير مصرح")
+                            return
+                        await update.message.reply_text(_get_brand_stats_text(bk))
+
+                    async def _brand_feeds(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+                        if not update.message:
+                            return
+                        if not _is_admin(update):
+                            await update.message.reply_text("❌ غير مصرح")
+                            return
+                        await admin_list_feeds_for_brand(update, context, brand_key=bk)
+
+                    async def _brand_test_platforms(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+                        if not update.message:
+                            return
+                        if not _is_admin(update):
+                            await update.message.reply_text("❌ غير مصرح")
+                            return
+                        # Temporarily set active_brand for better UX in platform status (non-critical)
+                        cfg2 = _load_config()
+                        cfg2["active_brand"] = bk
+                        _save_config(cfg2)
+                        await admin_test_platforms(update, context)
+
+                    async def _brand_platform_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+                        if not update.message:
+                            return
+                        if not _is_admin(update):
+                            await update.message.reply_text("❌ غير مصرح")
+                            return
+                        cfg2 = _load_config()
+                        cfg2["active_brand"] = bk
+                        _save_config(cfg2)
+                        await admin_platform_status(update, context)
+
+                    async def _brand_system_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+                        if not update.message:
+                            return
+                        if not _is_admin(update):
+                            await update.message.reply_text("❌ غير مصرح")
+                            return
+                        cfg2 = _load_config()
+                        cfg2["active_brand"] = bk
+                        _save_config(cfg2)
+                        await admin_system_info(update, context)
+
+                    async def _brand_logs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+                        if not update.message:
+                            return
+                        if not _is_admin(update):
+                            await update.message.reply_text("❌ غير مصرح")
+                            return
+                        await admin_view_logs(update, context)
+
+                    app_b.add_error_handler(_error_handler)
+                    app_b.add_handler(CommandHandler("start", _start_brand))
+                    app_b.add_handler(MessageHandler(filters.User(user_id=ADMIN_USER_ID) & filters.Regex(r"^⚡ Force Fetch$"), _brand_force_fetch))
+                    app_b.add_handler(MessageHandler(filters.User(user_id=ADMIN_USER_ID) & filters.Regex(r"^📊 Stats$"), _brand_stats))
+                    app_b.add_handler(MessageHandler(filters.User(user_id=ADMIN_USER_ID) & filters.Regex(r"^📡 Feeds$"), _brand_feeds))
+                    app_b.add_handler(MessageHandler(filters.User(user_id=ADMIN_USER_ID) & filters.Regex(r"^🧪 Test Platforms$"), _brand_test_platforms))
+                    app_b.add_handler(MessageHandler(filters.User(user_id=ADMIN_USER_ID) & filters.Regex(r"^🌐 Platform Status$"), _brand_platform_status))
+                    app_b.add_handler(MessageHandler(filters.User(user_id=ADMIN_USER_ID) & filters.Regex(r"^ℹ️ System Info$"), _brand_system_info))
+                    app_b.add_handler(MessageHandler(filters.User(user_id=ADMIN_USER_ID) & filters.Regex(r"^📋 Logs$"), _brand_logs))
+
+                    print(f"🤖 Starting brand bot polling: {bk}")
+                    app_b.run_polling(drop_pending_updates=True)
+                except Exception:
+                    print(f"❌ Brand bot failed: {bk}")
+                    traceback.print_exc()
+
+            th = threading.Thread(target=_runner, args=(brand_key, token), daemon=True)
+            th.start()
+    except Exception:
+        import traceback
+
+        print("❌ Failed to start brand bots")
+        traceback.print_exc()
+
+
 def _get_stats_text() -> str:
     cfg = _load_config()
     feeds = cfg.get("feeds")
@@ -881,7 +1136,10 @@ def prepare_media(post: Dict[str, Any], title: str) -> Dict[str, Optional[str]]:
 
 
 async def fetch_and_publish(
-    context: ContextTypes.DEFAULT_TYPE, *, override_status: bool = False
+    context: ContextTypes.DEFAULT_TYPE,
+    *,
+    override_status: bool = False,
+    brand_override: Optional[str] = None,
 ) -> PublishResult:
     """Existing pipeline wrapper: fetch from RSS then publish to channel.
 
@@ -900,15 +1158,26 @@ async def fetch_and_publish(
     # Multi-brand sequential publishing (preferred)
     cfg = _load_config()
     if isinstance(cfg.get("brands"), dict) and cfg.get("brands"):
-        if cfg.get("auto_rotate_brands", True):
-            brand_key = _pick_next_brand_key(cfg, ignore_schedule=override_status)
-        else:
-            brand_key = str(cfg.get("active_brand") or "").strip()
+        brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
 
-        if not brand_key and not override_status:
+        if brand_override:
+            brand_key = str(brand_override).strip()
+        else:
+            if cfg.get("auto_rotate_brands", True):
+                brand_key = _pick_next_brand_key(cfg, ignore_schedule=override_status)
+            else:
+                brand_key = str(cfg.get("active_brand") or "").strip()
+
+        # Validate requested brand exists
+        if brand_key and isinstance(brands, dict) and brand_key not in brands:
+            return {
+                "status": "error",
+                "error": f"Unknown brand: {brand_key}",
+            }
+
+        if not brand_key and not override_status and not brand_override:
             # All brands are sleeping
             try:
-                brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
                 waits: list[tuple[int, str]] = []
                 for k, b in (brands or {}).items():
                     if not isinstance(k, str) or not isinstance(b, dict):
@@ -932,7 +1201,10 @@ async def fetch_and_publish(
                 "status": "sleeping",
                 "error": "All brands are sleeping right now.",
             }
-        _save_config(cfg)
+
+        # Only persist rotation/active brand when we are actually rotating
+        if not brand_override:
+            _save_config(cfg)
 
         try:
             brands_dbg = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
@@ -946,7 +1218,6 @@ async def fetch_and_publish(
         except Exception:
             pass
 
-        brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
         brand_cfg = brands.get(brand_key) if isinstance(brands, dict) else None
         brand_language = (
             str(brand_cfg.get("language") or "en")
@@ -1844,6 +2115,12 @@ async def post_init(app: Application) -> None:
         print("✅ Auto Publisher started successfully")
     except Exception as e:
         print(f"⚠️ Failed to start Auto Publisher: {e}")
+
+    # Start per-brand bots (optional)
+    try:
+        _start_brand_bots()
+    except Exception as e:
+        print(f"⚠️ Failed to start brand bots: {e}")
 
 
 def main() -> None:
