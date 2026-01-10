@@ -44,7 +44,6 @@ BRAND_FEEDS = {
         "https://news.google.com/rss/search?q=defi+tvl&hl=en-US&gl=US&ceid=US:en",
         "https://news.google.com/rss/search?q=bitcoin+ETF+approval&hl=en-US&gl=US&ceid=US:en",
     ],
-    
     "zerodev": [
         # 🛠️ No-Code/Low-Code
         "https://dev.to/feed/tag/nocode",
@@ -68,12 +67,10 @@ BRAND_FEEDS = {
         "https://news.google.com/rss/search?q=airtable+notion&hl=en-US&gl=US&ceid=US:en",
         "https://news.google.com/rss/search?q=bubble+webflow&hl=en-US&gl=US&ceid=US:en",
     ],
-    
     "robovai_ar": [
         # ════════════════════════════════════════════════════════════════════
         # 🌍 GLOBAL TECH NEWS — Top English Sources (AI will translate to Arabic)
         # ════════════════════════════════════════════════════════════════════
-        
         # 🏆 Tier 1: Major Tech Publications
         "https://www.theverge.com/rss/index.xml",
         "https://arstechnica.com/feed/",
@@ -83,30 +80,25 @@ BRAND_FEEDS = {
         "https://www.engadget.com/rss.xml",
         "https://thenextweb.com/feed/",
         "https://venturebeat.com/feed/",
-        
         # 📱 Apple & Google Ecosystem
         "https://9to5mac.com/feed/",
         "https://9to5google.com/feed/",
         "https://www.androidauthority.com/feed/",
-        
         # 🤖 AI & ML Specific
         "https://openai.com/blog/rss/",
         "https://blog.google/products/rss/",
         "https://www.anthropic.com/news/rss",
         "https://stability.ai/blog?format=rss",
-        
         # 💻 Developer & Enterprise
         "https://www.zdnet.com/news/rss.xml",
         "https://www.cnet.com/rss/news/",
         "https://www.infoworld.com/index.rss",
-        
         # 🌐 Reddit Communities (Trending Discussions)
         "https://www.reddit.com/r/artificial/.rss",
         "https://www.reddit.com/r/ChatGPT/.rss",
         "https://www.reddit.com/r/technology/.rss",
         "https://www.reddit.com/r/MachineLearning/.rss",
         "https://www.reddit.com/r/singularity/.rss",
-        
         # 📰 Google News — HOT TRENDING TOPICS (English)
         "https://news.google.com/rss/search?q=OpenAI+GPT&hl=en-US&gl=US&ceid=US:en",
         "https://news.google.com/rss/search?q=ChatGPT+update&hl=en-US&gl=US&ceid=US:en",
@@ -127,7 +119,7 @@ BRAND_FEEDS = {
 # ═══════════════════════════════════════════════════════════════════════════════
 # 📤 PUBLISHING ORDER — Optimized for CTA Flow
 # ═══════════════════════════════════════════════════════════════════════════════
-# 
+#
 # STRATEGY:
 # 1. Long-form content FIRST (Blog/Dev.to) → Gets URL
 # 2. Social platforms SECOND → Can include blog link as CTA
@@ -140,13 +132,11 @@ PUBLISHING_ORDER = {
         {"platform": "telegram", "delay_minutes": 0, "enable_cta": False},
         {"platform": "discord", "delay_minutes": 2, "enable_cta": True},
     ],
-    
     "zerodev": [
         # Dev.to first (gets article URL), Telegram follows with link
         {"platform": "devto", "delay_minutes": 0, "enable_cta": False},
         {"platform": "telegram", "delay_minutes": 2, "enable_cta": True},
     ],
-    
     "robovai_ar": [
         # Blogger first (gets article URL), then social with links
         {"platform": "blogger", "delay_minutes": 0, "enable_cta": False},
@@ -165,12 +155,10 @@ CTA_TEMPLATES = {
         "telegram": "",  # First platform, no CTA needed
         "discord": "\n\n⚡ **Join our Telegram** for instant alerts: {telegram_url}\n\n#Crypto #BTC #ETH #DeFi #Web3",
     },
-    
     "zerodev": {
         "devto": "",  # First platform, no CTA needed
         "telegram": "\n\n📖 **Full tutorial on Dev.to**: {devto_url}\n\n#NoCode #Automation #Zapier #Make",
     },
-    
     "robovai_ar": {
         "blogger": "",  # First platform, no CTA needed
         "facebook": "\n\n📖 **اقرأ المقال كامل**: {blogger_url}\n\n#ذكاء_اصطناعي #تقنية #AI #ChatGPT",
@@ -191,15 +179,19 @@ HASHTAG_SETS = {
         "altcoins": ["#Altcoins", "#CryptoGems", "#100x", "#NewListings"],
         "regulation": ["#CryptoRegulation", "#SEC", "#CryptoLaw", "#Compliance"],
     },
-    
     "zerodev": {
-        "default": ["#NoCode", "#Automation", "#LowCode", "#BuildInPublic", "#IndieHacker"],
+        "default": [
+            "#NoCode",
+            "#Automation",
+            "#LowCode",
+            "#BuildInPublic",
+            "#IndieHacker",
+        ],
         "zapier": ["#Zapier", "#Automation", "#Workflow", "#Productivity"],
         "make": ["#Make", "#Integromat", "#Automation", "#NoCode"],
         "bubble": ["#Bubble", "#NoCode", "#WebApp", "#StartupTools"],
         "ai": ["#AITools", "#AIAutomation", "#NoCodeAI", "#FutureOfWork"],
     },
-    
     "robovai_ar": {
         "default": ["#ذكاء_اصطناعي", "#تقنية", "#AI", "#أتمتة", "#مصر"],
         "chatgpt": ["#ChatGPT", "#OpenAI", "#ذكاء_اصطناعي", "#AIChat"],
@@ -239,6 +231,7 @@ CROSS_POLLINATION = {
 # 📊 HELPER FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def get_feeds_for_brand(brand_name: str) -> List[str]:
     """Get RSS feeds for specific brand."""
     return BRAND_FEEDS.get(brand_name, [])
@@ -249,25 +242,24 @@ def get_all_brands_with_feeds() -> List[str]:
     return [brand for brand, feeds in BRAND_FEEDS.items() if feeds]
 
 
-def get_publishing_order(brand_name: str, enabled_platforms: List[str]) -> List[Dict[str, Any]]:
+def get_publishing_order(
+    brand_name: str, enabled_platforms: List[str]
+) -> List[Dict[str, Any]]:
     """Get publishing order filtered by enabled platforms."""
     brand_order = PUBLISHING_ORDER.get(brand_name, [])
     return [p for p in brand_order if p["platform"] in enabled_platforms]
 
 
 def inject_ctas(
-    content: str,
-    platform: str,
-    brand_name: str,
-    published_urls: Dict[str, str]
+    content: str, platform: str, brand_name: str, published_urls: Dict[str, str]
 ) -> str:
     """Inject cross-platform CTAs at end of content."""
     brand_templates = CTA_TEMPLATES.get(brand_name, {})
     template = brand_templates.get(platform, "")
-    
+
     if not template:
         return content
-    
+
     try:
         url_dict = {f"{p}_url": url for p, url in published_urls.items()}
         cta = template.format(**url_dict)
@@ -285,13 +277,13 @@ def should_cross_pollinate(post_count: int) -> bool:
 def get_cross_pollination_snippet(brand_name: str) -> str:
     """Get cross-brand mention snippet."""
     snippets = CROSS_POLLINATION.get(brand_name, {})
-    
+
     if not snippets:
         return ""
-    
+
     if brand_name == "robovai_ar":
         return snippets.get("all", "")
-    
+
     return random.choice(list(snippets.values()))
 
 

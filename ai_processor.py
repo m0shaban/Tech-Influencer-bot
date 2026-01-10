@@ -353,7 +353,14 @@ def _strip_urls(text: str) -> str:
     return out
 
 
-def _normalize_ai_result(parsed: Dict[str, Any], *, link: str) -> Dict[str, Any]:
+def _normalize_ai_result(parsed: Dict[str, Any], *, link: str, brand_language: str = "ar") -> Dict[str, Any]:
+    """Normalize and validate AI output.
+    
+    Args:
+        parsed: Parsed JSON from AI
+        link: Original article link
+        brand_language: Brand language ('en' or 'ar') - affects validation rules
+    """
     telegram_post = _strip_urls(
         _strip_code_fences(_ensure_string(parsed.get("telegram_post")))
     )
@@ -424,10 +431,17 @@ def _normalize_ai_result(parsed: Dict[str, Any], *, link: str) -> Dict[str, Any]
     if _contains_banned_phrases(joined):
         raise ValueError("Content contains banned phrases")
 
+    # Language validation - only check for Arabic brands
+    # English brands are EXPECTED to have high latin ratio
     latin_fraction = _latin_ratio(joined)
-    if latin_fraction > 0.75:
+    if brand_language == "ar" and latin_fraction > 0.75:
         raise ValueError(
-            f"Language skew detected (latin ratio: {latin_fraction:.2f} > 0.75)"
+            f"Language skew detected for Arabic brand (latin ratio: {latin_fraction:.2f} > 0.75)"
+        )
+    # For English brands, check that content is NOT mostly Arabic
+    elif brand_language == "en" and latin_fraction < 0.25:
+        raise ValueError(
+            f"Language skew detected for English brand (latin ratio: {latin_fraction:.2f} < 0.25)"
         )
 
     has_poll = _coerce_bool(parsed.get("has_poll"))
@@ -482,11 +496,41 @@ def rewrite_with_ai(
 
     # Use custom prompt if provided, otherwise use default
     effective_system_prompt = (system_prompt or "").strip() or DEFAULT_SYSTEM_PROMPT
-    
+
     # Add platform-specific instructions
-    platform_instructions = _get_platform_instructions(platform, brand_name, brand_language)
+    platform_instructions = _get_platform_instructions(
+        platform, brand_name, brand_language
+    )
     effective_system_prompt += f"\n\n{platform_instructions}"
 
+    # JSON schema that MUST be included for all brands
+    json_schema_instructions = """
+
+## REQUIRED JSON OUTPUT FORMAT:
+You MUST return a valid JSON object with these exact keys:
+{
+  "telegram_post": "Telegram message (150-250 words, bullets, emojis)",
+  "facebook_post": "Facebook post (500-800 words, engaging story)",
+  "linkedin_post": "LinkedIn post (300-500 words, professional tone)",
+  "blog_title": "SEO-optimized title for blog",
+  "blog_content_md": "Full blog article in Markdown (800-1500 words)",
+  "discord_msg": "Discord message (200-400 words, community vibe)",
+  "has_poll": false,
+  "poll_question": "",
+  "poll_options": []
+}
+
+CRITICAL RULES:
+- Return ONLY the JSON object, no markdown fences
+- Use \\n for line breaks inside strings
+- Do NOT include any URLs or links in content
+- Do NOT reference "the article" or "the source"
+"""
+    
+    # Add JSON schema to system prompt if it doesn't already have JSON instructions
+    if '"telegram_post"' not in effective_system_prompt and '"blog_content_md"' not in effective_system_prompt:
+        effective_system_prompt += json_schema_instructions
+    
     user_content = (
         f"Title: {title}\n"
         f"Summary: {summary}\n"
@@ -507,7 +551,8 @@ def rewrite_with_ai(
             platform=platform,
             system_prompt=effective_system_prompt,
             user_prompt=user_content,
-            enable_reasoning=platform in ["blogger", "devto"],  # Enable reasoning for long-form
+            enable_reasoning=platform
+            in ["blogger", "devto"],  # Enable reasoning for long-form
             brand_language=brand_language,  # NEW: Pass language for routing
         )
 
@@ -522,7 +567,7 @@ def rewrite_with_ai(
             _set_last_error(f"Failed to parse JSON response: {snippet}...")
             return None
 
-        return _normalize_ai_result(parsed, link=link)
+        return _normalize_ai_result(parsed, link=link, brand_language=brand_language)
 
     except ValueError as ve:
         _set_last_error(f"AI Validation Error: {ve}")
@@ -541,15 +586,17 @@ def rewrite_with_ai(
         return None
 
 
-def _get_platform_instructions(platform: str, brand_name: str, brand_language: str) -> str:
+def _get_platform_instructions(
+    platform: str, brand_name: str, brand_language: str
+) -> str:
     """
     Get platform-specific formatting and content instructions
-    
+
     Args:
         platform: Target platform
         brand_name: Brand identifier
         brand_language: Content language
-    
+
     Returns:
         Additional instructions for system prompt
     """
@@ -575,17 +622,23 @@ def _get_platform_instructions(platform: str, brand_name: str, brand_language: s
             "ar": "غير مدعوم - Discord للإنجليزي فقط",
         },
     }
-    
+
     lang = brand_language if brand_language in ["en", "ar"] else "en"
-    instruction = instructions.get(platform, {}).get(lang, instructions["telegram"]["en"])
-    
+    instruction = instructions.get(platform, {}).get(
+        lang, instructions["telegram"]["en"]
+    )
+
     # Add brand-specific modifications
     if brand_name == "robovai_ar" and brand_language == "ar":
         if platform == "blogger":
             instruction += "\n\nمهم: اشرح ليه الموضوع ده مهم للسوق المصري والعربي. أضف أمثلة محلية."
         elif platform == "facebook":
-            instruction += "\n\nابدأ بسيناريو أو موقف يحصل في مصر. خلي الناس تحس إنك بتتكلم عنهم."
+            instruction += (
+                "\n\nابدأ بسيناريو أو موقف يحصل في مصر. خلي الناس تحس إنك بتتكلم عنهم."
+            )
         elif platform == "telegram":
-            instruction += "\n\nتنبيه سريع بأسلوب صديق بيبعت رسالة. استخدم emojis بكثرة."
-    
+            instruction += (
+                "\n\nتنبيه سريع بأسلوب صديق بيبعت رسالة. استخدم emojis بكثرة."
+            )
+
     return f"**Platform Instructions for {platform}**:\n{instruction}"

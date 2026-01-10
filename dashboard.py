@@ -597,14 +597,22 @@ elif menu_choice == "🔗 Feed Manager":
     brands = _get_brands(config)
     brand_keys = sorted(list(brands.keys()))
     active_brand = str(config.get("active_brand") or "").strip()
-    default_brand = active_brand if active_brand in brand_keys else (brand_keys[0] if brand_keys else "")
+    default_brand = (
+        active_brand
+        if active_brand in brand_keys
+        else (brand_keys[0] if brand_keys else "")
+    )
 
     colb1, colb2 = st.columns([2, 1])
     with colb1:
         selected_brand = st.selectbox(
             "Brand",
             brand_keys,
-            index=(brand_keys.index(default_brand) if default_brand in brand_keys else 0) if brand_keys else 0,
+            index=(
+                (brand_keys.index(default_brand) if default_brand in brand_keys else 0)
+                if brand_keys
+                else 0
+            ),
             disabled=not bool(brand_keys),
         )
     with colb2:
@@ -656,7 +664,9 @@ elif menu_choice == "🔗 Feed Manager":
             if selected_brand == str(config.get("active_brand") or "").strip():
                 _sync_active_brand_into_runtime(config)
             save_config(config)
-            st.success(f"Loaded {len(feeds_from_code)} default feeds for '{selected_brand}'")
+            st.success(
+                f"Loaded {len(feeds_from_code)} default feeds for '{selected_brand}'"
+            )
             _rerun()
 
 

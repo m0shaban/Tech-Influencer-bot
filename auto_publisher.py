@@ -39,9 +39,13 @@ def _parse_hhmm(value: str, fallback: dt_time) -> dt_time:
         return fallback
 
 
-BUSINESS_START = _parse_hhmm(os.getenv("AUTO_PUBLISH_BUSINESS_START", ""), dt_time(9, 0))
+BUSINESS_START = _parse_hhmm(
+    os.getenv("AUTO_PUBLISH_BUSINESS_START", ""), dt_time(9, 0)
+)
 BUSINESS_END = _parse_hhmm(os.getenv("AUTO_PUBLISH_BUSINESS_END", ""), dt_time(23, 0))
-IGNORE_BUSINESS_HOURS = str(os.getenv("AUTO_PUBLISH_IGNORE_HOURS", "") or "").strip().lower() in {
+IGNORE_BUSINESS_HOURS = str(
+    os.getenv("AUTO_PUBLISH_IGNORE_HOURS", "") or ""
+).strip().lower() in {
     "1",
     "true",
     "yes",
@@ -224,7 +228,9 @@ class AutoPublisher:
 
         print("🚀 Auto Publisher started")
         if IGNORE_BUSINESS_HOURS:
-            print("⏰ Business hours: DISABLED (AUTO_PUBLISH_IGNORE_HOURS=1) — running 24/7")
+            print(
+                "⏰ Business hours: DISABLED (AUTO_PUBLISH_IGNORE_HOURS=1) — running 24/7"
+            )
         else:
             print(
                 f"⏰ Business hours: {BUSINESS_START.strftime('%H:%M')} - {BUSINESS_END.strftime('%H:%M')} (Cairo)"
