@@ -600,26 +600,43 @@ CRITICAL RULES:
     )
 
     try:
-        # Generate content using intelligent AI routing
-        result = ai_manager.generate_content(
-            platform=platform,
-            system_prompt=effective_system_prompt,
-            user_prompt=user_content,
-            enable_reasoning=platform
-            in ["blogger", "devto"],  # Enable reasoning for long-form
-            brand_language=brand_language,  # NEW: Pass language for routing
-        )
+        def _call_ai(prompt: str) -> Optional[str]:
+            return ai_manager.generate_content(
+                platform=platform,
+                system_prompt=effective_system_prompt,
+                user_prompt=prompt,
+                enable_reasoning=platform in ["blogger", "devto"],
+                brand_language=brand_language,
+            )
 
+        # First attempt
+        result = _call_ai(user_content)
         if not result:
             _set_last_error("Empty AI response")
             return None
 
-        # Parse JSON response (result is the content string directly)
         parsed = _parse_json_response(result)
         if parsed is None:
-            snippet = result.strip().replace("\n", " ")[:200]
-            _set_last_error(f"Failed to parse JSON response: {snippet}...")
-            return None
+            # Retry once with ultra-strict JSON constraints (fixes intermittent non-JSON / markdown output)
+            user_content_retry = (
+                user_content
+                + "\n\nRETRY MODE:\n"
+                + "- Output MUST be a single JSON object, starting with '{' and ending with '}'.\n"
+                + "- No prose, no markdown, no backticks, no trailing text.\n"
+                + "- Use double quotes for ALL keys/strings.\n"
+                + "- No trailing commas.\n"
+                + "- Keep strings short if needed, but keep ALL required keys.\n"
+            )
+            result2 = _call_ai(user_content_retry)
+            if not result2:
+                snippet = result.strip().replace("\n", " ")[:200]
+                _set_last_error(f"Failed to parse JSON response: {snippet}...")
+                return None
+            parsed = _parse_json_response(result2)
+            if parsed is None:
+                snippet = result2.strip().replace("\n", " ")[:200]
+                _set_last_error(f"Failed to parse JSON response (retry): {snippet}...")
+                return None
 
         return _normalize_ai_result(parsed, link=link, brand_language=brand_language)
 
@@ -657,7 +674,7 @@ def _get_platform_instructions(
     instructions = {
         "blogger": {
             "en": "Write a comprehensive article (1200-1500 words) with SEO optimization, clear headers (## ##), internal links placeholders, and markdown formatting.",
-            "ar": "اكتب مقالة شاملة (1200-1500 كلمة) مع تحسين SEO، عناوين واضحة، روابط داخلية، وتنسيق Markdown. استخدم اللهجة المصرية المهنية.",
+            "ar": "اكتب مقالة قوية (600-1000 كلمة) مع تحسين SEO، عناوين واضحة، وتنسيق Markdown. استخدم اللهجة المصرية الطبيعية.",
         },
         "devto": {
             "en": "Write a technical tutorial (1500-2000 words) with code blocks, step-by-step instructions, markdown formatting, and clear learning outcomes.",
@@ -669,7 +686,7 @@ def _get_platform_instructions(
         },
         "telegram": {
             "en": "Write a concise update (150-250 words) with key takeaways in bullets, emojis, and a clear call to action.",
-            "ar": "اكتب تنبيه قصير (150-200 كلمة) مع bullets واضحة وemojis. استخدم اللهجة المصرية البسيطة.",
+            "ar": "اكتب تنبيه قصير (100-200 كلمة) مع bullets واضحة وemojis. استخدم اللهجة المصرية البسيطة.",
         },
         "discord": {
             "en": "Write a discussion-starter (400-500 words) with context and open-ended questions to engage the community.",

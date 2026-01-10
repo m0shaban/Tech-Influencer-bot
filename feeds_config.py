@@ -123,25 +123,25 @@ BRAND_FEEDS = {
 # STRATEGY:
 # 1. Long-form content FIRST (Blog/Dev.to) → Gets URL
 # 2. Social platforms SECOND → Can include blog link as CTA
-# 3. Fast delays (30s) for rapid publishing cycles
+# 3. Minimal delays (2 min max) for fast publishing cycles
 #
 
 PUBLISHING_ORDER = {
     "blocksignals": [
         # Telegram first (fast alerts), Discord follows with discussion invite
         {"platform": "telegram", "delay_minutes": 0, "enable_cta": False},
-        {"platform": "discord", "delay_minutes": 0.5, "enable_cta": True},
+        {"platform": "discord", "delay_minutes": 0, "enable_cta": True},
     ],
     "zerodev": [
         # Dev.to first (gets article URL), Telegram follows with link
         {"platform": "devto", "delay_minutes": 0, "enable_cta": False},
-        {"platform": "telegram", "delay_minutes": 0.5, "enable_cta": True},
+        {"platform": "telegram", "delay_minutes": 0, "enable_cta": True},
     ],
     "robovai_ar": [
         # Blogger first (gets article URL), then social with links
         {"platform": "blogger", "delay_minutes": 0, "enable_cta": False},
-        {"platform": "facebook", "delay_minutes": 0.5, "enable_cta": True},
-        {"platform": "telegram", "delay_minutes": 0.5, "enable_cta": True},
+        {"platform": "facebook", "delay_minutes": 0, "enable_cta": True},
+        {"platform": "telegram", "delay_minutes": 0, "enable_cta": True},
     ],
 }
 

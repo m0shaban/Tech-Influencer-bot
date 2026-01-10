@@ -8,6 +8,7 @@ import asyncio
 import json
 from typing import Dict, List, Any, Optional
 from datetime import datetime
+import os
 
 from ai_processor import rewrite_with_ai
 from feeds_config import (
@@ -92,8 +93,22 @@ class SequentialPublisher:
         brand_language = brand_config.get("language", "en")
         brand_persona = brand_config.get("system_prompt", "")
 
-        # Track published URLs for CTAs
-        published_urls = {}
+        # Track published URLs for CTA injection (only real URLs)
+        published_urls: Dict[str, str] = {}
+        # Track platforms published (for success accounting even when no URL is returned)
+        published_platforms: Dict[str, str] = {}
+
+        start_ts = asyncio.get_event_loop().time()
+
+        reporter = getattr(platform_publisher, "reporter", None)
+        if reporter:
+            try:
+                await reporter.report_post_start(
+                    total_platforms=len(publishing_order),
+                    caption_preview=str(feed_item.get("title", "") or ""),
+                )
+            except Exception:
+                reporter = None
 
         # Track post count for cross-pollination
         if brand_name not in self.post_count:
@@ -142,28 +157,23 @@ class SequentialPublisher:
                 )
 
                 if not content_data:
-                    print(f"❌ Content generation failed for {platform}")
-                    self.last_errors.append(
-                        {"platform": platform, "error": "content generation failed"}
-                    )
-                    continue
+                    print(f"⚠️ Content generation failed for {platform} — using fallback")
+                    content_data = {}
 
                 # Get platform-specific content field
                 content_field = self._get_content_field_for_platform(platform)
-                content = content_data.get(content_field, "")
-
+                content = str(content_data.get(content_field, "") or "").strip()
                 if not content:
-                    print(f"❌ No content found in field '{content_field}'")
-                    self.last_errors.append(
-                        {
-                            "platform": platform,
-                            "error": f"empty content field {content_field}",
-                        }
+                    content = self._fallback_content_for_platform(
+                        platform=platform,
+                        brand_name=brand_name,
+                        brand_language=brand_language,
+                        feed_item=feed_item,
+                        content_data=content_data,
                     )
-                    continue
 
                 # Inject CTAs if enabled and we have URLs
-                if enable_cta and published_urls:
+                if enable_cta and any(v for v in published_urls.values()):
                     print(
                         f"🔗 Injecting CTAs from {len(published_urls)} previous platforms..."
                     )
@@ -178,6 +188,33 @@ class SequentialPublisher:
                         print(f"🌐 Adding cross-brand reference...")
                         content += f"\n\n{cross_snippet}"
 
+                # Build CTA buttons (Telegram only; URLs are not embedded in body by design)
+                cta_buttons = None
+                if platform == "telegram":
+                    source_url = str(feed_item.get("link", "") or "").strip() or None
+
+                    # Prefer previous platform URL (Dev.to/Blogger) when available
+                    preferred_url = None
+                    if enable_cta and published_urls:
+                        if brand_name == "zerodev" and published_urls.get("devto"):
+                            preferred_url = published_urls.get("devto")
+                        elif brand_name == "robovai_ar" and published_urls.get("blogger"):
+                            preferred_url = published_urls.get("blogger")
+                        else:
+                            # First non-empty URL
+                            for u in published_urls.values():
+                                if u:
+                                    preferred_url = u
+                                    break
+
+                    url_for_button = preferred_url or source_url
+                    if url_for_button:
+                        if brand_language == "ar":
+                            btn_text = "🔗 اقرأ المزيد"
+                        else:
+                            btn_text = "🔗 Read more"
+                        cta_buttons = [{"text": btn_text, "url": url_for_button}]
+
                 # Publish to platform
                 print(f"📤 Publishing to {platform}...")
                 result = await self._publish_to_platform(
@@ -189,25 +226,65 @@ class SequentialPublisher:
                     platform_publisher=platform_publisher,
                     feed_item=feed_item,
                     telegram_context=telegram_context,
+                    cta_buttons=cta_buttons,
                 )
 
-                if result and result.get("url"):
-                    published_urls[platform] = result["url"]
-                    print(f"✅ {platform.upper()}: {result['url']}")
+                if result:
+                    url = str(result.get("url") or "").strip() if isinstance(result, dict) else ""
+                    published_platforms[platform] = url or "ok"
+                    if url:
+                        published_urls[platform] = url
+                        print(f"✅ {platform.upper()}: {url}")
+                    else:
+                        print(f"✅ {platform.upper()}: published")
+                    if reporter:
+                        try:
+                            await reporter.report_platform_success(
+                                platform=platform,
+                                post_url=(url or None),
+                            )
+                        except Exception:
+                            pass
                 else:
-                    print(f"⚠️ {platform}: Published but no URL returned")
-                    # Some platforms don't return URLs; treat as soft-success if result exists
-                    if not result:
-                        self.last_errors.append(
-                            {
-                                "platform": platform,
-                                "error": "publish returned no result",
-                            }
+                    print(f"❌ {platform}: publish returned no result")
+                    self.last_errors.append(
+                        {"platform": platform, "error": "publish returned no result"}
+                    )
+                    if reporter:
+                        try:
+                            await reporter.report_platform_failure(
+                                platform=platform,
+                                error="publish returned no result",
+                            )
+                        except Exception:
+                            pass
+
+                # Micro delay between platforms (kept tiny; avoids hammering APIs)
+                if idx < len(publishing_order):
+                    try:
+                        inter_delay = max(
+                            0,
+                            int(
+                                os.getenv("INTER_PLATFORM_DELAY_SECONDS", "1")
+                                or "1"
+                            ),
                         )
+                    except Exception:
+                        inter_delay = 1
+                    if (not fast_mode) and inter_delay > 0:
+                        await asyncio.sleep(inter_delay)
 
             except Exception as e:
                 print(f"❌ Error publishing to {platform}: {e}")
                 self.last_errors.append({"platform": platform, "error": str(e)})
+                if reporter:
+                    try:
+                        await reporter.report_platform_failure(
+                            platform=platform,
+                            error=str(e),
+                        )
+                    except Exception:
+                        pass
                 continue
 
         print(f"\n{'='*60}")
@@ -215,11 +292,77 @@ class SequentialPublisher:
             f"✅ Publishing complete for {brand_config.get('display_name', brand_name)}"
         )
         print(
-            f"📊 Published to {len(published_urls)}/{len(publishing_order)} platforms"
+            f"📊 Published to {len(published_platforms)}/{len(publishing_order)} platforms"
         )
         print(f"{'='*60}\n")
 
-        return published_urls
+        if reporter:
+            try:
+                successful = len(published_platforms)
+                failed = max(0, len(publishing_order) - successful)
+                duration_seconds = max(0.0, asyncio.get_event_loop().time() - start_ts)
+                await reporter.report_post_complete(
+                    successful=successful,
+                    failed=failed,
+                    total=len(publishing_order),
+                    duration_seconds=duration_seconds,
+                )
+            except Exception:
+                pass
+
+        return published_platforms
+
+    def _fallback_content_for_platform(
+        self,
+        *,
+        platform: str,
+        brand_name: str,
+        brand_language: str,
+        feed_item: Dict[str, Any],
+        content_data: Dict[str, Any],
+    ) -> str:
+        title = str(feed_item.get("title", "") or "").strip()
+        summary = str(feed_item.get("summary", "") or "").strip()
+
+        if brand_language == "ar":
+            if platform in {"blogger", "devto"}:
+                return (
+                    f"# {title or 'تحديث تقني'}\n\n"
+                    f"{summary or 'ملخص سريع للخبر/الأداة.'}\n\n"
+                    "## أهم النقاط\n"
+                    "- الفكرة الأساسية\n"
+                    "- ليه ده مهم\n"
+                    "- إزاي تستفيد منه عملياً\n\n"
+                    "## خطوات سريعة\n"
+                    "1) جرّبه بنفسك\n"
+                    "2) طبّقه على شغلك\n"
+                    "3) شاركنا رأيك\n"
+                )
+            return (
+                f"{title}\n\n"
+                f"• {summary[:220]}\n\n"
+                "قولّي: إيه أكتر حاجة عجبتك/مضايقاك في الخبر ده؟"
+            ).strip()
+
+        # English fallback
+        if platform in {"blogger", "devto"}:
+            return (
+                f"# {title or 'Tech Update'}\n\n"
+                f"{summary or 'Quick summary of the update.'}\n\n"
+                "## Key takeaways\n"
+                "- What changed\n"
+                "- Why it matters\n"
+                "- How to apply it\n\n"
+                "## Next steps\n"
+                "1) Try it today\n"
+                "2) Adapt it to your workflow\n"
+                "3) Share your results\n"
+            )
+        return (
+            f"{title}\n\n"
+            f"• {summary[:220]}\n\n"
+            "What’s one workflow you’d automate with this?"
+        ).strip()
 
     def _get_enabled_platforms(self, brand_config: Dict[str, Any]) -> List[str]:
         """Get list of enabled platforms for brand"""
@@ -251,6 +394,7 @@ class SequentialPublisher:
         platform_publisher: Any,
         feed_item: Dict[str, Any],
         telegram_context: Any,
+        cta_buttons: Optional[Any] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Publish content to specific platform
@@ -262,7 +406,11 @@ class SequentialPublisher:
             # Import platform-specific publishers dynamically
             if platform == "telegram":
                 return await self._publish_telegram(
-                    content, brand_config, platform_publisher, telegram_context
+                    content,
+                    brand_config,
+                    platform_publisher,
+                    telegram_context,
+                    cta_buttons=cta_buttons,
                 )
             elif platform == "facebook":
                 return await self._publish_facebook(content, platform_publisher)
@@ -290,6 +438,8 @@ class SequentialPublisher:
         brand_config: Dict[str, Any],
         platform_publisher: Any,
         telegram_context: Any,
+        *,
+        cta_buttons: Optional[Any] = None,
     ) -> Optional[Dict[str, Any]]:
         """Publish to Telegram"""
         channel_id = brand_config.get("channel_id")
@@ -302,11 +452,11 @@ class SequentialPublisher:
             channel_id=channel_id,
             message=content,
             telegram_context=telegram_context,
+            cta_buttons=cta_buttons,
         )
 
-        if result:
-            # Telegram doesn't return public URLs easily
-            return {"url": f"https://t.me/{channel_id.replace('-100', '')}"}
+        if isinstance(result, dict) and (result.get("status") == "success" or result.get("success")):
+            return {"url": ""}
         return None
 
     async def _publish_facebook(

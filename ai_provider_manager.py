@@ -62,10 +62,9 @@ class AIProviderManager:
             "ultra_fast": {
                 "provider": "groq",
                 "models": [
-                    "llama-3.3-70b-versatile",  # Production stable
+                    "llama-3.3-70b-versatile",  # Production stable (best reliability)
+                    "openai/gpt-oss-120b",  # Production (strong JSON adherence)
                     "meta-llama/llama-4-scout-17b-16e-instruct",  # Preview - Llama 4
-                    "llama-3.1-8b-instant",  # Production - Fastest
-                    "openai/gpt-oss-20b",  # Production - Efficient
                 ],
                 "base_url": "https://api.groq.com/openai/v1",
                 "max_tokens": 1024,
@@ -138,7 +137,8 @@ class AIProviderManager:
                 return {
                     "strategy": strategy_name,
                     "provider": config["provider"],
-                    "model": random.choice(config["models"]),
+                    # Prefer best model first for stability/quality.
+                    "model": (config.get("models") or [""])[0],
                     "base_url": config["base_url"],
                     "api_key": self._get_api_key(config["provider"]),
                     "max_tokens": config["max_tokens"],
@@ -150,7 +150,7 @@ class AIProviderManager:
         return {
             "strategy": "fast_multilingual",
             "provider": config["provider"],
-            "model": random.choice(config["models"]),
+            "model": (config.get("models") or [""])[0],
             "base_url": config["base_url"],
             "api_key": self._get_api_key(config["provider"]),
             "max_tokens": config["max_tokens"],

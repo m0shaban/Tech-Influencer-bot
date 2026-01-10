@@ -519,13 +519,13 @@ def _start_brand_bots() -> None:
                         if not _is_admin(update):
                             await update.message.reply_text("❌ غير مصرح")
                             return
-                        
+
                         # Get brand display name
                         cfg = _load_config()
                         brands = cfg.get("brands", {})
                         brand_cfg = brands.get(bk, {})
                         display_name = brand_cfg.get("display_name", bk)
-                        
+
                         welcome_brand = (
                             f"🎯 **{display_name}**\n"
                             "═══════════════════════\n\n"
@@ -538,7 +538,7 @@ def _start_brand_bots() -> None:
                         await update.message.reply_text(
                             welcome_brand,
                             reply_markup=get_brand_keyboard(),
-                            parse_mode="Markdown"
+                            parse_mode="Markdown",
                         )
 
                     async def _brand_force_fetch(
@@ -1284,10 +1284,17 @@ async def fetch_and_publish(
         if brand_override:
             brand_key = str(brand_override).strip()
         else:
-            if cfg.get("auto_rotate_brands", True):
-                brand_key = _pick_next_brand_key(cfg, ignore_schedule=override_status)
-            else:
+            # Admin Force Fetch should publish the currently selected active brand.
+            # Rotating here is surprising (it looks like Force didn't publish for the intended brand).
+            if override_status:
                 brand_key = str(cfg.get("active_brand") or "").strip()
+                if not brand_key and cfg.get("auto_rotate_brands", True):
+                    brand_key = _pick_next_brand_key(cfg, ignore_schedule=True)
+            else:
+                if cfg.get("auto_rotate_brands", True):
+                    brand_key = _pick_next_brand_key(cfg, ignore_schedule=False)
+                else:
+                    brand_key = str(cfg.get("active_brand") or "").strip()
 
         # Validate requested brand exists
         if brand_key and isinstance(brands, dict) and brand_key not in brands:
@@ -1392,6 +1399,8 @@ async def fetch_and_publish(
                 return {
                     "status": "published",
                     "title": str(post.get("title", "") or "").strip(),
+                    "brand": brand_key,
+                    "platforms": list(published.keys()) if isinstance(published, dict) else [],
                 }
             # Provide a more actionable error for ops
             enabled_runtime = []
@@ -1713,16 +1722,12 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             "استخدم القائمة أدناه للتحكم:"
         )
         await update.message.reply_text(
-            welcome_admin,
-            reply_markup=get_admin_keyboard(),
-            parse_mode="Markdown"
+            welcome_admin, reply_markup=get_admin_keyboard(), parse_mode="Markdown"
         )
         return
 
     await update.message.reply_text(
-        SALES_COPY,
-        reply_markup=get_sales_keyboard(),
-        parse_mode="Markdown"
+        SALES_COPY, reply_markup=get_sales_keyboard(), parse_mode="Markdown"
     )
 
 
@@ -1768,7 +1773,14 @@ async def admin_force_fetch(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         status = result.get("status")
         if status == "published":
             title = result.get("title", "")
-            await msg.edit_text(f"✅ تم النشر! {title}")
+            brand = str(result.get("brand") or "").strip() or "(unknown brand)"
+            platforms = result.get("platforms")
+            platforms_txt = ""
+            if isinstance(platforms, list) and platforms:
+                platforms_txt = "\n" + "📤 Platforms: " + ", ".join(
+                    [str(p) for p in platforms if str(p).strip()]
+                )
+            await msg.edit_text(f"✅ تم النشر!\n🏷️ Brand: {brand}\n📝 {title}{platforms_txt}")
             return
         if status == "no_news":
             await msg.edit_text("⚠️ مفيش أخبار جديدة. (Evergreen logic skipped for now)")
@@ -2324,9 +2336,7 @@ def main() -> None:
         )
     )
     app.add_handler(
-        MessageHandler(
-            admin_filter & filters.Regex(r"^📝 Prompt$"), admin_view_prompt
-        )
+        MessageHandler(admin_filter & filters.Regex(r"^📝 Prompt$"), admin_view_prompt)
     )
     app.add_handler(
         MessageHandler(admin_filter & filters.Regex(r"^📡 Feeds$"), admin_list_feeds)
@@ -2335,9 +2345,7 @@ def main() -> None:
         MessageHandler(admin_filter & filters.Regex(r"^📋 Logs$"), admin_view_logs)
     )
     app.add_handler(
-        MessageHandler(
-            admin_filter & filters.Regex(r"^ℹ️ Info$"), admin_system_info
-        )
+        MessageHandler(admin_filter & filters.Regex(r"^ℹ️ Info$"), admin_system_info)
     )
     app.add_handler(
         MessageHandler(
@@ -2350,9 +2358,7 @@ def main() -> None:
         )
     )
     app.add_handler(
-        MessageHandler(
-            admin_filter & filters.Regex(r"^🧪 Test$"), admin_test_platforms
-        )
+        MessageHandler(admin_filter & filters.Regex(r"^🧪 Test$"), admin_test_platforms)
     )
 
     # Broadcast wizard

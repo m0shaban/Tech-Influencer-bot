@@ -4,6 +4,7 @@ Unified interface for publishing to multiple platforms with scheduling support
 """
 
 from typing import Any, Dict, Optional, Literal
+import asyncio
 import os
 import time
 from datetime import datetime
@@ -26,8 +27,11 @@ PlatformType = Literal[
 ]
 
 
-# Delay between platform publishes to prevent rate limiting
-PLATFORM_DELAY_SECONDS = 5
+# Delay between platform publishes to prevent rate limiting (keep small; configurable)
+try:
+    PLATFORM_DELAY_SECONDS = max(0, int(os.getenv("PLATFORM_DELAY_SECONDS", "1") or "1"))
+except Exception:
+    PLATFORM_DELAY_SECONDS = 1
 
 
 class MultiPlatformPublisher:
@@ -385,10 +389,9 @@ class MultiPlatformPublisher:
                     else:
                         image_for_platform = None
 
-                # Small delay between platforms to prevent rate limiting
-                # (skip delay for the first platform)
-                if results:  # Not the first platform
-                    time.sleep(PLATFORM_DELAY_SECONDS)
+                # Small delay between platforms to prevent rate limiting (skip first platform)
+                if results and PLATFORM_DELAY_SECONDS > 0:
+                    await asyncio.sleep(PLATFORM_DELAY_SECONDS)
 
                 # Publish immediately to this platform
                 if platform == "telegram":

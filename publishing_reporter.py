@@ -95,7 +95,7 @@ class PublishingReporter:
             "linkedin": "💼",
         }
         emoji = platform_emojis.get(platform.lower(), "🌐")
-        
+
         message = f"✅ {emoji} **{platform.upper()}**\n"
 
         if post_url:
@@ -131,7 +131,7 @@ class PublishingReporter:
         success_rate = (successful / total * 100) if total > 0 else 0
 
         status_emoji = "🎉" if failed == 0 else "⚠️"
-        
+
         # Progress bar
         progress_filled = int(success_rate / 10)
         progress_bar = "█" * progress_filled + "░" * (10 - progress_filled)
