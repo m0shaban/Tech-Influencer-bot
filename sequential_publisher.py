@@ -47,6 +47,8 @@ class SequentialPublisher:
         feed_item: Dict[str, Any],
         platform_publisher: Any,  # The multi_platform_publisher instance
         telegram_context: Any = None,
+        *,
+        fast_mode: bool = False,
     ) -> Dict[str, str]:
         """
         Process and publish one feed item across all enabled platforms
@@ -111,7 +113,7 @@ class SequentialPublisher:
             enable_cta = platform_config.get("enable_cta", False)
             
             # Wait for delay (skip for first platform)
-            if delay_minutes > 0 and idx > 1:
+            if (not fast_mode) and delay_minutes > 0 and idx > 1:
                 print(f"⏳ Waiting {delay_minutes} minutes before publishing to {platform}...")
                 await asyncio.sleep(delay_minutes * 60)
             

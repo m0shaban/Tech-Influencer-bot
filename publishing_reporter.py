@@ -7,6 +7,7 @@ import os
 from datetime import datetime
 from typing import Any, Dict, Optional
 from telegram import Bot
+from telegram.error import BadRequest
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -39,6 +40,20 @@ class PublishingReporter:
                 parse_mode="Markdown",
             )
             return True
+        except BadRequest as e:
+            # Telegram Markdown is picky; fall back to plain text so reporting never breaks publishing flows.
+            if "Can't parse entities" in str(e) or "can't parse entities" in str(e):
+                try:
+                    await self.bot.send_message(
+                        chat_id=self.admin_user_id,
+                        text=message,
+                    )
+                    return True
+                except Exception as e2:
+                    print(f"Failed to send report (fallback): {e2}")
+                    return False
+            print(f"Failed to send report: {e}")
+            return False
         except Exception as e:
             print(f"Failed to send report: {e}")
             return False

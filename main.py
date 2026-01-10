@@ -1257,6 +1257,7 @@ async def fetch_and_publish(
                 feed_item=post,
                 platform_publisher=platform_publisher,
                 telegram_context=context,
+                fast_mode=override_status,
             )
 
             if published:
