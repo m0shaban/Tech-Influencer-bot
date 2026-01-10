@@ -160,6 +160,19 @@ EMOJIS: 💻 🛠️ ⚡ 🚀 💡 🎯 ✨ 🔧 📱 🔥
 }
 
 
+# Global negative constraint (must be present in all personas)
+_NO_TEASER_CONSTRAINT = (
+    "CRITICAL INSTRUCTION: You are FORBIDDEN from writing 'Click the link to read more' "
+    "or 'Read the full article here'. You MUST write the FULL content/tutorial/news summary "
+    "directly in the response. The output must be valuable on its own. Do not act as a gateway."
+)
+
+# Inject the constraint into each persona prompt (safely, without changing tone)
+for _k in list(PERSONA_PROMPTS.keys()):
+    if _NO_TEASER_CONSTRAINT not in PERSONA_PROMPTS[_k]:
+        PERSONA_PROMPTS[_k] = PERSONA_PROMPTS[_k].rstrip() + "\n\n" + _NO_TEASER_CONSTRAINT + "\n"
+
+
 # RSS Feeds by brand
 BRAND_FEEDS = {
     "ARB": [

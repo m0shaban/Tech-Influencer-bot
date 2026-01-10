@@ -16,13 +16,20 @@ import asyncio
 import json
 import os
 import random
+import re
 import threading
 import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, Callable
 
-from telegram import Update, ReplyKeyboardMarkup, Bot
+from telegram import (
+    Bot,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    ReplyKeyboardMarkup,
+    Update,
+)
 from telegram.ext import (
     Application,
     ApplicationBuilder,
@@ -40,6 +47,8 @@ from brands_config import (
     ADMIN_USER_ID,
     MASTER_BOT_TOKEN,
 )
+
+from image_manager import get_best_image
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -101,6 +110,115 @@ def send_alert_sync(brand_key: str, error_message: str, tb: str = "") -> None:
         loop.close()
     except Exception:
         pass
+
+
+async def send_success_report_to_admin(
+    *,
+    brand_name: str,
+    topic_title: str,
+    had_image: bool,
+    timestamp: str,
+) -> None:
+    """Send a clean HTML success report to the admin via Master bot."""
+    if not MASTER_BOT_TOKEN or not ADMIN_USER_ID:
+        return
+
+    try:
+        master_bot = Bot(token=MASTER_BOT_TOKEN)
+        img_txt = "Attached" if had_image else "Missing"
+        text = (
+            f"<b>✅ MISSION SUCCESS | {brand_name}</b>\n"
+            "——————————————————\n"
+            f"<b>🗞 Topic:</b> {topic_title}\n"
+            f"<b>🖼 Image:</b> {img_txt}\n"
+            f"<b>🕒 Time:</b> {timestamp}\n"
+            "——————————————————\n"
+            "<i>🚀 Post is live on channel.</i>"
+        )
+        await master_bot.send_message(chat_id=ADMIN_USER_ID, text=text, parse_mode="HTML")
+    except Exception:
+        return
+
+
+_TEASER_PHRASES = [
+    # English
+    "read more",
+    "click the link",
+    "click link",
+    "full article",
+    "link in bio",
+    "read the full",
+    "see full",
+    # Arabic
+    "اقرأ المزيد",
+    "اضغط",
+    "الرابط",
+    "التفاصيل في",
+    "شوف المقال",
+    "اقرأ المقال",
+]
+
+
+def _looks_like_teaser(text: str) -> bool:
+    t = (text or "").strip().lower()
+    if not t:
+        return True
+    if len(t) < 280:
+        return True
+    return any(p in t for p in _TEASER_PHRASES)
+
+
+def _split_text_chunks(text: str, limit: int) -> list[str]:
+    """Split by paragraphs first, then hard-split as last resort."""
+    t = (text or "").strip()
+    if not t:
+        return []
+
+    parts = [p.strip() for p in t.split("\n\n") if p.strip()]
+    chunks: list[str] = []
+    buf = ""
+
+    def flush() -> None:
+        nonlocal buf
+        if buf.strip():
+            chunks.append(buf.strip())
+        buf = ""
+
+    for p in parts:
+        candidate = (buf + "\n\n" + p).strip() if buf else p
+        if len(candidate) <= limit:
+            buf = candidate
+            continue
+
+        if buf:
+            flush()
+
+        # If single paragraph is too long, hard split it
+        while len(p) > limit:
+            chunks.append(p[:limit].strip())
+            p = p[limit:]
+        buf = p.strip()
+
+    flush()
+    return chunks
+
+
+def _build_source_button(*, url: str, lang: str) -> Optional[InlineKeyboardMarkup]:
+    u = (url or "").strip()
+    if not u:
+        return None
+    label = "🔗 Reference" if (lang or "").lower().startswith("en") else "🔗 المصدر"
+    return InlineKeyboardMarkup([[InlineKeyboardButton(label, url=u)]])
+
+
+def _strip_urls(text: str) -> str:
+    t = text or ""
+    # Remove raw URLs if the model leaks them; reference is via button.
+    t = re.sub(r"https?://\S+", "", t, flags=re.IGNORECASE)
+    t = re.sub(r"www\.[^\s]+", "", t, flags=re.IGNORECASE)
+    # Normalize excess blank lines
+    t = re.sub(r"\n{3,}", "\n\n", t)
+    return t.strip()
 
 
 def _get_worker_keyboard() -> ReplyKeyboardMarkup:
@@ -187,7 +305,28 @@ class BrandWorker:
             return {"status": "error", "error": "AI generation failed"}
 
         # Extract the native post
-        telegram_post = content_data.get("telegram_post", "")
+        telegram_post = str(content_data.get("telegram_post", "") or "").strip()
+        if not telegram_post or _looks_like_teaser(telegram_post):
+            # One retry with even stricter instruction (models sometimes ignore first pass)
+            retry_prompt = (
+                self._get_native_prompt()
+                + "\n\nCRITICAL: Your previous output looked like a teaser/gateway. "
+                + "Rewrite as a standalone Telegram post that teaches EVERYTHING inside Telegram. "
+                + "Do not mention clicking links."
+            )
+            retry = rewrite_with_ai(
+                title=title,
+                summary=summary,
+                link=link,
+                system_prompt=retry_prompt,
+                platform="telegram",
+                brand_name=self.brand.key,
+                brand_language=self.brand.language,
+            )
+            telegram_post2 = str((retry or {}).get("telegram_post", "") or "").strip()
+            if telegram_post2 and not _looks_like_teaser(telegram_post2):
+                telegram_post = telegram_post2
+
         if not telegram_post:
             # Fallback: Generate a simple but valuable post
             telegram_post = self._generate_fallback_post(title, summary)
@@ -262,39 +401,63 @@ Share your thoughts below 👇
         self,
         context: ContextTypes.DEFAULT_TYPE,
         content: str,
-        image_url: Optional[str] = None,
+        *,
+        title: str = "",
+        source_url: str = "",
     ) -> Dict[str, Any]:
-        """Publish native content to the brand's Telegram channel."""
+        """Publish native content to the brand's Telegram channel.
+
+        Requirements:
+        - EVERY post must include an image (ImgBB URL preferred).
+        - Publish via send_photo() with caption.
+        - If caption exceeds Telegram limit (1024), send remaining text as follow-up messages.
+        - Link is provided as a footer reference via an inline button.
+        """
         try:
             bot = context.bot
             channel_id = self.brand.channel_id
 
-            if image_url:
-                try:
-                    await bot.send_photo(
-                        chat_id=channel_id,
-                        photo=image_url,
-                        caption=content[:1024],  # Telegram caption limit
-                        parse_mode="Markdown",
-                    )
-                except Exception:
-                    # Fallback to text-only
-                    await bot.send_message(
-                        chat_id=channel_id,
-                        text=content,
-                        parse_mode="Markdown",
-                    )
-            else:
-                await bot.send_message(
-                    chat_id=channel_id,
-                    text=content,
-                    parse_mode="Markdown",
-                )
+            # Always resolve an image (best effort) and prefer ImgBB URL
+            img = get_best_image(title or "RoboVAI", source_url or "", brand_key=self.brand.key)
+            image_url = str((img or {}).get("url") or "").strip()
+            if not image_url:
+                return {"status": "error", "error": "ImageManager returned no image"}
+
+            # Split content: caption <= 1024, remainder as messages
+            safe_content = _strip_urls(content)
+            caption_chunks = _split_text_chunks(safe_content, 1024)
+            caption = caption_chunks[0] if caption_chunks else ""
+            remainder = caption_chunks[1:] if len(caption_chunks) > 1 else []
+
+            reply_markup = _build_source_button(url=source_url, lang=self.brand.language)
+
+            # Send photo with caption (no parse_mode to avoid formatting failures)
+            await bot.send_photo(
+                chat_id=channel_id,
+                photo=image_url,
+                caption=caption,
+                reply_markup=reply_markup,
+            )
+
+            # Send remainder inside Telegram (still standalone; no leaving TG)
+            if remainder:
+                # Telegram message limit is 4096; keep some headroom
+                for chunk in remainder:
+                    for msg_chunk in _split_text_chunks(chunk, 3800):
+                        await bot.send_message(chat_id=channel_id, text=msg_chunk)
+
+            # Admin UX report
+            await send_success_report_to_admin(
+                brand_name=self.brand.display_name,
+                topic_title=(title or "").strip() or "(no title)",
+                had_image=True,
+                timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            )
 
             self.posts_today += 1
             self.last_post_time = datetime.now()
 
-            return {"status": "success", "channel_id": channel_id}
+            return {"status": "success", "channel_id": channel_id, "image": image_url}
 
         except Exception as e:
             self._log(f"Publish error: {e}")
@@ -331,10 +494,16 @@ Share your thoughts below 👇
 
             content = result.get("content", "")
             feed_item = result.get("feed_item", {})
-            image_url = feed_item.get("image")
+            title = str(result.get("title", "") or "").strip()
+            link = str(result.get("link", "") or "").strip()
 
             # Publish to channel
-            pub_result = await self._publish_to_channel(context, content, image_url)
+            pub_result = await self._publish_to_channel(
+                context,
+                content,
+                title=title,
+                source_url=link,
+            )
 
             if pub_result.get("status") == "success":
                 await msg.edit_text(
@@ -568,6 +737,11 @@ Use the keyboard below to control this brand.
         # Initialize and run
         await app.initialize()
         await app.start()
+        if app.updater is None:
+            raise RuntimeError(
+                "Application.updater is None; cannot start polling. "
+                "Ensure python-telegram-bot polling is enabled."
+            )
         await app.updater.start_polling(drop_pending_updates=True)
 
         # Keep running
