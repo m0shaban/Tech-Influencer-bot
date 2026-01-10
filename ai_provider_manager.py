@@ -57,7 +57,7 @@ class AIProviderManager:
                 "provider": "groq",
                 "models": [
                     "llama-3.3-70b-versatile",
-                    "llama3-8b-8192",
+                    "llama3-70b-8192",
                 ],
                 "base_url": "https://api.groq.com/openai/v1",
                 "max_tokens": 1024,
