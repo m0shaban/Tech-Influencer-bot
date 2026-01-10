@@ -138,6 +138,7 @@ DEFAULT_SYSTEM_PROMPT = r"""
 
 DEFAULT_MODEL_CANDIDATES = [
     "llama-3.3-70b-versatile",
+    "llama3-70b-8192",
 ]
 
 DEFAULT_MAX_TOKENS = 2600
@@ -511,7 +512,7 @@ def rewrite_with_ai(
         )
 
         if not result:
-            _set_last_error(getattr(ai_manager, "last_error", None) or "Empty AI response")
+            _set_last_error("Empty AI response")
             return None
 
         # Parse JSON response (result is the content string directly)
