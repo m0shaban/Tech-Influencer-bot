@@ -45,6 +45,7 @@ class SequentialPublisher:
         brand_name: str,
         feed_item: Dict[str, Any],
         platform_publisher: Any,  # The multi_platform_publisher instance
+        telegram_context: Any = None,
     ) -> Dict[str, str]:
         """
         Process and publish one feed item across all enabled platforms
@@ -156,6 +157,7 @@ class SequentialPublisher:
                     brand_config=brand_config,
                     platform_publisher=platform_publisher,
                     feed_item=feed_item,
+                    telegram_context=telegram_context,
                 )
                 
                 if result and result.get("url"):
@@ -204,6 +206,7 @@ class SequentialPublisher:
         brand_config: Dict[str, Any],
         platform_publisher: Any,
         feed_item: Dict[str, Any],
+        telegram_context: Any,
     ) -> Optional[Dict[str, Any]]:
         """
         Publish content to specific platform
@@ -215,27 +218,27 @@ class SequentialPublisher:
             # Import platform-specific publishers dynamically
             if platform == "telegram":
                 return await self._publish_telegram(
-                    content, brand_config, platform_publisher
+                    content, brand_config, platform_publisher, telegram_context
                 )
             elif platform == "facebook":
                 return await self._publish_facebook(
-                    content, brand_name, platform_publisher
+                    content, platform_publisher
                 )
             elif platform == "discord":
                 return await self._publish_discord(
-                    content, brand_name, platform_publisher
+                    content, platform_publisher
                 )
             elif platform == "blogger":
                 return await self._publish_blogger(
-                    content_data, brand_name, platform_publisher
+                    content_data, platform_publisher
                 )
             elif platform == "devto":
                 return await self._publish_devto(
-                    content_data, brand_name, platform_publisher, feed_item
+                    content_data, platform_publisher, feed_item
                 )
             elif platform == "linkedin":
                 return await self._publish_linkedin(
-                    content, brand_name, platform_publisher
+                    content, platform_publisher
                 )
             else:
                 print(f"⚠️ Platform {platform} not yet implemented")
@@ -250,6 +253,7 @@ class SequentialPublisher:
         content: str,
         brand_config: Dict[str, Any],
         platform_publisher: Any,
+        telegram_context: Any,
     ) -> Optional[Dict[str, Any]]:
         """Publish to Telegram"""
         channel_id = brand_config.get("channel_id")
@@ -261,6 +265,7 @@ class SequentialPublisher:
         result = await platform_publisher.publish_to_telegram(
             channel_id=channel_id,
             message=content,
+            telegram_context=telegram_context,
         )
         
         if result:
@@ -271,13 +276,11 @@ class SequentialPublisher:
     async def _publish_facebook(
         self,
         content: str,
-        brand_name: str,
         platform_publisher: Any,
     ) -> Optional[Dict[str, Any]]:
         """Publish to Facebook"""
         result = await platform_publisher.publish_to_facebook(
             message=content,
-            brand_suffix=self._get_brand_suffix(brand_name),
         )
         
         if result:
@@ -290,13 +293,11 @@ class SequentialPublisher:
     async def _publish_discord(
         self,
         content: str,
-        brand_name: str,
         platform_publisher: Any,
     ) -> Optional[Dict[str, Any]]:
         """Publish to Discord"""
         result = await platform_publisher.publish_to_discord(
             message=content,
-            brand_suffix=self._get_brand_suffix(brand_name),
         )
         
         if result:
@@ -307,7 +308,6 @@ class SequentialPublisher:
     async def _publish_blogger(
         self,
         content_data: Dict[str, Any],
-        brand_name: str,
         platform_publisher: Any,
     ) -> Optional[Dict[str, Any]]:
         """Publish to Blogger"""
@@ -317,7 +317,6 @@ class SequentialPublisher:
         result = await platform_publisher.publish_to_blogger(
             title=title,
             content=content,
-            brand_suffix=self._get_brand_suffix(brand_name),
         )
         
         if result:
@@ -327,7 +326,6 @@ class SequentialPublisher:
     async def _publish_devto(
         self,
         content_data: Dict[str, Any],
-        brand_name: str,
         platform_publisher: Any,
         feed_item: Dict[str, Any],
     ) -> Optional[Dict[str, Any]]:
@@ -338,7 +336,6 @@ class SequentialPublisher:
         result = await platform_publisher.publish_to_devto(
             title=title,
             content=content,
-            brand_suffix=self._get_brand_suffix(brand_name),
         )
         
         if result:
@@ -348,26 +345,15 @@ class SequentialPublisher:
     async def _publish_linkedin(
         self,
         content: str,
-        brand_name: str,
         platform_publisher: Any,
     ) -> Optional[Dict[str, Any]]:
         """Publish to LinkedIn"""
         result = await platform_publisher.publish_to_linkedin(
             message=content,
-            brand_suffix=self._get_brand_suffix(brand_name),
         )
         
         if result:
             return {"url": result.get("url", "LinkedIn post published")}
         return None
     
-    def _get_brand_suffix(self, brand_name: str) -> str:
-        """Get brand suffix for credential resolution"""
-        suffix_map = {
-            "flowpilot": "FP",
-            "blocksignals": "BS",
-            "zerodev": "ZDS",
-            "growthbyte": "GB",
-            "robovai_ar": "ARB",
-        }
-        return suffix_map.get(brand_name, "")
+    # NOTE: Brand/account resolution is handled by brand_context.py via brand.accounts.

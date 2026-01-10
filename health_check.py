@@ -26,7 +26,7 @@ CRITICAL_FILES = [
 init(autoreset=True)
 
 
-def _load_feeds_from_config() -> list[str]:
+def _load_feeds_from_config(*, brand: str | None = None) -> list[str]:
     config_path = BASE_DIR / "config.json"
     try:
         if not config_path.exists():
@@ -34,14 +34,39 @@ def _load_feeds_from_config() -> list[str]:
         data = json.loads(config_path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
             return []
+
+        brand_key = (brand or data.get("active_brand") or "").strip()
+
+        if brand_key:
+            brands = data.get("brands") if isinstance(data.get("brands"), dict) else {}
+            brand_cfg = brands.get(brand_key) if isinstance(brands, dict) else None
+            feeds = brand_cfg.get("feeds") if isinstance(brand_cfg, dict) else None
+            if isinstance(feeds, list) and feeds:
+                cleaned: list[str] = []
+                for item in feeds:
+                    if isinstance(item, str) and item.strip():
+                        cleaned.append(item.strip())
+                return cleaned
+
         feeds = data.get("feeds")
-        if not isinstance(feeds, list):
-            return []
-        cleaned: list[str] = []
-        for item in feeds:
-            if isinstance(item, str) and item.strip():
-                cleaned.append(item.strip())
-        return cleaned
+        if isinstance(feeds, list) and feeds:
+            cleaned2: list[str] = []
+            for item in feeds:
+                if isinstance(item, str) and item.strip():
+                    cleaned2.append(item.strip())
+            return cleaned2
+
+        if brand_key:
+            try:
+                from feeds_config import get_feeds_for_brand
+
+                defaults = get_feeds_for_brand(brand_key)
+                if defaults:
+                    return list(defaults)
+            except Exception:
+                pass
+
+        return []
     except Exception:
         return []
 

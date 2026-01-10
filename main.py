@@ -273,6 +273,16 @@ async def _generate_platform_contents(
     """Generate platform-specific content using AI routing."""
     from ai_processor import rewrite_with_ai
 
+    cfg = _load_config()
+    active_key = str(cfg.get("active_brand") or "").strip() or "robovai_ar"
+    brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+    brand_cfg = brands.get(active_key) if isinstance(brands, dict) else None
+    brand_language = (
+        str(brand_cfg.get("language") or "en")
+        if isinstance(brand_cfg, dict)
+        else "en"
+    )
+
     platforms_to_generate = [
         "blogger",
         "devto",
@@ -292,6 +302,8 @@ async def _generate_platform_contents(
                 link=link,
                 system_prompt=system_prompt,
                 platform=platform,
+                brand_name=active_key,
+                brand_language=brand_language,
             )
 
             if ai_result:
@@ -337,6 +349,51 @@ async def _generate_platform_contents(
     contents.setdefault("linkedin", {"caption": facebook_post or telegram_post})
 
     return contents
+
+
+def _pick_next_brand_key(cfg: dict) -> str:
+    """Pick next brand to publish for (round-robin), skipping brands without feeds/platforms."""
+    brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+    if not isinstance(brands, dict) or not brands:
+        return str(cfg.get("active_brand") or "").strip() or "robovai_ar"
+
+    candidates: list[str] = []
+    for key, brand in brands.items():
+        if not isinstance(key, str) or not key.strip() or not isinstance(brand, dict):
+            continue
+        feeds = brand.get("feeds")
+        if not isinstance(feeds, list) or not any(isinstance(f, str) and f.strip() for f in feeds):
+            continue
+        platforms = brand.get("platforms")
+        if not isinstance(platforms, dict):
+            continue
+        if not any(isinstance(v, dict) and v.get("enabled") is True for v in platforms.values()):
+            continue
+        candidates.append(key.strip())
+
+    if not candidates:
+        return str(cfg.get("active_brand") or "").strip() or "robovai_ar"
+
+    candidates = sorted(set(candidates))
+    idx_raw = cfg.get("brand_rotation_index", 0)
+    idx = idx_raw if isinstance(idx_raw, int) and idx_raw >= 0 else 0
+    chosen = candidates[idx % len(candidates)]
+    cfg["brand_rotation_index"] = (idx + 1) % len(candidates)
+    cfg["active_brand"] = chosen
+
+    # Keep top-level compatibility keys in sync
+    brand_cfg = brands.get(chosen)
+    if isinstance(brand_cfg, dict):
+        if isinstance(brand_cfg.get("system_prompt"), str):
+            cfg["system_prompt"] = brand_cfg.get("system_prompt", "")
+        if isinstance(brand_cfg.get("feeds"), list):
+            cfg["feeds"] = brand_cfg.get("feeds", [])
+        if isinstance(brand_cfg.get("channel_id"), str):
+            cfg["channel_id"] = brand_cfg.get("channel_id", "")
+        if isinstance(brand_cfg.get("group_id"), str):
+            cfg["group_id"] = brand_cfg.get("group_id", "")
+
+    return chosen
 
 
 async def _publish_sequential_with_ctas(
@@ -697,6 +754,59 @@ async def fetch_and_publish(
     except Exception as exc:  # noqa: BLE001
         return {"status": "error", "error": f"Import error: {exc}"}
 
+    if not override_status and not _is_system_active():
+        return {"status": "error", "error": "System is paused"}
+
+    # Multi-brand sequential publishing (preferred)
+    cfg = _load_config()
+    if isinstance(cfg.get("brands"), dict) and cfg.get("brands"):
+        brand_key = _pick_next_brand_key(cfg) if cfg.get("auto_rotate_brands", True) else str(cfg.get("active_brand") or "").strip()
+        _save_config(cfg)
+
+        brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+        brand_cfg = brands.get(brand_key) if isinstance(brands, dict) else None
+        brand_language = (
+            str(brand_cfg.get("language") or "en")
+            if isinstance(brand_cfg, dict)
+            else "en"
+        )
+
+        post = fetch_random_new_post(brand=brand_key)
+        if not post:
+            return {"status": "no_news"}
+
+        # Ensure media availability (for platform publishers that need it)
+        title = str(post.get("title", "") or "").strip()
+        media_result = prepare_media(post, title)
+        # Attach (used by some publishers)
+        post["image"] = media_result.get("image_url")
+        post["image_local_path"] = media_result.get("image_local_path")
+
+        try:
+            from multi_platform_publisher import MultiPlatformPublisher
+            from sequential_publisher import SequentialPublisher
+
+            platform_publisher = MultiPlatformPublisher(brand_key=brand_key)
+            seq = SequentialPublisher(cfg)
+            published = await seq.publish_item(
+                brand_name=brand_key,
+                feed_item=post,
+                platform_publisher=platform_publisher,
+                telegram_context=context,
+            )
+
+            if published:
+                return {
+                    "status": "published",
+                    "title": str(post.get("title", "") or "").strip(),
+                }
+            return {"status": "error", "error": "No platforms published"}
+
+        except Exception as exc:  # noqa: BLE001
+            return {"status": "error", "error": f"Sequential publish failed: {exc}"}
+
+    # Legacy single-brand pipeline
+
     channel_id = _get_channel_id_from_config()
     if not channel_id:
         return {
@@ -704,19 +814,30 @@ async def fetch_and_publish(
             "error": "CHANNEL_ID is not set (env or config.json)",
         }
 
-    if not override_status and not _is_system_active():
-        return {"status": "error", "error": "System is paused"}
-
     post = fetch_random_new_post()
     if not post:
         return {"status": "no_news"}
 
     system_prompt = _get_system_prompt_from_config()
+
+    legacy_cfg = _load_config()
+    legacy_brand_key = str(legacy_cfg.get("active_brand") or "").strip() or "robovai_ar"
+    legacy_brands = legacy_cfg.get("brands") if isinstance(legacy_cfg.get("brands"), dict) else {}
+    legacy_brand_cfg = legacy_brands.get(legacy_brand_key) if isinstance(legacy_brands, dict) else None
+    legacy_lang = (
+        str(legacy_brand_cfg.get("language") or "en")
+        if isinstance(legacy_brand_cfg, dict)
+        else "en"
+    )
+
     ai = rewrite_with_ai(
         post.get("title", ""),
         post.get("summary", ""),
         post.get("link", ""),
         system_prompt=system_prompt,
+        platform="telegram",
+        brand_name=legacy_brand_key,
+        brand_language=legacy_lang,
     )
     if not ai:
         return {"status": "error", "error": get_last_ai_error() or "AI failed"}

@@ -81,19 +81,28 @@ def _rerun() -> None:
         rerun_fn()
 
 
-def load_feeds_from_code() -> List[str]:
+def load_feeds_from_code(*, brand: str | None = None) -> List[str]:
     try:
-        from feeds_config import RSS_FEEDS
+        from feeds_config import RSS_FEEDS, get_feeds_for_brand
 
+        brand_key = (brand or "").strip()
+        if brand_key:
+            brand_feeds = get_feeds_for_brand(brand_key)
+            if brand_feeds:
+                return list(brand_feeds)
         return list(RSS_FEEDS)
     except Exception:
         return []
 
 
 def write_feeds_to_code(feeds: List[str]) -> None:
-    FEEDS_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    content = "RSS_FEEDS = [\n" + "\n".join(f"    '{f}'," for f in feeds) + "\n]\n"
-    FEEDS_CONFIG_PATH.write_text(content, encoding="utf-8")
+    """Deprecated: do not overwrite feeds_config.py from the dashboard.
+
+    The repo now supports brand-aware feeds in feeds_config.py and config.json.
+    """
+    raise RuntimeError(
+        "Dashboard no longer writes feeds_config.py directly; edit brand feeds in config.json."
+    )
 
 
 def tail_log(path: Path, lines: int = 50) -> List[str]:
@@ -246,8 +255,26 @@ def _sync_active_brand_into_runtime(cfg: Dict[str, Any]) -> None:
 
 config = load_config()
 _sync_active_brand_into_runtime(config)
-feeds_list = config.get("feeds") or load_feeds_from_code()
-config["feeds"] = feeds_list
+
+# Bootstrap: if active brand has no feeds, load defaults for that brand.
+active_brand_key = str(config.get("active_brand") or "").strip()
+brands_boot = _get_brands(config)
+active_boot = brands_boot.get(active_brand_key) if active_brand_key else None
+active_brand_feeds = (
+    active_boot.get("feeds")
+    if isinstance(active_boot, dict) and isinstance(active_boot.get("feeds"), list)
+    else []
+)
+if active_brand_key and not active_brand_feeds:
+    defaults = load_feeds_from_code(brand=active_brand_key)
+    if defaults:
+        brands_boot.setdefault(active_brand_key, {})
+        if isinstance(brands_boot.get(active_brand_key), dict):
+            brands_boot[active_brand_key]["feeds"] = defaults
+        config["brands"] = brands_boot
+        _sync_active_brand_into_runtime(config)
+
+feeds_list = config.get("feeds") or []
 save_config(config)
 
 
@@ -567,7 +594,24 @@ elif menu_choice == "🔗 Feed Manager":
     st.title("Feed Manager")
     st.caption("Edit RSS feeds")
 
-    feeds = config.get("feeds", [])
+    brands = _get_brands(config)
+    brand_keys = sorted(list(brands.keys()))
+    active_brand = str(config.get("active_brand") or "").strip()
+    default_brand = active_brand if active_brand in brand_keys else (brand_keys[0] if brand_keys else "")
+
+    colb1, colb2 = st.columns([2, 1])
+    with colb1:
+        selected_brand = st.selectbox(
+            "Brand",
+            brand_keys,
+            index=(brand_keys.index(default_brand) if default_brand in brand_keys else 0) if brand_keys else 0,
+            disabled=not bool(brand_keys),
+        )
+    with colb2:
+        st.caption(f"Active: {active_brand or '(none)'}")
+
+    brand_cfg = brands.get(selected_brand) if selected_brand else {}
+    feeds = brand_cfg.get("feeds", []) if isinstance(brand_cfg, dict) else []
     editable_rows = [{"url": f} for f in feeds]
     edited = st.data_editor(
         editable_rows,
@@ -585,22 +629,35 @@ elif menu_choice == "🔗 Feed Manager":
             if f not in seen:
                 cleaned.append(f)
                 seen.add(f)
-        config["feeds"] = cleaned
-        save_config(config)
-        try:
-            write_feeds_to_code(cleaned)
-        except Exception as exc:  # noqa: BLE001
-            st.error(f"Saved config, but failed to write feeds_config.py: {exc}")
+        if selected_brand:
+            brands = _get_brands(config)
+            brands.setdefault(selected_brand, {})
+            if isinstance(brands.get(selected_brand), dict):
+                brands[selected_brand]["feeds"] = cleaned
+            config["brands"] = brands
+            if selected_brand == str(config.get("active_brand") or "").strip():
+                _sync_active_brand_into_runtime(config)
+            save_config(config)
+            st.success(f"Saved {len(cleaned)} feeds for brand '{selected_brand}'")
         else:
-            st.success(f"Saved {len(cleaned)} feeds and updated feeds_config.py")
+            st.error("No brand selected")
 
     st.markdown("---")
-    if st.button("Reload from feeds_config.py", use_container_width=True):
-        feeds_from_code = load_feeds_from_code()
-        config["feeds"] = feeds_from_code
-        save_config(config)
-        st.success(f"Loaded {len(feeds_from_code)} feeds from code")
-        _rerun()
+    if st.button("Load defaults from feeds_config.py", use_container_width=True):
+        if not selected_brand:
+            st.error("No brand selected")
+        else:
+            feeds_from_code = load_feeds_from_code(brand=selected_brand)
+            brands = _get_brands(config)
+            brands.setdefault(selected_brand, {})
+            if isinstance(brands.get(selected_brand), dict):
+                brands[selected_brand]["feeds"] = feeds_from_code
+            config["brands"] = brands
+            if selected_brand == str(config.get("active_brand") or "").strip():
+                _sync_active_brand_into_runtime(config)
+            save_config(config)
+            st.success(f"Loaded {len(feeds_from_code)} default feeds for '{selected_brand}'")
+            _rerun()
 
 
 # ------------- Platform Status -------------

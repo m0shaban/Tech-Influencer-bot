@@ -9,7 +9,7 @@ import feedparser
 import requests
 from bs4 import BeautifulSoup
 
-from feeds_config import RSS_FEEDS
+from feeds_config import RSS_FEEDS, get_feeds_for_brand
 
 BASE_DIR = Path(__file__).resolve().parent
 SEEN_POSTS_PATH = BASE_DIR / "data" / "seen_posts.json"
@@ -110,30 +110,56 @@ def _write_seen_posts(seen: set[str]) -> None:
     SEEN_POSTS_PATH.write_text(json.dumps(sorted(seen)), encoding="utf-8")
 
 
-def _load_feeds_from_config() -> list[str]:
+def _load_feeds_from_config(*, brand: str | None = None) -> list[str]:
     try:
         if not CONFIG_PATH.exists():
             return []
         data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
             return []
+
+        brand_key = (brand or data.get("active_brand") or "").strip()
+
+        # 1) Brand feeds (preferred)
+        if brand_key:
+            brands = data.get("brands") if isinstance(data.get("brands"), dict) else {}
+            brand_cfg = brands.get(brand_key) if isinstance(brands, dict) else None
+            feeds = brand_cfg.get("feeds") if isinstance(brand_cfg, dict) else None
+            if isinstance(feeds, list) and feeds:
+                cleaned: list[str] = []
+                for item in feeds:
+                    if not isinstance(item, str):
+                        continue
+                    url = item.strip()
+                    if url:
+                        cleaned.append(url)
+                return cleaned
+
+        # 2) Backward-compatible: top-level feeds
         feeds = data.get("feeds")
-        if not isinstance(feeds, list):
-            return []
-        cleaned: list[str] = []
-        for item in feeds:
-            if not isinstance(item, str):
-                continue
-            url = item.strip()
-            if url:
-                cleaned.append(url)
-        return cleaned
+        if isinstance(feeds, list) and feeds:
+            cleaned2: list[str] = []
+            for item in feeds:
+                if not isinstance(item, str):
+                    continue
+                url = item.strip()
+                if url:
+                    cleaned2.append(url)
+            return cleaned2
+
+        # 3) Code defaults: per-brand feeds (if known)
+        if brand_key:
+            defaults = get_feeds_for_brand(brand_key)
+            if defaults:
+                return list(defaults)
+
+        return []
     except Exception:
         return []
 
 
-def fetch_random_new_post() -> Optional[Dict[str, Any]]:
-    feeds = _load_feeds_from_config() or list(RSS_FEEDS)
+def fetch_random_new_post(*, brand: str | None = None) -> Optional[Dict[str, Any]]:
+    feeds = _load_feeds_from_config(brand=brand) or list(RSS_FEEDS)
     random.shuffle(feeds)
     seen = _read_seen_posts()
 
@@ -161,7 +187,7 @@ def fetch_random_new_post() -> Optional[Dict[str, Any]]:
             seen.add(link)
             _write_seen_posts(seen)
 
-            title = latest.get("title", "")
+            title = str(latest.get("title", "") or "")
             image_url = _extract_image(latest)
 
             # Use advanced image strategy if no image found

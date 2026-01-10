@@ -33,9 +33,13 @@ PLATFORM_DELAY_SECONDS = 5
 class MultiPlatformPublisher:
     """Publish content to multiple platforms from a single interface"""
 
-    def __init__(self, use_scheduler: bool = False):
+    def __init__(self, use_scheduler: bool = False, *, brand_key: Optional[str] = None):
         # use_scheduler is ignored - we always publish immediately now
-        self.active_brand = get_active_brand()
+        self.active_brand_key = (brand_key or "").strip() or None
+        if self.active_brand_key:
+            self.active_brand = self._load_brand_by_key(self.active_brand_key)
+        else:
+            self.active_brand = get_active_brand()
         self.enabled_platforms = self._get_enabled_platforms()
         self.reporter = None
 
@@ -45,6 +49,24 @@ class MultiPlatformPublisher:
             self.reporter = get_reporter()
         except Exception as e:
             print(f"Failed to initialize reporter: {e}")
+
+    def _load_brand_by_key(self, brand_key: str) -> Dict[str, Any]:
+        """Load a brand config dict from config.json by key."""
+        try:
+            import json
+            from pathlib import Path
+
+            cfg_path = Path(__file__).parent / "config.json"
+            if not cfg_path.exists():
+                return {}
+            cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+            if not isinstance(cfg, dict):
+                return {}
+            brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+            brand = brands.get(brand_key) if isinstance(brands, dict) else None
+            return brand if isinstance(brand, dict) else {}
+        except Exception:
+            return {}
 
     def _get_enabled_platforms(self) -> list[PlatformType]:
         """Detect which platforms are configured"""
@@ -69,7 +91,10 @@ class MultiPlatformPublisher:
             if cfg_path.exists():
                 cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
                 if isinstance(cfg, dict):
-                    active_key = str(cfg.get("active_brand") or "").strip()
+                    active_key = (
+                        str(self.active_brand_key or "").strip()
+                        or str(cfg.get("active_brand") or "").strip()
+                    )
                     brands = (
                         cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
                     )
@@ -183,6 +208,87 @@ class MultiPlatformPublisher:
             platforms.append("devto")
 
         return platforms
+
+    # ---- Public per-platform wrappers (used by SequentialPublisher) ----
+
+    async def publish_to_telegram(
+        self,
+        *,
+        channel_id: str,
+        message: str,
+        telegram_context: Optional[Any] = None,
+        image_url: Optional[str] = None,
+        cta_buttons: Optional[Any] = None,
+    ) -> Dict[str, Any]:
+        return await self._publish_telegram(
+            caption=message,
+            link=None,
+            image_url=image_url,
+            context=telegram_context,
+            cta_buttons=cta_buttons,
+            channel_id_override=str(channel_id or "").strip() or None,
+        )
+
+    async def publish_to_facebook(
+        self,
+        *,
+        message: str,
+        link: Optional[str] = None,
+        image_url: Optional[str] = None,
+        image_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        return self._publish_facebook(
+            message,
+            link,
+            image_url,
+            image_path=image_path,
+        )
+
+    async def publish_to_discord(
+        self,
+        *,
+        message: str,
+        link: Optional[str] = None,
+        image_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        return self._publish_discord(message, link, image_url)
+
+    async def publish_to_blogger(
+        self,
+        *,
+        title: str,
+        content: str,
+        image_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        return self._publish_blogger(
+            content,
+            link=None,
+            image_url=image_url,
+            title_override=str(title or "").strip() or None,
+        )
+
+    async def publish_to_devto(
+        self,
+        *,
+        title: str,
+        content: str,
+        image_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        return self._publish_devto(
+            content,
+            link=None,
+            image_url=image_url,
+            title_override=str(title or "").strip() or None,
+        )
+
+    async def publish_to_linkedin(
+        self,
+        *,
+        message: str,
+        link: Optional[str] = None,
+        image_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        return self._publish_linkedin(message, link, image_url)
 
     async def publish(
         self,
