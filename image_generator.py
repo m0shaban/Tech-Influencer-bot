@@ -86,7 +86,7 @@ class ArabicFontManager:
                 font = ImageFont.truetype(str(path), size)
                 if ArabicFontManager._picked_name != name:
                     ArabicFontManager._picked_name = name
-                    print(f"✅ Using Arabic font: {name}")
+                    print(f"Using Arabic font: {name}")
                 return font
             except Exception:
                 return None
@@ -111,7 +111,7 @@ class ArabicFontManager:
                 ArabicFontManager._cache[cache_key] = font
                 return font
 
-        print("⚠️ Using default font (consider adding fonts into ./fonts)")
+        print("Using default font (consider adding fonts into ./fonts)")
         font = ImageFont.load_default()
         ArabicFontManager._cache[cache_key] = font
         return font
@@ -272,7 +272,7 @@ class EmojiFontManager:
                 font = ImageFont.truetype(str(p), size)
                 if EmojiFontManager._picked != name:
                     EmojiFontManager._picked = name
-                    print(f"✅ Using emoji font: {name}")
+                    print(f"Using emoji font: {name}")
                 EmojiFontManager._cache[size] = font
                 return font
             except Exception:
@@ -667,9 +667,9 @@ class OGImageGenerator:
         ]
 
         if self.backgrounds:
-            print(f"✅ Loaded {len(self.backgrounds)} background images")
+            print(f"Loaded {len(self.backgrounds)} background images")
         else:
-            print("⚠️ No background images found")
+            print("No background images found")
 
     def _load_backgrounds(self) -> list:
         """Load available background images"""
@@ -700,7 +700,7 @@ class OGImageGenerator:
             template_class = random.choice(self.templates)
             template = template_class(seed=secrets.randbelow(1_000_000_000))
 
-            print(f"🎨 Design: {template_class.__name__}")
+            print(f"Design: {template_class.__name__}")
 
             # Create image
             image = template.create_image(headline, bg_path)
@@ -719,13 +719,13 @@ class OGImageGenerator:
 
                 public_url = upload_image_if_configured(str(output_path), filename)
                 if public_url:
-                    print("✅ Image uploaded successfully")
+                    print("Image uploaded successfully")
                 else:
                     print(
-                        "⚠️ Image upload returned None (not configured or failed silently)"
+                        "Image upload returned None (not configured or failed silently)"
                     )
             except Exception as exc:
-                print(f"❌ Image upload failed with exception: {exc}")
+                print(f"Image upload failed with exception: {exc}")
                 import traceback
 
                 traceback.print_exc()
@@ -735,16 +735,16 @@ class OGImageGenerator:
                 base_url = os.getenv("IMAGE_BASE_URL", "").rstrip("/")
                 public_url = f"{base_url}/og/{filename}" if base_url else None
                 if public_url:
-                    print(f"⚠️ Using IMAGE_BASE_URL fallback: {public_url}")
+                    print(f"Using IMAGE_BASE_URL fallback: {public_url}")
 
-            print(f"✅ Generated: {output_path}")
+            print(f"Generated: {output_path}")
             if public_url:
-                print(f"🌐 Public URL: {public_url}")
+                print(f"Public URL: {public_url}")
 
             return {"local_path": str(output_path), "public_url": public_url}
 
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f"Error: {e}")
             import traceback
 
             traceback.print_exc()
@@ -762,7 +762,7 @@ class ImageFetcher:
             if response.status_code == 200:
                 return response.content
         except Exception as e:
-            print(f"⚠️ Failed to fetch image: {e}")
+            print(f"Failed to fetch image: {e}")
         return None
 
 
@@ -788,7 +788,7 @@ class ImageStrategy:
 
         # Strategy 1: Extract from article HTML (if URL provided)
         if article_url:
-            print(f"🖼️ Strategy 1: Extracting image from article...")
+            print(f"Strategy 1: Extracting image from article...")
             try:
                 from feed_manager import extract_image_from_html
                 import requests as req
@@ -796,14 +796,14 @@ class ImageStrategy:
                 response = req.get(article_url, timeout=10)
                 image_url = extract_image_from_html(response.text)
                 if image_url:
-                    print(f"✅ Found image in article: {image_url[:60]}...")
+                    print(f"Found image in article: {image_url[:60]}...")
                     return {"local_path": image_url, "public_url": image_url}
             except Exception as e:
-                print(f"⚠️ Article extraction failed: {e}")
+                print(f"Article extraction failed: {e}")
 
         # Strategy 2: OG Image (always available as fallback)
         if fallback_to_og:
-            print("🎨 Strategy 2: Generating OG Image...")
+            print("Strategy 2: Generating OG Image...")
             image_result = self.og_generator.generate_og_image(headline)
             if image_result and image_result.get("local_path"):
                 return image_result
@@ -838,7 +838,7 @@ def get_article_image(
 
 # Test function
 if __name__ == "__main__":
-    print("🎨 Advanced Image Generator Test\n")
+    print("Advanced Image Generator Test\n")
 
     gen = get_image_strategy()
 
@@ -851,9 +851,9 @@ if __name__ == "__main__":
     ]
 
     for headline in test_headlines:
-        print(f"\n📝 {headline[:50]}...")
+        print(f"\n {headline[:50]}...")
         image_path = gen.get_image(headline, fallback_to_og=True)
         if image_path:
-            print(f"✅ Generated!")
+            print(f"Generated!")
         else:
-            print(f"❌ Failed")
+            print(f"Failed")

@@ -48,4 +48,7 @@ def keep_alive():
     """Start the web server in a background thread"""
     t = Thread(target=run, daemon=True)
     t.start()
-    print(f"✅ Keep-alive server started on port {os.getenv('PORT', 8080)}")
+    try:
+        print(f"✅ Keep-alive server started on port {os.getenv('PORT', 8080)}")
+    except UnicodeEncodeError:
+        print(f"Keep-alive server started on port {os.getenv('PORT', 8080)}")

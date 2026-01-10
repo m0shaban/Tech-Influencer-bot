@@ -204,7 +204,10 @@ def fetch_random_new_post(*, brand: str | None = None) -> Optional[Dict[str, Any
                         )
                         image_local_path = image_result.get("local_path")
                 except Exception as e:
-                    print(f"⚠️ Image generation failed: {e}")
+                    try:
+                        print(f"Image generation failed: {e}")
+                    except Exception:
+                        pass
 
             return {
                 "title": title,

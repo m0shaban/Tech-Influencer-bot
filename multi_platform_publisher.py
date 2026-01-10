@@ -29,7 +29,9 @@ PlatformType = Literal[
 
 # Delay between platform publishes to prevent rate limiting (keep small; configurable)
 try:
-    PLATFORM_DELAY_SECONDS = max(0, int(os.getenv("PLATFORM_DELAY_SECONDS", "1") or "1"))
+    PLATFORM_DELAY_SECONDS = max(
+        0, int(os.getenv("PLATFORM_DELAY_SECONDS", "1") or "1")
+    )
 except Exception:
     PLATFORM_DELAY_SECONDS = 1
 
@@ -114,7 +116,7 @@ class MultiPlatformPublisher:
                             if isinstance(v, dict) and "enabled" in v:
                                 config_enabled[k] = bool(v.get("enabled"))
         except Exception as e:
-            print(f"⚠️ Failed to load platform_config.json: {e}")
+            print(f"Failed to load platform_config.json: {e}")
 
         def is_enabled(name):
             # Default to True if not in config, otherwise use config value

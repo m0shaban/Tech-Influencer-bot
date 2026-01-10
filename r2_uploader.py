@@ -93,7 +93,7 @@ def upload_file_to_r2(
     endpoint = _env_any("R2_ENDPOINT_URL", "STORJ_ENDPOINT_URL")
     bucket = _env_any("R2_BUCKET", "STORJ_BUCKET")
 
-    print(f"📤 Uploading to S3: {endpoint}/{bucket}/{key}")
+    print(f"Uploading to S3: {endpoint}/{bucket}/{key}")
 
     session = Session(
         aws_access_key_id=access_key,
@@ -129,14 +129,14 @@ def upload_file_to_r2(
         s3.upload_file(
             str(file_path), bucket, key, ExtraArgs=extra_args if extra_args else None
         )
-        print(f"✅ Upload successful: {key}")
+        print(f"Upload successful: {key}")
     except Exception as e:
-        print(f"❌ Upload failed: {e}")
+        print(f"Upload failed: {e}")
         raise
 
     public_base = _env_any("R2_PUBLIC_BASE_URL", "STORJ_PUBLIC_BASE_URL").rstrip("/")
     public_url = f"{public_base}/{key.lstrip('/')}"
-    print(f"🌐 Public URL: {public_url}")
+    print(f"Public URL: {public_url}")
     return public_url
 
 
@@ -146,10 +146,10 @@ def upload_image_if_configured(local_path: str, filename: str) -> Optional[str]:
     if imgbb_is_configured():
         try:
             url = upload_file_to_imgbb(local_path)
-            print(f"✅ ImgBB upload successful: {url[:60]}...")
+            print(f"ImgBB upload successful: {url[:60]}...")
             return url
         except Exception as e:
-            print(f"⚠️ ImgBB upload failed: {e}")
+            print(f"ImgBB upload failed: {e}")
 
     # Fallback: R2/Storj (S3-compatible)
     if not r2_is_configured():

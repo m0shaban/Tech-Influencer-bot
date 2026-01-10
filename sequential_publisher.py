@@ -67,14 +67,14 @@ class SequentialPublisher:
         # Get brand config
         brand_config = self.brands.get(brand_name)
         if not brand_config:
-            print(f"❌ Brand {brand_name} not found in config")
+            print(f"Brand {brand_name} not found in config")
             self.last_errors.append({"platform": "config", "error": "brand not found"})
             return {}
 
         # Get enabled platforms
         enabled_platforms = self._get_enabled_platforms(brand_config)
         if not enabled_platforms:
-            print(f"⚠️ No enabled platforms for {brand_name}")
+            print(f"No enabled platforms for {brand_name}")
             self.last_errors.append(
                 {"platform": "config", "error": "no enabled platforms"}
             )
@@ -83,7 +83,7 @@ class SequentialPublisher:
         # Get publishing order with delays
         publishing_order = get_publishing_order(brand_name, enabled_platforms)
         if not publishing_order:
-            print(f"⚠️ No publishing order defined for {brand_name}")
+            print(f"No publishing order defined for {brand_name}")
             self.last_errors.append(
                 {"platform": "config", "error": "no publishing order"}
             )
@@ -119,11 +119,14 @@ class SequentialPublisher:
         add_cross_pollination = should_cross_pollinate(self.post_count[brand_name])
 
         print(f"\n{'='*60}")
-        print(f"📢 Publishing for {brand_config.get('display_name', brand_name)}")
-        print(f"📝 Title: {feed_item.get('title', 'Untitled')[:80]}...")
-        print(f"🌐 Language: {brand_language}")
+        print(f"Publishing for {brand_config.get('display_name', brand_name)}")
+        try:
+            print(f"Title: {feed_item.get('title', 'Untitled')[:80]}...")
+        except UnicodeEncodeError:
+            print("Title: (title contains unicode characters)")
+        print(f"Language: {brand_language}")
         print(
-            f"📱 Platforms: {len(publishing_order)} ({', '.join([p['platform'] for p in publishing_order])})"
+            f"Platforms: {len(publishing_order)} ({', '.join([p['platform'] for p in publishing_order])})"
         )
         print(f"{'='*60}\n")
 
@@ -136,14 +139,14 @@ class SequentialPublisher:
             # Wait for delay (skip for first platform)
             if (not fast_mode) and delay_minutes > 0 and idx > 1:
                 print(
-                    f"⏳ Waiting {delay_minutes} minutes before publishing to {platform}..."
+                    f"Waiting {delay_minutes} minutes before publishing to {platform}..."
                 )
                 await asyncio.sleep(delay_minutes * 60)
 
             try:
                 # Generate platform-specific content
                 print(
-                    f"\n[{idx}/{len(publishing_order)}] 🤖 Generating content for {platform}..."
+                    f"\n[{idx}/{len(publishing_order)}] Generating content for {platform}..."
                 )
 
                 content_data = rewrite_with_ai(
@@ -157,7 +160,7 @@ class SequentialPublisher:
                 )
 
                 if not content_data:
-                    print(f"⚠️ Content generation failed for {platform} — using fallback")
+                    print(f"Content generation failed for {platform} — using fallback")
                     content_data = {}
 
                 # Get platform-specific content field
@@ -175,7 +178,7 @@ class SequentialPublisher:
                 # Inject CTAs if enabled and we have URLs
                 if enable_cta and any(v for v in published_urls.values()):
                     print(
-                        f"🔗 Injecting CTAs from {len(published_urls)} previous platforms..."
+                        f"Injecting CTAs from {len(published_urls)} previous platforms..."
                     )
                     content = inject_ctas(content, platform, brand_name, published_urls)
 
@@ -185,7 +188,7 @@ class SequentialPublisher:
                 ):  # Only on last platform
                     cross_snippet = get_cross_pollination_snippet(brand_name)
                     if cross_snippet:
-                        print(f"🌐 Adding cross-brand reference...")
+                        print(f"Adding cross-brand reference...")
                         content += f"\n\n{cross_snippet}"
 
                 # Build CTA buttons (Telegram only; URLs are not embedded in body by design)
@@ -198,7 +201,9 @@ class SequentialPublisher:
                     if enable_cta and published_urls:
                         if brand_name == "zerodev" and published_urls.get("devto"):
                             preferred_url = published_urls.get("devto")
-                        elif brand_name == "robovai_ar" and published_urls.get("blogger"):
+                        elif brand_name == "robovai_ar" and published_urls.get(
+                            "blogger"
+                        ):
                             preferred_url = published_urls.get("blogger")
                         else:
                             # First non-empty URL
@@ -216,7 +221,7 @@ class SequentialPublisher:
                         cta_buttons = [{"text": btn_text, "url": url_for_button}]
 
                 # Publish to platform
-                print(f"📤 Publishing to {platform}...")
+                print(f"Publishing to {platform}...")
                 result = await self._publish_to_platform(
                     platform=platform,
                     content=content,
@@ -230,13 +235,17 @@ class SequentialPublisher:
                 )
 
                 if result:
-                    url = str(result.get("url") or "").strip() if isinstance(result, dict) else ""
+                    url = (
+                        str(result.get("url") or "").strip()
+                        if isinstance(result, dict)
+                        else ""
+                    )
                     published_platforms[platform] = url or "ok"
                     if url:
                         published_urls[platform] = url
-                        print(f"✅ {platform.upper()}: {url}")
+                        print(f"{platform.upper()}: {url}")
                     else:
-                        print(f"✅ {platform.upper()}: published")
+                        print(f"{platform.upper()}: published")
                     if reporter:
                         try:
                             await reporter.report_platform_success(
@@ -246,7 +255,7 @@ class SequentialPublisher:
                         except Exception:
                             pass
                 else:
-                    print(f"❌ {platform}: publish returned no result")
+                    print(f"{platform}: publish returned no result")
                     self.last_errors.append(
                         {"platform": platform, "error": "publish returned no result"}
                     )
@@ -264,10 +273,7 @@ class SequentialPublisher:
                     try:
                         inter_delay = max(
                             0,
-                            int(
-                                os.getenv("INTER_PLATFORM_DELAY_SECONDS", "1")
-                                or "1"
-                            ),
+                            int(os.getenv("INTER_PLATFORM_DELAY_SECONDS", "1") or "1"),
                         )
                     except Exception:
                         inter_delay = 1
@@ -275,7 +281,7 @@ class SequentialPublisher:
                         await asyncio.sleep(inter_delay)
 
             except Exception as e:
-                print(f"❌ Error publishing to {platform}: {e}")
+                print(f"Error publishing to {platform}: {e}")
                 self.last_errors.append({"platform": platform, "error": str(e)})
                 if reporter:
                     try:
@@ -288,11 +294,9 @@ class SequentialPublisher:
                 continue
 
         print(f"\n{'='*60}")
+        print(f"Publishing complete for {brand_config.get('display_name', brand_name)}")
         print(
-            f"✅ Publishing complete for {brand_config.get('display_name', brand_name)}"
-        )
-        print(
-            f"📊 Published to {len(published_platforms)}/{len(publishing_order)} platforms"
+            f"Published to {len(published_platforms)}/{len(publishing_order)} platforms"
         )
         print(f"{'='*60}\n")
 
@@ -455,7 +459,9 @@ class SequentialPublisher:
             cta_buttons=cta_buttons,
         )
 
-        if isinstance(result, dict) and (result.get("status") == "success" or result.get("success")):
+        if isinstance(result, dict) and (
+            result.get("status") == "success" or result.get("success")
+        ):
             return {"url": ""}
         return None
 
@@ -471,9 +477,18 @@ class SequentialPublisher:
 
         if result:
             # Extract post URL if available
-            post_id = result.get("id", "")
-            if post_id:
-                return {"url": f"https://facebook.com/{post_id}"}
+            if result.get("success"):
+                post_id = result.get("post_id") or result.get("id")
+                url = result.get("url")
+                if url:
+                    return {"url": url}
+                if post_id:
+                    return {"url": f"https://facebook.com/{post_id}"}
+                return {"url": "https://facebook.com"}
+
+            # If not success, logged error might have happened
+            if result.get("error") or not result.get("success"):
+                print(f"Facebook publish failed: {result}")
         return None
 
     async def _publish_discord(

@@ -607,6 +607,7 @@ CRITICAL RULES:
     )
 
     try:
+
         def _call_ai(prompt: str) -> Optional[str]:
             return ai_manager.generate_content(
                 platform=platform,

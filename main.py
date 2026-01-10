@@ -38,7 +38,7 @@ try:
 
     keep_alive()
 except ImportError:
-    print("⚠️ keep_alive not available (OK for local dev)")
+    print("Warning: keep_alive not available (OK for local dev)")
 
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_DIR / "config.json"
@@ -481,7 +481,7 @@ def _start_brand_bots() -> None:
         "yes",
         "on",
     }:
-        print("ℹ️ Brand bots are disabled (set ENABLE_BRAND_BOTS=1 to enable)")
+        print("Brand bots are disabled (set ENABLE_BRAND_BOTS=1 to enable)")
         return
 
     try:
@@ -492,7 +492,7 @@ def _start_brand_bots() -> None:
         cfg = _load_config()
         brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
         if not isinstance(brands, dict) or not brands:
-            print("ℹ️ No brands configured; skipping brand bots")
+            print("No brands configured; skipping brand bots")
             return
 
         for brand_key, brand_cfg in brands.items():
@@ -709,14 +709,17 @@ def _start_brand_bots() -> None:
                         )
                     )
 
-                    print(f"🤖 Starting brand bot polling: {bk}")
+                    try:
+                        print(f"Starting brand bot polling: {bk}")
+                    except UnicodeEncodeError:
+                        pass
                     # IMPORTANT: Brand bots run in background threads (supervisor bot is in main thread).
                     # On Linux (Render), registering signal handlers from a non-main thread crashes with:
                     # "set_wakeup_fd only works in main thread".
                     # Disabling stop_signals avoids signal registration inside the thread.
                     app_b.run_polling(drop_pending_updates=True, stop_signals=None)
                 except Exception:
-                    print(f"❌ Brand bot failed: {bk}")
+                    print(f"Brand bot failed: {bk}")
                     traceback.print_exc()
 
             th = threading.Thread(target=_runner, args=(brand_key, token), daemon=True)
@@ -724,7 +727,7 @@ def _start_brand_bots() -> None:
     except Exception:
         import traceback
 
-        print("❌ Failed to start brand bots")
+        print("Failed to start brand bots")
         traceback.print_exc()
 
 
@@ -1400,7 +1403,9 @@ async def fetch_and_publish(
                     "status": "published",
                     "title": str(post.get("title", "") or "").strip(),
                     "brand": brand_key,
-                    "platforms": list(published.keys()) if isinstance(published, dict) else [],
+                    "platforms": (
+                        list(published.keys()) if isinstance(published, dict) else []
+                    ),
                 }
             # Provide a more actionable error for ops
             enabled_runtime = []
@@ -1777,10 +1782,14 @@ async def admin_force_fetch(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             platforms = result.get("platforms")
             platforms_txt = ""
             if isinstance(platforms, list) and platforms:
-                platforms_txt = "\n" + "📤 Platforms: " + ", ".join(
-                    [str(p) for p in platforms if str(p).strip()]
+                platforms_txt = (
+                    "\n"
+                    + "📤 Platforms: "
+                    + ", ".join([str(p) for p in platforms if str(p).strip()])
                 )
-            await msg.edit_text(f"✅ تم النشر!\n🏷️ Brand: {brand}\n📝 {title}{platforms_txt}")
+            await msg.edit_text(
+                f"✅ تم النشر!\n🏷️ Brand: {brand}\n📝 {title}{platforms_txt}"
+            )
             return
         if status == "no_news":
             await msg.edit_text("⚠️ مفيش أخبار جديدة. (Evergreen logic skipped for now)")
@@ -2242,15 +2251,22 @@ async def post_init(app: Application) -> None:
     """Initialize bot after startup - clean webhooks and set commands"""
     # Force delete webhook and clear any pending updates to avoid conflicts
     try:
-        print("🔧 Cleaning up old webhooks and pending updates...")
+        try:
+            print("🔧 Cleaning up old webhooks and pending updates...")
+        except UnicodeEncodeError:
+            print("Cleaning up old webhooks and pending updates...")
+
         await app.bot.delete_webhook(drop_pending_updates=True)
         # Give Telegram API time to process
         import asyncio
 
         await asyncio.sleep(1)
-        print("✅ Webhooks cleaned successfully")
+        try:
+            print("✅ Webhooks cleaned successfully")
+        except UnicodeEncodeError:
+            print("Webhooks cleaned successfully")
     except Exception as e:
-        print(f"⚠️ Warning during webhook cleanup: {e}")
+        print(f"Warning during webhook cleanup: {e}")
 
     # Set bot commands
     await app.bot.set_my_commands(
@@ -2263,7 +2279,11 @@ async def post_init(app: Application) -> None:
     )
 
     # Start Auto Publisher (smart pacing with business hours)
-    print("🚀 Starting Auto Publisher...")
+    try:
+        print("Starting Auto Publisher...")
+    except UnicodeEncodeError:
+        pass
+
     try:
         from auto_publisher import get_auto_publisher
         import asyncio
@@ -2283,15 +2303,18 @@ async def post_init(app: Application) -> None:
 
         # Start auto publishing in background
         asyncio.create_task(auto_pub.run(publish_wrapper, ctx))
-        print("✅ Auto Publisher started successfully")
+        try:
+            print("Auto Publisher started successfully")
+        except UnicodeEncodeError:
+            pass
     except Exception as e:
-        print(f"⚠️ Failed to start Auto Publisher: {e}")
+        print(f"Failed to start Auto Publisher: {e}")
 
     # Start per-brand bots (optional)
     try:
         _start_brand_bots()
     except Exception as e:
-        print(f"⚠️ Failed to start brand bots: {e}")
+        print(f"Failed to start brand bots: {e}")
 
 
 def main() -> None:
@@ -2381,7 +2404,10 @@ def main() -> None:
     )
     app.add_handler(broadcast_conv)
 
-    print("🚀 RoboVAI Bot running. Press Ctrl+C to stop.")
+    try:
+        print("🚀 RoboVAI Bot running. Press Ctrl+C to stop.")
+    except UnicodeEncodeError:
+        print("RoboVAI Bot running. Press Ctrl+C to stop.")
     app.run_polling(drop_pending_updates=True)
 
 

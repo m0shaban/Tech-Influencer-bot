@@ -180,7 +180,7 @@ class AutoPublisher:
         if self.last_post_date is None or self.last_post_date.date() != now.date():
             self.posts_today = 0
             self.last_post_date = now
-            print(f"📅 New day started - reset counter ({now.strftime('%Y-%m-%d')})")
+            print(f"New day started - reset counter ({now.strftime('%Y-%m-%d')})")
 
     def _can_post(self) -> bool:
         """Check if we can post (within limits)"""
@@ -190,7 +190,7 @@ class AutoPublisher:
     async def _do_publish(self) -> bool:
         """Execute one publish cycle"""
         if self.publish_callback is None or self.context is None:
-            print("❌ Publish callback or context not set")
+            print("Publish callback or context not set")
             return False
 
         try:
@@ -200,18 +200,18 @@ class AutoPublisher:
                 self.posts_today += 1
                 self.last_post_date = self._get_cairo_now()
                 self._save_state()
-                print(f"✅ Published successfully! (Post #{self.posts_today} today)")
+                print(f"Published successfully! (Post #{self.posts_today} today)")
                 return True
             elif result.get("status") in {"no_news", "sleeping"}:
-                print("📭 No new content available")
+                print("No new content available")
                 return True  # Not an error, just no content
             else:
                 error = result.get("error", "Unknown error")
-                print(f"⚠️ Publish failed: {error}")
+                print(f"Publish failed: {error}")
                 return False
 
         except Exception as e:
-            print(f"❌ Error during publish: {e}")
+            print(f"Error during publish: {e}")
             return False
 
     async def run(self, publish_callback: Callable, context: Any) -> None:
@@ -226,17 +226,27 @@ class AutoPublisher:
         self.context = context
         self.is_running = True
 
-        print("🚀 Auto Publisher started")
+        print("Auto Publisher started")
         if IGNORE_BUSINESS_HOURS:
-            print(
-                "⏰ Business hours: DISABLED (AUTO_PUBLISH_IGNORE_HOURS=1) — running 24/7"
-            )
+            try:
+                print(
+                    "Business hours: DISABLED (AUTO_PUBLISH_IGNORE_HOURS=1) — running 24/7"
+                )
+            except UnicodeEncodeError:
+                print(
+                    "Business hours: DISABLED (AUTO_PUBLISH_IGNORE_HOURS=1) -- running 24/7"
+                )
         else:
-            print(
-                f"⏰ Business hours: {BUSINESS_START.strftime('%H:%M')} - {BUSINESS_END.strftime('%H:%M')} (Cairo)"
-            )
-        print(f"📊 Max posts/day: {MAX_POSTS_PER_DAY}")
-        print(f"⏱️ Interval: {MIN_INTERVAL//60}-{MAX_INTERVAL//60} minutes")
+            try:
+                print(
+                    f"Business hours: {BUSINESS_START.strftime('%H:%M')} - {BUSINESS_END.strftime('%H:%M')} (Cairo)"
+                )
+            except UnicodeEncodeError:
+                print(
+                    f"Business hours: {BUSINESS_START.strftime('%H:%M')} - {BUSINESS_END.strftime('%H:%M')} (Cairo)"
+                )
+        print(f"Max posts/day: {MAX_POSTS_PER_DAY}")
+        print(f"Interval: {MIN_INTERVAL//60}-{MAX_INTERVAL//60} minutes")
 
         while self.is_running:
             try:
@@ -246,16 +256,16 @@ class AutoPublisher:
                     wait_hours = wait_seconds / 3600
                     cairo_now = self._get_cairo_now()
                     print(
-                        f"😴 Outside business hours ({cairo_now.strftime('%H:%M')} Cairo)"
+                        f"Outside business hours ({cairo_now.strftime('%H:%M')} Cairo)"
                     )
-                    print(f"💤 Sleeping for {wait_hours:.1f} hours until 9:00 AM...")
+                    print(f"Sleeping for {wait_hours:.1f} hours until 9:00 AM...")
                     self._save_state(next_run_seconds=wait_seconds)
                     await asyncio.sleep(wait_seconds)
                     continue
 
                 # Check daily limit
                 if not self._can_post():
-                    print(f"🛑 Daily limit reached ({MAX_POSTS_PER_DAY} posts)")
+                    print(f"Daily limit reached ({MAX_POSTS_PER_DAY} posts)")
                     # Sleep until next day's business hours
                     wait_seconds = self._seconds_until_business_hours()
                     self._save_state(next_run_seconds=wait_seconds)
@@ -265,7 +275,7 @@ class AutoPublisher:
                 # Do publish
                 cairo_now = self._get_cairo_now()
                 print(
-                    f"\n🔄 Starting publish cycle at {cairo_now.strftime('%H:%M:%S')} Cairo"
+                    f"\nStarting publish cycle at {cairo_now.strftime('%H:%M:%S')} Cairo"
                 )
 
                 success = await self._do_publish()
@@ -280,21 +290,21 @@ class AutoPublisher:
                 next_time += timedelta(seconds=interval)
 
                 print(
-                    f"⏳ Next publish in {interval_minutes:.0f} minutes (at {next_time.strftime('%H:%M')})"
+                    f"Next publish in {interval_minutes:.0f} minutes (at {next_time.strftime('%H:%M')})"
                 )
                 self._save_state(next_run_seconds=interval)
 
                 await asyncio.sleep(interval)
 
             except asyncio.CancelledError:
-                print("🛑 Auto Publisher cancelled")
+                print("Auto Publisher cancelled")
                 break
             except Exception as e:
-                print(f"❌ Error in auto publisher loop: {e}")
+                print(f"Error in auto publisher loop: {e}")
                 # Wait 5 minutes before retrying on error
                 await asyncio.sleep(300)
 
-        print("🛑 Auto Publisher stopped")
+        print("Auto Publisher stopped")
 
     def stop(self) -> None:
         """Stop the auto publisher"""
