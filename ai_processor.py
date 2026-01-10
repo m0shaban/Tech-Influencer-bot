@@ -239,36 +239,36 @@ def _parse_json_response(content: str) -> Optional[Dict[str, Any]]:
         if not isinstance(parsed, dict):
             return None
         return parsed
-    
+
     def _robust_json_extract(text: str) -> Optional[Dict[str, Any]]:
         """Try multiple strategies to extract valid JSON from text."""
         # Strategy 1: Direct parse
         result = _try_parse(text)
         if result:
             return result
-        
+
         # Strategy 2: Find JSON object boundaries
         start = text.find("{")
         end = text.rfind("}")
         if start != -1 and end != -1 and end > start:
-            extracted = text[start:end + 1]
+            extracted = text[start : end + 1]
             result = _try_parse(extracted)
             if result:
                 return result
-            
+
             # Strategy 3: Escape control characters
             result = _try_parse(_escape_controls_inside_strings(extracted))
             if result:
                 return result
-        
+
         # Strategy 4: Try to fix common issues
         # Remove BOM and other invisible characters
-        cleaned_text = text.replace('\ufeff', '').replace('\x00', '')
+        cleaned_text = text.replace("\ufeff", "").replace("\x00", "")
         if cleaned_text != text:
             result = _try_parse(cleaned_text)
             if result:
                 return result
-        
+
         # Strategy 5: Replace problematic unicode
         try:
             # Fix curly quotes
@@ -279,7 +279,7 @@ def _parse_json_response(content: str) -> Optional[Dict[str, Any]]:
                 return result
         except Exception:
             pass
-        
+
         return None
 
     return _robust_json_extract(cleaned)
@@ -329,7 +329,7 @@ def _latin_ratio(text: str) -> float:
 # Phrases that indicate DIRECT copying from source (strict - both languages)
 _STRICT_BANNED_PHRASES = [
     "based on the article",
-    "according to the article", 
+    "according to the article",
     "the article states",
     "the article mentions",
     "as mentioned in the article",
@@ -358,22 +358,22 @@ _ARABIC_BANNED_PHRASES = [
 
 def _contains_banned_phrases(text: str, brand_language: str = "ar") -> bool:
     """Check for banned phrases based on brand language.
-    
+
     Args:
         text: Content to check
         brand_language: 'ar' for Arabic (stricter), 'en' for English (more lenient)
     """
     lowered = (text or "").lower()
-    
+
     # Always check strict phrases
     if any(p in lowered for p in _STRICT_BANNED_PHRASES):
         return True
-    
+
     # Check Arabic-specific phrases only for Arabic brands
     if brand_language == "ar":
         if any(p in lowered for p in _ARABIC_BANNED_PHRASES):
             return True
-    
+
     return False
 
 
@@ -400,9 +400,11 @@ def _strip_urls(text: str) -> str:
     return out
 
 
-def _normalize_ai_result(parsed: Dict[str, Any], *, link: str, brand_language: str = "ar") -> Dict[str, Any]:
+def _normalize_ai_result(
+    parsed: Dict[str, Any], *, link: str, brand_language: str = "ar"
+) -> Dict[str, Any]:
     """Normalize and validate AI output.
-    
+
     Args:
         parsed: Parsed JSON from AI
         link: Original article link
@@ -476,7 +478,9 @@ def _normalize_ai_result(parsed: Dict[str, Any], *, link: str, brand_language: s
         ]
     )
     if _contains_banned_phrases(joined, brand_language):
-        raise ValueError("Content contains banned phrases (copying from source detected)")
+        raise ValueError(
+            "Content contains banned phrases (copying from source detected)"
+        )
 
     # Language validation - only check for Arabic brands
     # English brands are EXPECTED to have high latin ratio
@@ -573,11 +577,14 @@ CRITICAL RULES:
 - Do NOT include any URLs or links in content
 - Do NOT reference "the article" or "the source"
 """
-    
+
     # Add JSON schema to system prompt if it doesn't already have JSON instructions
-    if '"telegram_post"' not in effective_system_prompt and '"blog_content_md"' not in effective_system_prompt:
+    if (
+        '"telegram_post"' not in effective_system_prompt
+        and '"blog_content_md"' not in effective_system_prompt
+    ):
         effective_system_prompt += json_schema_instructions
-    
+
     user_content = (
         f"Title: {title}\n"
         f"Summary: {summary}\n"

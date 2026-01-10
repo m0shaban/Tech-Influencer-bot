@@ -90,12 +90,15 @@ GROUP_URL = "https://t.me/nextlevelegyptt"
 
 
 SALES_COPY = (
-    "👋 أهلاً بيك في RoboVAI Solutions\n\n"
-    "إحنا بنبني حلول AI و Automation للشركات بشكل عملي وسريع.\n\n"
-    "🤖 شات بوت خدمة عملاء 24/7\n"
-    "⚙️ أتمتة شغل الشركة وتقليل التكاليف\n"
-    "📊 حلول بيانات وذكاء أعمال\n\n"
-    "لو مهتم—تابعنا وجرب بنفسك."
+    "🤖 مرحباً بك في **RoboVAI Solutions**\n"
+    "━━━━━━━━━━━━━━━━━━━━━\n\n"
+    "💡 **نحن نصنع الذكاء الاصطناعي للأعمال العربية**\n\n"
+    "✨ **خدماتنا:**\n"
+    "   🔹 شات بوتات ذكية 24/7\n"
+    "   🔹 أتمتة العمليات التجارية\n"
+    "   🔹 تحليل البيانات والتقارير الذكية\n"
+    "   🔹 محتوى تقني احترافي\n\n"
+    "📱 **تواصل معنا الآن لاستشارة مجانية!**"
 )
 
 
@@ -212,11 +215,11 @@ def get_admin_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         [
             ["⚡ Force Fetch", "📊 Stats"],
-            ["📢 Broadcast", "🛑 Status Toggle"],
-            ["📝 Edit Prompt", "📡 Feeds"],
-            ["📋 Logs", "ℹ️ System Info"],
-            ["🤖 Brands Status", "🌐 Platform Status"],
-            ["🧪 Test Platforms"],
+            ["🤖 Brands", "🌐 Platforms"],
+            ["📡 Feeds", "📝 Prompt"],
+            ["📢 Broadcast", "🧪 Test"],
+            ["📋 Logs", "ℹ️ Info"],
+            ["🛑 Toggle Status"],
         ],
         resize_keyboard=True,
         is_persistent=True,
@@ -257,21 +260,21 @@ def _get_brand_schedule(brand_key: str, brand_cfg: dict) -> dict:
         raw = {}
 
     tz = str(raw.get("timezone") or default_tz).strip() or default_tz
-    
+
     # Support both formats: wake_hour/sleep_hour (int) OR start/end (string "HH:MM")
     wake_hour = raw.get("wake_hour")
     sleep_hour = raw.get("sleep_hour")
-    
+
     if wake_hour is not None and isinstance(wake_hour, int):
         start = f"{wake_hour:02d}:00"
     else:
         start = _parse_hhmm(raw.get("start") or "", fallback=default_start)
-    
+
     if sleep_hour is not None and isinstance(sleep_hour, int):
         end = f"{sleep_hour:02d}:00"
     else:
         end = _parse_hhmm(raw.get("end") or "", fallback=default_end)
-    
+
     return {"timezone": tz, "start": start, "end": end}
 
 
@@ -378,9 +381,9 @@ def get_brand_keyboard() -> ReplyKeyboardMarkup:
     """Keyboard for brand-specific bots (admin-only)."""
     return ReplyKeyboardMarkup(
         [
-            ["⚡ Force Fetch", "📊 Stats"],
-            ["📡 Feeds", "🧪 Test Platforms"],
-            ["🌐 Platform Status", "ℹ️ System Info"],
+            ["⚡ Fetch", "📊 Stats"],
+            ["📡 Feeds", "🌐 Platforms"],
+            ["🧪 Test", "ℹ️ Info"],
             ["📋 Logs"],
         ],
         resize_keyboard=True,
@@ -516,9 +519,26 @@ def _start_brand_bots() -> None:
                         if not _is_admin(update):
                             await update.message.reply_text("❌ غير مصرح")
                             return
+                        
+                        # Get brand display name
+                        cfg = _load_config()
+                        brands = cfg.get("brands", {})
+                        brand_cfg = brands.get(bk, {})
+                        display_name = brand_cfg.get("display_name", bk)
+                        
+                        welcome_brand = (
+                            f"🎯 **{display_name}**\n"
+                            "═══════════════════════\n\n"
+                            "✅ **البوت جاهز للتشغيل**\n\n"
+                            "📊 استخدم القائمة للتحكم في العمليات:\n"
+                            "   ⚡ جلب محتوى جديد\n"
+                            "   📊 عرض الإحصائيات\n"
+                            "   🧪 اختبار المنصات\n"
+                        )
                         await update.message.reply_text(
-                            f"✅ {bk} bot ready.",
+                            welcome_brand,
                             reply_markup=get_brand_keyboard(),
+                            parse_mode="Markdown"
                         )
 
                     async def _brand_force_fetch(
@@ -642,7 +662,7 @@ def _start_brand_bots() -> None:
                     app_b.add_handler(
                         MessageHandler(
                             filters.User(user_id=ADMIN_USER_ID)
-                            & filters.Regex(r"^⚡ Force Fetch$"),
+                            & filters.Regex(r"^⚡ Fetch$"),
                             _brand_force_fetch,
                         )
                     )
@@ -663,21 +683,21 @@ def _start_brand_bots() -> None:
                     app_b.add_handler(
                         MessageHandler(
                             filters.User(user_id=ADMIN_USER_ID)
-                            & filters.Regex(r"^🧪 Test Platforms$"),
+                            & filters.Regex(r"^🧪 Test$"),
                             _brand_test_platforms,
                         )
                     )
                     app_b.add_handler(
                         MessageHandler(
                             filters.User(user_id=ADMIN_USER_ID)
-                            & filters.Regex(r"^🌐 Platform Status$"),
+                            & filters.Regex(r"^🌐 Platforms$"),
                             _brand_platform_status,
                         )
                     )
                     app_b.add_handler(
                         MessageHandler(
                             filters.User(user_id=ADMIN_USER_ID)
-                            & filters.Regex(r"^ℹ️ System Info$"),
+                            & filters.Regex(r"^ℹ️ Info$"),
                             _brand_system_info,
                         )
                     )
@@ -1683,15 +1703,26 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     if update.effective_user.id == ADMIN_USER_ID:
+        welcome_admin = (
+            "🎛️ **مرحباً يا هندسة!**\n"
+            "━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "✅ **غرفة التحكم جاهزة**\n\n"
+            "📊 جميع الأنظمة تعمل بكفاءة\n"
+            "🤖 البوتات متصلة ونشطة\n"
+            "⚡ جاهز لاستقبال الأوامر\n\n"
+            "استخدم القائمة أدناه للتحكم:"
+        )
         await update.message.reply_text(
-            "أهلاً يا هندسة! 🚀 غرفة التحكم جاهزة.",
+            welcome_admin,
             reply_markup=get_admin_keyboard(),
+            parse_mode="Markdown"
         )
         return
 
     await update.message.reply_text(
         SALES_COPY,
         reply_markup=get_sales_keyboard(),
+        parse_mode="Markdown"
     )
 
 
@@ -2289,12 +2320,12 @@ def main() -> None:
     )
     app.add_handler(
         MessageHandler(
-            admin_filter & filters.Regex(r"^🛑 Status Toggle$"), admin_status_toggle
+            admin_filter & filters.Regex(r"^🛑 Toggle Status$"), admin_status_toggle
         )
     )
     app.add_handler(
         MessageHandler(
-            admin_filter & filters.Regex(r"^📝 Edit Prompt$"), admin_view_prompt
+            admin_filter & filters.Regex(r"^📝 Prompt$"), admin_view_prompt
         )
     )
     app.add_handler(
@@ -2305,22 +2336,22 @@ def main() -> None:
     )
     app.add_handler(
         MessageHandler(
-            admin_filter & filters.Regex(r"^ℹ️ System Info$"), admin_system_info
+            admin_filter & filters.Regex(r"^ℹ️ Info$"), admin_system_info
         )
     )
     app.add_handler(
         MessageHandler(
-            admin_filter & filters.Regex(r"^🤖 Brands Status$"), admin_brands_status
+            admin_filter & filters.Regex(r"^🤖 Brands$"), admin_brands_status
         )
     )
     app.add_handler(
         MessageHandler(
-            admin_filter & filters.Regex(r"^🌐 Platform Status$"), admin_platform_status
+            admin_filter & filters.Regex(r"^🌐 Platforms$"), admin_platform_status
         )
     )
     app.add_handler(
         MessageHandler(
-            admin_filter & filters.Regex(r"^🧪 Test Platforms$"), admin_test_platforms
+            admin_filter & filters.Regex(r"^🧪 Test$"), admin_test_platforms
         )
     )
 

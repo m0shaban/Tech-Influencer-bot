@@ -22,11 +22,19 @@ BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_DIR / "config.json"
 LOG_PATH = BASE_DIR / "bot.log"
 
-WELCOME_LEAD = """👋 *أهلاً بك في RoboVAI Ecosystem*
+WELCOME_LEAD = """🌟 **مرحباً بك في RoboVAI Ecosystem**
 
-نحن نصمم حلولاً ذكية لأعمالك 💡
+نصمم حلولاً ذكية تعمل بالذكاء الاصطناعي 🤖
 
-*اختر من هنا:* ⬇️"""
+━━━━━━━━━━━━━━━━━━━
+
+✨ **خدماتنا:**
+   🔹 شات بوتات ذكية 24/7
+   🔹 أتمتة العمليات التجارية
+   🔹 تحليل البيانات الذكي
+   🔹 محتوى تقني احترافي
+
+اختر من الخيارات أدناه للبدء 👇"""
 
 SALES_COPY = """👋 أهلاً بك في RoboVAI Ecosystem
 

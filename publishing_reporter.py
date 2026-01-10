@@ -71,10 +71,11 @@ class PublishingReporter:
         )
 
         message = (
-            f"🚀 **بدء النشر**\n\n"
-            f"📊 **عدد المنصات:** {total_platforms}\n"
-            f"⏰ **الوقت:** {datetime.now().strftime('%H:%M:%S')}\n\n"
-            f"📝 **المحتوى:**\n{preview}"
+            "🚀 **بدء عملية النشر**\n"
+            "━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"🎯 **المنصات:** {total_platforms}\n"
+            f"⏱️ **الوقت:** {datetime.now().strftime('%H:%M:%S')}\n\n"
+            f"📝 **معاينة المحتوى:**\n`{preview}`"
         )
 
         await self.send_report(message)
@@ -85,12 +86,22 @@ class PublishingReporter:
         post_url: Optional[str] = None,
     ) -> None:
         """Report successful publishing to a platform"""
-        message = f"✅ **{platform.upper()}**\n"
+        platform_emojis = {
+            "telegram": "✉️",
+            "facebook": "🔵",
+            "discord": "🗣️",
+            "blogger": "✍️",
+            "devto": "💻",
+            "linkedin": "💼",
+        }
+        emoji = platform_emojis.get(platform.lower(), "🌐")
+        
+        message = f"✅ {emoji} **{platform.upper()}**\n"
 
         if post_url:
             message += f"🔗 [عرض المنشور]({post_url})\n"
 
-        message += f"⏰ {datetime.now().strftime('%H:%M:%S')}"
+        message += f"⏱️ {datetime.now().strftime('%H:%M:%S')}"
 
         await self.send_report(message)
 
@@ -101,9 +112,10 @@ class PublishingReporter:
     ) -> None:
         """Report failed publishing to a platform"""
         message = (
-            f"❌ **{platform.upper()} - فشل**\n\n"
-            f"⚠️ **الخطأ:**\n`{error[:200]}`\n\n"
-            f"⏰ {datetime.now().strftime('%H:%M:%S')}"
+            f"❌ **{platform.upper()}**\n"
+            "━━━━━━━━━━━━━━━━━━━━━\n"
+            f"⚠️ **الخطأ:** `{error[:200]}`\n\n"
+            f"⏱️ {datetime.now().strftime('%H:%M:%S')}"
         )
 
         await self.send_report(message)
@@ -118,16 +130,22 @@ class PublishingReporter:
         """Report when all publishing is complete"""
         success_rate = (successful / total * 100) if total > 0 else 0
 
-        status_emoji = "✅" if failed == 0 else "⚠️"
+        status_emoji = "🎉" if failed == 0 else "⚠️"
+        
+        # Progress bar
+        progress_filled = int(success_rate / 10)
+        progress_bar = "█" * progress_filled + "░" * (10 - progress_filled)
 
         message = (
-            f"{status_emoji} **اكتمل النشر**\n\n"
+            f"{status_emoji} **اكتملت عملية النشر**\n"
+            "═══════════════════════\n\n"
             f"📊 **النتائج:**\n"
-            f"✅ نجح: {successful}\n"
-            f"❌ فشل: {failed}\n"
-            f"📈 نسبة النجاح: {success_rate:.0f}%\n\n"
-            f"⏱️ **المدة:** {duration_seconds:.1f} ثانية\n"
-            f"🕐 **انتهى:** {datetime.now().strftime('%H:%M:%S')}"
+            f"   ✅ نجح: **{successful}**\n"
+            f"   ❌ فشل: **{failed}**\n"
+            f"   📈 معدل النجاح: **{success_rate:.0f}%**\n\n"
+            f"⏱️ **المدة:** {duration_seconds:.1f}s\n"
+            f"🕐 **انتهى:** {datetime.now().strftime('%H:%M:%S')}\n\n"
+            f"Progress: [{progress_bar}] {success_rate:.0f}%"
         )
 
         await self.send_report(message)
