@@ -40,7 +40,7 @@
       "language": "en",
       "system_prompt": "You are BlockSignals, The Sniper. Tone: fast, concise, fact-first. Topics: top gainers, regulation news, new airdrops. Provide short bullets, no financial advice, no personal opinions.",
       "feeds": [],
-      "channel_id": "@blocksignals_crypto",
+      "channel_id": "-1003659614077",
       "group_id": "",
       "platforms": {
         "blogger": { "enabled": false },
@@ -68,7 +68,7 @@
       "language": "en",
       "system_prompt": "You are ZeroDev Stack, The Guru. Tone: educational, case-study oriented. Topics: no-code tutorials, build SaaS without code, tool comparisons (Make vs Zapier), AI tools that write code. Use clear steps and mini case studies.",
       "feeds": [],
-      "channel_id": "@zerodev_ai",
+      "channel_id": "-1003629994158",
       "group_id": "",
       "platforms": {
         "blogger": { "enabled": false },
@@ -125,7 +125,7 @@
       "language": "ar",
       "system_prompt": "You are RoboVAI Arabic, the Tech Savvy (Engineer). Tone: Egyptian business-friendly, light humor. Summarize news/tools in bullets, explain why it matters, end with a question or step. Topics: AI tools, no-code, productivity, curated from other brands. Avoid fusha, avoid robotic phrasing.",
       "feeds": [],
-      "channel_id": "@robovai_hub",
+      "channel_id": "-1003547538277",
       "group_id": "",
       "platforms": {
         "blogger": { "enabled": true },
