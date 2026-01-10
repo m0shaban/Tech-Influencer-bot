@@ -77,8 +77,12 @@ class ScheduledPublisherTask:
                 from blogger_publisher import BloggerPublisher
 
                 pub = BloggerPublisher(
-                    api_key=env_get("BLOGGER_API_KEY", platform="blogger", brand=active_brand),
-                    blog_id=env_get("BLOGGER_BLOG_ID", platform="blogger", brand=active_brand),
+                    api_key=env_get(
+                        "BLOGGER_API_KEY", platform="blogger", brand=active_brand
+                    ),
+                    blog_id=env_get(
+                        "BLOGGER_BLOG_ID", platform="blogger", brand=active_brand
+                    ),
                     access_token=env_get(
                         "BLOGGER_ACCESS_TOKEN", platform="blogger", brand=active_brand
                     ),
@@ -183,7 +187,9 @@ class ScheduledPublisherTask:
                 from devto_publisher import DevtoPublisher
 
                 pub = DevtoPublisher(
-                    api_key=env_get("DEVTO_API_KEY", platform="devto", brand=active_brand)
+                    api_key=env_get(
+                        "DEVTO_API_KEY", platform="devto", brand=active_brand
+                    )
                 )
                 result = pub.publish(
                     caption=post.caption,

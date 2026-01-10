@@ -19,6 +19,12 @@ class AIProviderManager:
     def __init__(self):
         self.groq_keys = self._load_groq_keys()
         self.nvidia_keys = self._load_nvidia_keys()
+        self.groq_rotation_index = 0  # For round-robin
+        self.key_health = {}  # Track key health
+        
+        # Initialize health tracking
+        for key in self.groq_keys:
+            self.key_health[key] = {"requests": 0, "errors": 0, "last_error": None}
 
         # Provider configurations
         self.providers = {
@@ -79,9 +85,31 @@ class AIProviderManager:
                 keys.append(key)
         return keys
 
-    def get_provider_for_platform(self, platform: str) -> Dict[str, Any]:
-        """Get best AI provider configuration for a platform"""
-        # Find matching provider
+    def get_provider_for_platform(self, platform: str, brand_language: str = "en") -> Dict[str, Any]:
+        """
+        Get best AI provider configuration for platform + language
+        
+        Args:
+            platform: Target platform (blogger, telegram, devto, facebook, discord)
+            brand_language: Brand language (en, ar)
+        
+        Returns:
+            Provider config with model, API key, temperature, etc.
+        """
+        # ARABIC OVERRIDE: Force Groq Llama3-70b for quality Arabic
+        if brand_language == "ar":
+            config = self.providers["fast_multilingual"]
+            return {
+                "strategy": "fast_multilingual_ar",
+                "provider": "groq",
+                "model": "llama-3.3-70b-versatile",  # Best Arabic model
+                "base_url": config["base_url"],
+                "api_key": self._get_next_groq_key(),  # Round-robin
+                "max_tokens": 3000 if platform != "telegram" else 1024,
+                "temperature": 0.65,  # More creative for natural dialect
+            }
+        
+        # Find matching provider for English content
         for strategy_name, config in self.providers.items():
             if platform in config["use_for"]:
                 return {
@@ -109,10 +137,33 @@ class AIProviderManager:
     def _get_api_key(self, provider: str) -> Optional[str]:
         """Get random API key for load balancing"""
         if provider == "groq":
-            return random.choice(self.groq_keys) if self.groq_keys else None
+            return self._get_next_groq_key()
         elif provider == "nvidia":
             return random.choice(self.nvidia_keys) if self.nvidia_keys else None
         return None
+    
+    def _get_next_groq_key(self) -> Optional[str]:
+        """Get next Groq key with round-robin strategy"""
+        if not self.groq_keys:
+            return None
+        
+        attempts = 0
+        while attempts < len(self.groq_keys):
+            key = self.groq_keys[self.groq_rotation_index]
+            self.groq_rotation_index = (self.groq_rotation_index + 1) % len(self.groq_keys)
+            
+            # Skip keys with too many recent errors (> 5)
+            if self.key_health.get(key, {}).get("errors", 0) < 5:
+                return key
+            
+            attempts += 1
+        
+        # All keys have errors - reset health and try first key
+        print("⚠️ All Groq keys have errors - resetting health counters")
+        for key in self.key_health:
+            self.key_health[key]["errors"] = 0
+        
+        return self.groq_keys[0] if self.groq_keys else None
 
     def generate_content(
         self,
@@ -120,9 +171,22 @@ class AIProviderManager:
         system_prompt: str,
         user_prompt: str,
         enable_reasoning: bool = False,
+        brand_language: str = "en",  # NEW: Language awareness
     ) -> Optional[str]:
-        """Generate content using best provider for platform"""
-        config = self.get_provider_for_platform(platform)
+        """
+        Generate content using best provider for platform
+        
+        Args:
+            platform: Target platform
+            system_prompt: System instructions
+            user_prompt: User content
+            enable_reasoning: Enable thinking mode for NVIDIA
+            brand_language: Brand language (en, ar)
+        
+        Returns:
+            Generated content or None if failed
+        """
+        config = self.get_provider_for_platform(platform, brand_language)
 
         if not config["api_key"]:
             print(f"⚠️ No API key available for {config['provider']}")
@@ -160,15 +224,61 @@ class AIProviderManager:
                 elif "deepseek" in config["model"]:
                     params["extra_body"] = {"chat_template_kwargs": {"thinking": True}}
 
-            print(f"🤖 Using {config['provider']} ({config['model']}) for {platform}")
+            print(f"🤖 Using {config['provider']} ({config['model']}) for {platform} [{brand_language}]")
 
             response = client.chat.completions.create(**params)
             content = response.choices[0].message.content
+            
+            # Track success
+            if config["api_key"] in self.key_health:
+                self.key_health[config["api_key"]]["requests"] += 1
 
             return content
 
         except Exception as e:
-            print(f"❌ AI generation failed for {platform}: {e}")
+            error_msg = str(e)
+            print(f"❌ AI generation failed for {platform}: {error_msg}")
+            
+            # Track error for health monitoring
+            if config["api_key"] in self.key_health:
+                self.key_health[config["api_key"]]["errors"] += 1
+                self.key_health[config["api_key"]]["last_error"] = error_msg
+            
+            # Check if rate limit error - try fallback
+            if "429" in error_msg or "rate" in error_msg.lower():
+                print("🔄 Rate limit detected - attempting fallback")
+                return self._fallback_to_groq(system_prompt, user_prompt, platform)
+            
+            return None
+    
+    def _fallback_to_groq(self, system_prompt: str, user_prompt: str, platform: str) -> Optional[str]:
+        """Fallback to Groq when NVIDIA fails"""
+        try:
+            groq_key = self._get_next_groq_key()
+            if not groq_key:
+                return None
+            
+            client = OpenAI(
+                base_url="https://api.groq.com/openai/v1",
+                api_key=groq_key,
+            )
+            
+            print(f"🔄 Fallback: Using Groq Llama3-70b")
+            
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.6,
+                max_tokens=2048,
+            )
+            
+            return response.choices[0].message.content
+        
+        except Exception as e:
+            print(f"❌ Fallback also failed: {e}")
             return None
 
 

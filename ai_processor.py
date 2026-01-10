@@ -457,6 +457,8 @@ def rewrite_with_ai(
     link: str,
     system_prompt: Optional[str] = None,
     platform: str = "telegram",
+    brand_name: str = "robovai_ar",  # NEW: Brand awareness
+    brand_language: str = "en",  # NEW: Language awareness
 ) -> Optional[Dict[str, Any]]:
     """Generate per-platform content using intelligent AI routing.
 
@@ -466,6 +468,8 @@ def rewrite_with_ai(
         link: Post link
         system_prompt: Custom system prompt (optional)
         platform: Target platform (blogger, devto, facebook, telegram, etc.)
+        brand_name: Brand identifier (blocksignals, zerodev, flowpilot, robovai_ar)
+        brand_language: Content language (en, ar)
 
     Returns:
         Dict with platform-specific content or None on failure
@@ -477,11 +481,18 @@ def rewrite_with_ai(
 
     # Use custom prompt if provided, otherwise use default
     effective_system_prompt = (system_prompt or "").strip() or DEFAULT_SYSTEM_PROMPT
+    
+    # Add platform-specific instructions
+    platform_instructions = _get_platform_instructions(platform, brand_name, brand_language)
+    effective_system_prompt += f"\n\n{platform_instructions}"
 
     user_content = (
         f"Title: {title}\n"
         f"Summary: {summary}\n"
         f"Link: {link}\n\n"
+        f"Target Platform: {platform}\n"
+        f"Brand: {brand_name}\n"
+        f"Language: {brand_language}\n\n"
         "Return ONLY the JSON object with the required keys.\n\n"
         "CRITICAL JSON RULES: Output must be strict valid JSON. Do NOT wrap in ``` fences. "
         "Do NOT include raw line breaks inside string values; use \\n for new lines.\n\n"
@@ -495,8 +506,8 @@ def rewrite_with_ai(
             platform=platform,
             system_prompt=effective_system_prompt,
             user_prompt=user_content,
-            enable_reasoning=platform
-            in ["blogger", "devto"],  # Enable reasoning for long-form
+            enable_reasoning=platform in ["blogger", "devto"],  # Enable reasoning for long-form
+            brand_language=brand_language,  # NEW: Pass language for routing
         )
 
         if not result:
@@ -527,3 +538,53 @@ def rewrite_with_ai(
             base += f": {detail}"
         _set_last_error(base[:300])
         return None
+
+
+def _get_platform_instructions(platform: str, brand_name: str, brand_language: str) -> str:
+    """
+    Get platform-specific formatting and content instructions
+    
+    Args:
+        platform: Target platform
+        brand_name: Brand identifier
+        brand_language: Content language
+    
+    Returns:
+        Additional instructions for system prompt
+    """
+    instructions = {
+        "blogger": {
+            "en": "Write a comprehensive article (1200-1500 words) with SEO optimization, clear headers (## ##), internal links placeholders, and markdown formatting.",
+            "ar": "اكتب مقالة شاملة (1200-1500 كلمة) مع تحسين SEO، عناوين واضحة، روابط داخلية، وتنسيق Markdown. استخدم اللهجة المصرية المهنية.",
+        },
+        "devto": {
+            "en": "Write a technical tutorial (1500-2000 words) with code blocks, step-by-step instructions, markdown formatting, and clear learning outcomes.",
+            "ar": "غير مدعوم - Dev.to للإنجليزي فقط",
+        },
+        "facebook": {
+            "en": "Write an engaging story (600-800 words) with a strong hook, short paragraphs (2-3 lines), and a question at the end to encourage comments.",
+            "ar": "اكتب قصة جذابة (600-800 كلمة) تبدأ بموقف relatable، فقرات قصيرة، وسؤال في النهاية للتفاعل. استخدم اللهجة المصرية الطبيعية.",
+        },
+        "telegram": {
+            "en": "Write a concise update (150-250 words) with key takeaways in bullets, emojis, and a clear call to action.",
+            "ar": "اكتب تنبيه قصير (150-200 كلمة) مع bullets واضحة وemojis. استخدم اللهجة المصرية البسيطة.",
+        },
+        "discord": {
+            "en": "Write a discussion-starter (400-500 words) with context and open-ended questions to engage the community.",
+            "ar": "غير مدعوم - Discord للإنجليزي فقط",
+        },
+    }
+    
+    lang = brand_language if brand_language in ["en", "ar"] else "en"
+    instruction = instructions.get(platform, {}).get(lang, instructions["telegram"]["en"])
+    
+    # Add brand-specific modifications
+    if brand_name == "robovai_ar" and brand_language == "ar":
+        if platform == "blogger":
+            instruction += "\n\nمهم: اشرح ليه الموضوع ده مهم للسوق المصري والعربي. أضف أمثلة محلية."
+        elif platform == "facebook":
+            instruction += "\n\nابدأ بسيناريو أو موقف يحصل في مصر. خلي الناس تحس إنك بتتكلم عنهم."
+        elif platform == "telegram":
+            instruction += "\n\nتنبيه سريع بأسلوب صديق بيبعت رسالة. استخدم emojis بكثرة."
+    
+    return f"**Platform Instructions for {platform}**:\n{instruction}"
