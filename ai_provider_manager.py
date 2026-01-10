@@ -32,8 +32,8 @@ class AIProviderManager:
             "reasoning": {
                 "provider": "nvidia",
                 "models": [
-                    "nvidia/nemotron-3-nano-30b-a3b",
-                    "deepseek-ai/deepseek-v3.1-terminus",
+                    "deepseek-ai/deepseek-r1",
+                    "nvidia/llama-3.1-nemotron-ultra-253b-v1",
                 ],
                 "base_url": "https://integrate.api.nvidia.com/v1",
                 "max_tokens": 8192,
@@ -45,7 +45,7 @@ class AIProviderManager:
                 "provider": "groq",
                 "models": [
                     "llama-3.3-70b-versatile",
-                    "llama3-70b-8192",
+                    "llama-3.1-70b-versatile",
                 ],
                 "base_url": "https://api.groq.com/openai/v1",
                 "max_tokens": 3000,
@@ -57,7 +57,7 @@ class AIProviderManager:
                 "provider": "groq",
                 "models": [
                     "llama-3.3-70b-versatile",
-                    "llama3-70b-8192",
+                    "meta-llama/llama-4-scout-17b-16e-instruct",
                 ],
                 "base_url": "https://api.groq.com/openai/v1",
                 "max_tokens": 1024,
