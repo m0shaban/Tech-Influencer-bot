@@ -136,9 +136,11 @@ DEFAULT_SYSTEM_PROMPT = r"""
 """
 
 
+# Updated July 2025 - Only working Groq production models
 DEFAULT_MODEL_CANDIDATES = [
-    "llama-3.3-70b-versatile",
-    "llama3-70b-8192",
+    "llama-3.3-70b-versatile",  # Production - Primary
+    "openai/gpt-oss-120b",  # Production - Fallback
+    "llama-3.1-8b-instant",  # Production - Fast fallback
 ]
 
 DEFAULT_MAX_TOKENS = 2600
@@ -237,21 +239,50 @@ def _parse_json_response(content: str) -> Optional[Dict[str, Any]]:
         if not isinstance(parsed, dict):
             return None
         return parsed
-
-    direct = _try_parse(cleaned)
-    if direct is not None:
-        return direct
-
-    start = cleaned.find("{")
-    end = cleaned.rfind("}")
-    if start == -1 or end == -1 or end <= start:
+    
+    def _robust_json_extract(text: str) -> Optional[Dict[str, Any]]:
+        """Try multiple strategies to extract valid JSON from text."""
+        # Strategy 1: Direct parse
+        result = _try_parse(text)
+        if result:
+            return result
+        
+        # Strategy 2: Find JSON object boundaries
+        start = text.find("{")
+        end = text.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            extracted = text[start:end + 1]
+            result = _try_parse(extracted)
+            if result:
+                return result
+            
+            # Strategy 3: Escape control characters
+            result = _try_parse(_escape_controls_inside_strings(extracted))
+            if result:
+                return result
+        
+        # Strategy 4: Try to fix common issues
+        # Remove BOM and other invisible characters
+        cleaned_text = text.replace('\ufeff', '').replace('\x00', '')
+        if cleaned_text != text:
+            result = _try_parse(cleaned_text)
+            if result:
+                return result
+        
+        # Strategy 5: Replace problematic unicode
+        try:
+            # Fix curly quotes
+            fixed = text.replace('"', '"').replace('"', '"')
+            fixed = fixed.replace("'", "'").replace("'", "'")
+            result = _try_parse(fixed)
+            if result:
+                return result
+        except Exception:
+            pass
+        
         return None
 
-    extracted = cleaned[start : end + 1]
-    parsed = _try_parse(extracted)
-    if parsed is not None:
-        return parsed
-    return _try_parse(_escape_controls_inside_strings(extracted))
+    return _robust_json_extract(cleaned)
 
 
 def _coerce_bool(value: Any) -> Optional[bool]:

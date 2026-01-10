@@ -26,14 +26,19 @@ class AIProviderManager:
         for key in self.groq_keys:
             self.key_health[key] = {"requests": 0, "errors": 0, "last_error": None}
 
-        # Provider configurations
+        # Provider configurations - Updated July 2025
+        # Groq Production: llama-3.3-70b-versatile, llama-3.1-8b-instant, openai/gpt-oss-120b, openai/gpt-oss-20b
+        # Groq Preview: meta-llama/llama-4-scout-17b-16e-instruct, meta-llama/llama-4-maverick-17b-128e-instruct, qwen/qwen3-32b, moonshotai/kimi-k2-instruct-0905
+        # NVIDIA: deepseek-ai/deepseek-r1, nvidia/llama-3.1-nemotron-ultra-253b-v1, nvidia/llama-3.3-nemotron-super-49b-v1.5, qwen/qwq-32b
         self.providers = {
             # Deep reasoning for long-form content (Blogger, Dev.to)
             "reasoning": {
                 "provider": "nvidia",
                 "models": [
-                    "deepseek-ai/deepseek-r1",
-                    "nvidia/llama-3.1-nemotron-ultra-253b-v1",
+                    "deepseek-ai/deepseek-r1",  # Latest DeepSeek reasoning model
+                    "nvidia/llama-3.1-nemotron-ultra-253b-v1",  # Best for complex reasoning
+                    "nvidia/llama-3.3-nemotron-super-49b-v1.5",  # High efficiency reasoning
+                    "qwen/qwq-32b",  # Strong reasoning alternative
                 ],
                 "base_url": "https://integrate.api.nvidia.com/v1",
                 "max_tokens": 8192,
@@ -44,8 +49,9 @@ class AIProviderManager:
             "fast_multilingual": {
                 "provider": "groq",
                 "models": [
-                    "llama-3.3-70b-versatile",
-                    "llama-3.1-70b-versatile",
+                    "llama-3.3-70b-versatile",  # Production - Best quality
+                    "openai/gpt-oss-120b",  # Production - GPT alternative
+                    "qwen/qwen3-32b",  # Preview - Fast & multilingual
                 ],
                 "base_url": "https://api.groq.com/openai/v1",
                 "max_tokens": 3000,
@@ -56,13 +62,28 @@ class AIProviderManager:
             "ultra_fast": {
                 "provider": "groq",
                 "models": [
-                    "llama-3.3-70b-versatile",
-                    "meta-llama/llama-4-scout-17b-16e-instruct",
+                    "llama-3.3-70b-versatile",  # Production stable
+                    "meta-llama/llama-4-scout-17b-16e-instruct",  # Preview - Llama 4
+                    "llama-3.1-8b-instant",  # Production - Fastest
+                    "openai/gpt-oss-20b",  # Production - Efficient
                 ],
                 "base_url": "https://api.groq.com/openai/v1",
                 "max_tokens": 1024,
                 "temperature": 0.8,
                 "use_for": ["telegram"],
+            },
+            # Advanced coding/technical content
+            "technical": {
+                "provider": "groq",
+                "models": [
+                    "moonshotai/kimi-k2-instruct-0905",  # Advanced reasoning + long context
+                    "meta-llama/llama-4-maverick-17b-128e-instruct",  # Latest Llama 4
+                    "openai/gpt-oss-120b",  # Strong technical
+                ],
+                "base_url": "https://api.groq.com/openai/v1",
+                "max_tokens": 4096,
+                "temperature": 0.5,
+                "use_for": ["linkedin", "medium"],
             },
         }
 
