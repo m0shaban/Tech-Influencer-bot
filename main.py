@@ -1238,12 +1238,37 @@ async def admin_test_platforms(
     try:
         from multi_platform_publisher import MultiPlatformPublisher
 
-        publisher = MultiPlatformPublisher()
+        cfg = _load_config()
+        active_brand_key = str(cfg.get("active_brand") or "").strip()
+        brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+        brand_cfg = (
+            brands.get(active_brand_key)
+            if active_brand_key and isinstance(brands, dict)
+            else None
+        )
+
+        publisher = MultiPlatformPublisher(brand_key=active_brand_key or None)
+
+        platform_payloads: Dict[Any, Dict[str, Any]] = {}
+        brand_channel_id = None
+        if isinstance(brand_cfg, dict):
+            brand_channel_id = str(brand_cfg.get("channel_id") or "").strip() or None
+
+        # Ensure Telegram test targets the configured brand channel (avoids needing env CHANNEL_ID)
+        if "telegram" in getattr(publisher, "enabled_platforms", []):
+            if not brand_channel_id:
+                await update.message.reply_text(
+                    "⚠️ Telegram enabled لكن مفيش channel_id للبراند الحالي في config.json"
+                )
+            else:
+                platform_payloads["telegram"] = {"channel_id": brand_channel_id}
+
         results = await publisher.publish(
             caption=test_caption,
             link=test_link,
             image_url=None,
             telegram_context=context,
+            platform_payloads=platform_payloads,
         )
 
         # Build results message
