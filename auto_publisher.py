@@ -5,6 +5,7 @@ Handles automatic content fetching and publishing with business hours and smart 
 
 import asyncio
 import json
+import os
 import random
 from datetime import datetime, time as dt_time
 from pathlib import Path
@@ -15,8 +16,37 @@ import pytz
 CAIRO_TZ = pytz.timezone("Africa/Cairo")
 
 # Business hours (9 AM to 11 PM Cairo time)
-BUSINESS_START = dt_time(9, 0)  # 9:00 AM
-BUSINESS_END = dt_time(23, 0)  # 11:00 PM
+# Can be overridden via env:
+# - AUTO_PUBLISH_BUSINESS_START=HH:MM
+# - AUTO_PUBLISH_BUSINESS_END=HH:MM
+# - AUTO_PUBLISH_IGNORE_HOURS=1 (run 24/7)
+
+
+def _parse_hhmm(value: str, fallback: dt_time) -> dt_time:
+    try:
+        s = (value or "").strip()
+        if not s:
+            return fallback
+        parts = s.split(":")
+        if len(parts) != 2:
+            return fallback
+        hour = int(parts[0])
+        minute = int(parts[1])
+        if hour < 0 or hour > 23 or minute < 0 or minute > 59:
+            return fallback
+        return dt_time(hour, minute)
+    except Exception:
+        return fallback
+
+
+BUSINESS_START = _parse_hhmm(os.getenv("AUTO_PUBLISH_BUSINESS_START", ""), dt_time(9, 0))
+BUSINESS_END = _parse_hhmm(os.getenv("AUTO_PUBLISH_BUSINESS_END", ""), dt_time(23, 0))
+IGNORE_BUSINESS_HOURS = str(os.getenv("AUTO_PUBLISH_IGNORE_HOURS", "") or "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 
 # Smart interval settings (in seconds)
 MIN_INTERVAL = 20 * 60  # 20 minutes
@@ -27,6 +57,21 @@ MAX_POSTS_PER_DAY = 50
 
 # State file
 STATUS_FILE = Path(__file__).parent / "autopublisher_status.json"
+
+
+def _is_multi_brand_mode() -> bool:
+    """If config.json has multi-brand setup, per-brand schedule is handled in main.fetch_and_publish."""
+    try:
+        cfg_path = Path(__file__).parent / "config.json"
+        if not cfg_path.exists():
+            return False
+        data = json.loads(cfg_path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return False
+        brands = data.get("brands")
+        return isinstance(brands, dict) and bool(brands)
+    except Exception:
+        return False
 
 
 class AutoPublisher:
@@ -86,12 +131,16 @@ class AutoPublisher:
 
     def _is_business_hours(self) -> bool:
         """Check if current time is within business hours (Cairo time)"""
+        if IGNORE_BUSINESS_HOURS or _is_multi_brand_mode():
+            return True
         now = self._get_cairo_now()
         current_time = now.time()
         return BUSINESS_START <= current_time <= BUSINESS_END
 
     def _seconds_until_business_hours(self) -> int:
         """Calculate seconds until next business hours start"""
+        if IGNORE_BUSINESS_HOURS or _is_multi_brand_mode():
+            return 0
         now = self._get_cairo_now()
         current_time = now.time()
 
@@ -149,7 +198,7 @@ class AutoPublisher:
                 self._save_state()
                 print(f"✅ Published successfully! (Post #{self.posts_today} today)")
                 return True
-            elif result.get("status") == "no_news":
+            elif result.get("status") in {"no_news", "sleeping"}:
                 print("📭 No new content available")
                 return True  # Not an error, just no content
             else:
@@ -174,9 +223,12 @@ class AutoPublisher:
         self.is_running = True
 
         print("🚀 Auto Publisher started")
-        print(
-            f"⏰ Business hours: {BUSINESS_START.strftime('%H:%M')} - {BUSINESS_END.strftime('%H:%M')} (Cairo)"
-        )
+        if IGNORE_BUSINESS_HOURS:
+            print("⏰ Business hours: DISABLED (AUTO_PUBLISH_IGNORE_HOURS=1) — running 24/7")
+        else:
+            print(
+                f"⏰ Business hours: {BUSINESS_START.strftime('%H:%M')} - {BUSINESS_END.strftime('%H:%M')} (Cairo)"
+            )
         print(f"📊 Max posts/day: {MAX_POSTS_PER_DAY}")
         print(f"⏱️ Interval: {MIN_INTERVAL//60}-{MAX_INTERVAL//60} minutes")
 

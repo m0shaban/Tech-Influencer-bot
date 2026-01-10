@@ -39,6 +39,7 @@ class SequentialPublisher:
         self.config = config
         self.brands = config.get("brands", {})
         self.post_count = {}  # Track posts per brand for cross-pollination
+        self.last_errors: List[Dict[str, str]] = []
     
     async def publish_item(
         self,
@@ -58,22 +59,27 @@ class SequentialPublisher:
         Returns:
             Dict of {platform: published_url}
         """
+        self.last_errors = []
+
         # Get brand config
         brand_config = self.brands.get(brand_name)
         if not brand_config:
             print(f"❌ Brand {brand_name} not found in config")
+            self.last_errors.append({"platform": "config", "error": "brand not found"})
             return {}
         
         # Get enabled platforms
         enabled_platforms = self._get_enabled_platforms(brand_config)
         if not enabled_platforms:
             print(f"⚠️ No enabled platforms for {brand_name}")
+            self.last_errors.append({"platform": "config", "error": "no enabled platforms"})
             return {}
         
         # Get publishing order with delays
         publishing_order = get_publishing_order(brand_name, enabled_platforms)
         if not publishing_order:
             print(f"⚠️ No publishing order defined for {brand_name}")
+            self.last_errors.append({"platform": "config", "error": "no publishing order"})
             return {}
         
         # Get brand language
@@ -125,6 +131,7 @@ class SequentialPublisher:
                 
                 if not content_data:
                     print(f"❌ Content generation failed for {platform}")
+                    self.last_errors.append({"platform": platform, "error": "content generation failed"})
                     continue
                 
                 # Get platform-specific content field
@@ -133,6 +140,7 @@ class SequentialPublisher:
                 
                 if not content:
                     print(f"❌ No content found in field '{content_field}'")
+                    self.last_errors.append({"platform": platform, "error": f"empty content field {content_field}"})
                     continue
                 
                 # Inject CTAs if enabled and we have URLs
@@ -165,9 +173,13 @@ class SequentialPublisher:
                     print(f"✅ {platform.upper()}: {result['url']}")
                 else:
                     print(f"⚠️ {platform}: Published but no URL returned")
+                    # Some platforms don't return URLs; treat as soft-success if result exists
+                    if not result:
+                        self.last_errors.append({"platform": platform, "error": "publish returned no result"})
             
             except Exception as e:
                 print(f"❌ Error publishing to {platform}: {e}")
+                self.last_errors.append({"platform": platform, "error": str(e)})
                 continue
         
         print(f"\n{'='*60}")

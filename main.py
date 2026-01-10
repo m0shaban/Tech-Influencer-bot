@@ -44,6 +44,7 @@ BASE_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = BASE_DIR / "config.json"
 SEEN_POSTS_PATH = BASE_DIR / "data" / "seen_posts.json"
 LOG_PATH = BASE_DIR / "bot.log"
+BRAND_STATS_PATH = BASE_DIR / "data" / "brand_stats.json"
 
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "0") or "0")
@@ -99,7 +100,7 @@ SALES_COPY = (
 
 
 class PublishResult(TypedDict, total=False):
-    status: Literal["published", "no_news", "error"]
+    status: Literal["published", "no_news", "sleeping", "error"]
     title: str
     error: str
 
@@ -214,11 +215,132 @@ def get_admin_keyboard() -> ReplyKeyboardMarkup:
             ["📢 Broadcast", "🛑 Status Toggle"],
             ["📝 Edit Prompt", "📡 Feeds"],
             ["📋 Logs", "ℹ️ System Info"],
-            ["🌐 Platform Status", "🧪 Test Platforms"],
+            ["🤖 Brands Status", "🌐 Platform Status"],
+            ["🧪 Test Platforms"],
         ],
         resize_keyboard=True,
         is_persistent=True,
     )
+
+
+def _parse_hhmm(value: str, *, fallback: str = "09:00") -> str:
+    s = str(value or "").strip()
+    if not s:
+        return fallback
+    parts = s.split(":")
+    if len(parts) != 2:
+        return fallback
+    try:
+        hh = int(parts[0])
+        mm = int(parts[1])
+    except Exception:
+        return fallback
+    if hh < 0 or hh > 23 or mm < 0 or mm > 59:
+        return fallback
+    return f"{hh:02d}:{mm:02d}"
+
+
+def _get_brand_schedule(brand_key: str, brand_cfg: dict) -> dict:
+    """Resolve brand schedule. Defaults: Arabic=Cairo, others=America/New_York."""
+    # Defaults
+    default_tz = "Africa/Cairo" if str(brand_key).endswith("_ar") or str(brand_cfg.get("language") or "").lower().startswith("ar") else "America/New_York"
+    default_start = "09:00"
+    default_end = "23:00"
+
+    raw = brand_cfg.get("schedule") if isinstance(brand_cfg, dict) else None
+    if not isinstance(raw, dict):
+        raw = {}
+
+    tz = str(raw.get("timezone") or default_tz).strip() or default_tz
+    start = _parse_hhmm(raw.get("start") or "", fallback=default_start)
+    end = _parse_hhmm(raw.get("end") or "", fallback=default_end)
+    return {"timezone": tz, "start": start, "end": end}
+
+
+def _brand_awake_status(brand_key: str, brand_cfg: dict) -> dict:
+    """Return {awake: bool, tz, now, start, end, until_seconds}.
+
+    Note: If schedule window crosses midnight, we treat it as overnight.
+    """
+    sched = _get_brand_schedule(brand_key, brand_cfg)
+    tz_name = sched["timezone"]
+    start = sched["start"]
+    end = sched["end"]
+
+    try:
+        import pytz
+
+        tz = pytz.timezone(tz_name)
+        now_local = datetime.now(tz)
+    except Exception:
+        now_local = datetime.utcnow()
+        tz_name = "UTC"
+
+    hh, mm = (int(x) for x in start.split(":"))
+    eh, em = (int(x) for x in end.split(":"))
+    start_min = hh * 60 + mm
+    end_min = eh * 60 + em
+    now_min = now_local.hour * 60 + now_local.minute
+
+    if start_min <= end_min:
+        awake = start_min <= now_min <= end_min
+        if awake:
+            until = 0
+        else:
+            # seconds until next start
+            if now_min < start_min:
+                delta_min = start_min - now_min
+            else:
+                delta_min = (24 * 60 - now_min) + start_min
+            until = delta_min * 60
+    else:
+        # Overnight window (e.g. 20:00-06:00)
+        awake = now_min >= start_min or now_min <= end_min
+        if awake:
+            until = 0
+        else:
+            delta_min = start_min - now_min
+            until = max(delta_min, 0) * 60
+
+    return {
+        "awake": bool(awake),
+        "timezone": tz_name,
+        "now": now_local.strftime("%H:%M"),
+        "start": start,
+        "end": end,
+        "until_seconds": int(until),
+    }
+
+
+def _read_brand_stats() -> dict:
+    try:
+        if not BRAND_STATS_PATH.exists():
+            return {}
+        data = json.loads(BRAND_STATS_PATH.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _write_brand_stats(data: dict) -> None:
+    try:
+        BRAND_STATS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        BRAND_STATS_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _touch_brand_stats(brand_key: str, *, title: str = "") -> None:
+    data = _read_brand_stats()
+    existing = data.get(brand_key)
+    row = existing if isinstance(existing, dict) else {}
+    posts = int(row.get("posts", 0) or 0)
+    row["posts"] = posts + 1
+    row["last_published_at"] = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    if title:
+        row["last_title"] = str(title)[:160]
+    data[brand_key] = row
+    _write_brand_stats(data)
 
 
 def get_sales_keyboard() -> InlineKeyboardMarkup:
@@ -351,13 +473,16 @@ async def _generate_platform_contents(
     return contents
 
 
-def _pick_next_brand_key(cfg: dict) -> str:
-    """Pick next brand to publish for (round-robin), skipping brands without feeds/platforms."""
+def _pick_next_brand_key(cfg: dict, *, ignore_schedule: bool = False) -> str:
+    """Pick next brand to publish for (round-robin).
+
+    Skips brands without feeds/platforms and (by default) brands that are sleeping.
+    """
     brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
     if not isinstance(brands, dict) or not brands:
         return str(cfg.get("active_brand") or "").strip() or "robovai_ar"
 
-    candidates: list[str] = []
+    candidates_all: list[str] = []
     for key, brand in brands.items():
         if not isinstance(key, str) or not key.strip() or not isinstance(brand, dict):
             continue
@@ -369,9 +494,24 @@ def _pick_next_brand_key(cfg: dict) -> str:
             continue
         if not any(isinstance(v, dict) and v.get("enabled") is True for v in platforms.values()):
             continue
-        candidates.append(key.strip())
+        candidates_all.append(key.strip())
+
+    # Apply schedule filter unless overridden (Force Fetch)
+    candidates = list(candidates_all)
+    if not ignore_schedule:
+        filtered: list[str] = []
+        for k in candidates:
+            brand_cfg = brands.get(k) if isinstance(brands, dict) else None
+            if isinstance(brand_cfg, dict):
+                st = _brand_awake_status(k, brand_cfg)
+                if st.get("awake") is True:
+                    filtered.append(k)
+        candidates = filtered
 
     if not candidates:
+        # If we had candidates but all are sleeping, signal no-publish.
+        if candidates_all and not ignore_schedule:
+            return ""
         return str(cfg.get("active_brand") or "").strip() or "robovai_ar"
 
     candidates = sorted(set(candidates))
@@ -760,8 +900,51 @@ async def fetch_and_publish(
     # Multi-brand sequential publishing (preferred)
     cfg = _load_config()
     if isinstance(cfg.get("brands"), dict) and cfg.get("brands"):
-        brand_key = _pick_next_brand_key(cfg) if cfg.get("auto_rotate_brands", True) else str(cfg.get("active_brand") or "").strip()
+        if cfg.get("auto_rotate_brands", True):
+            brand_key = _pick_next_brand_key(cfg, ignore_schedule=override_status)
+        else:
+            brand_key = str(cfg.get("active_brand") or "").strip()
+
+        if not brand_key and not override_status:
+            # All brands are sleeping
+            try:
+                brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+                waits: list[tuple[int, str]] = []
+                for k, b in (brands or {}).items():
+                    if not isinstance(k, str) or not isinstance(b, dict):
+                        continue
+                    st = _brand_awake_status(k, b)
+                    if st.get("awake") is True:
+                        waits.append((0, k))
+                    else:
+                        waits.append((int(st.get("until_seconds") or 0), k))
+                waits = [w for w in waits if w[0] > 0]
+                if waits:
+                    waits.sort(key=lambda x: x[0])
+                    mins = max(1, int(waits[0][0] / 60))
+                    return {
+                        "status": "sleeping",
+                        "error": f"All brands are sleeping. Next wake in ~{mins} min.",
+                    }
+            except Exception:
+                pass
+            return {
+                "status": "sleeping",
+                "error": "All brands are sleeping right now.",
+            }
         _save_config(cfg)
+
+        try:
+            brands_dbg = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+            brand_dbg = brands_dbg.get(brand_key) if isinstance(brands_dbg, dict) else None
+            enabled_dbg = []
+            if isinstance(brand_dbg, dict) and isinstance(brand_dbg.get("platforms"), dict):
+                for p, v in brand_dbg.get("platforms", {}).items():
+                    if isinstance(v, dict) and v.get("enabled") is True:
+                        enabled_dbg.append(str(p))
+            print(f"🧭 Selected brand: {brand_key} | enabled_platforms_in_config={enabled_dbg}")
+        except Exception:
+            pass
 
         brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
         brand_cfg = brands.get(brand_key) if isinstance(brands, dict) else None
@@ -787,6 +970,12 @@ async def fetch_and_publish(
             from sequential_publisher import SequentialPublisher
 
             platform_publisher = MultiPlatformPublisher(brand_key=brand_key)
+            try:
+                print(
+                    f"🔐 Runtime enabled platforms (env+brand): {getattr(platform_publisher, 'enabled_platforms', [])}"
+                )
+            except Exception:
+                pass
             seq = SequentialPublisher(cfg)
             published = await seq.publish_item(
                 brand_name=brand_key,
@@ -796,11 +985,50 @@ async def fetch_and_publish(
             )
 
             if published:
+                _touch_brand_stats(brand_key, title=str(post.get("title", "") or "").strip())
                 return {
                     "status": "published",
                     "title": str(post.get("title", "") or "").strip(),
                 }
-            return {"status": "error", "error": "No platforms published"}
+            # Provide a more actionable error for ops
+            enabled_runtime = []
+            try:
+                enabled_runtime = list(getattr(platform_publisher, "enabled_platforms", []) or [])
+            except Exception:
+                enabled_runtime = []
+
+            brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+            brand_cfg = brands.get(brand_key) if isinstance(brands, dict) else None
+            enabled_cfg = []
+            if isinstance(brand_cfg, dict) and isinstance(brand_cfg.get("platforms"), dict):
+                for p, v in brand_cfg.get("platforms", {}).items():
+                    if isinstance(v, dict) and v.get("enabled") is True:
+                        enabled_cfg.append(str(p))
+
+            missing = [p for p in enabled_cfg if p not in enabled_runtime]
+            errors_hint = ""
+            try:
+                last_errors = getattr(seq, "last_errors", [])
+                if isinstance(last_errors, list) and last_errors:
+                    sample = last_errors[:3]
+                    parts = []
+                    for e in sample:
+                        if isinstance(e, dict):
+                            p = str(e.get("platform") or "")
+                            msg = str(e.get("error") or "")
+                            if p and msg:
+                                parts.append(f"{p}: {msg[:80]}")
+                    if parts:
+                        errors_hint = " | errors=" + "; ".join(parts)
+            except Exception:
+                errors_hint = ""
+            hint = ""
+            if missing:
+                hint = f" | missing_credentials_for={missing} (check Render env vars for this brand suffix)"
+            return {
+                "status": "error",
+                "error": f"No platforms published (brand={brand_key}, enabled_in_config={enabled_cfg}, enabled_runtime={enabled_runtime}){hint}{errors_hint}",
+            }
 
         except Exception as exc:  # noqa: BLE001
             return {"status": "error", "error": f"Sequential publish failed: {exc}"}
@@ -1084,7 +1312,12 @@ async def admin_force_fetch(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     admin_force_fetch._last_time = now  # type: ignore[attr-defined]
 
     try:
-        result = await fetch_and_publish(context, override_status=True)
+        import asyncio
+
+        # Protect against long blocking network calls (image pipeline / external APIs)
+        result = await asyncio.wait_for(
+            fetch_and_publish(context, override_status=True), timeout=180
+        )
         status = result.get("status")
         if status == "published":
             title = result.get("title", "")
@@ -1094,6 +1327,10 @@ async def admin_force_fetch(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             await msg.edit_text("⚠️ مفيش أخبار جديدة. (Evergreen logic skipped for now)")
             return
         await msg.edit_text(f"❌ خطأ: {result.get('error', 'Unknown error')}")
+    except asyncio.TimeoutError:
+        await msg.edit_text(
+            "⏱️ العملية أخدت وقت طويل وممكن تكون علّقت في تحميل صورة/AI. جرّب تاني، أو عطّل توليد الصور مؤقتًا."
+        )
     except Exception as exc:  # noqa: BLE001
         await msg.edit_text(f"❌ خطأ: {exc}")
 
@@ -1270,18 +1507,148 @@ async def admin_system_info(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         except:
             pass
 
+    active_brand_key = str(cfg.get("active_brand") or "").strip()
+    brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+    brand_cfg = brands.get(active_brand_key) if active_brand_key and isinstance(brands, dict) else None
+
+    brand_channel = None
+    brand_lang = None
+    brand_awake = None
+    brand_sched = None
+    if isinstance(brand_cfg, dict):
+        brand_channel = str(brand_cfg.get("channel_id") or "").strip() or None
+        brand_lang = str(brand_cfg.get("language") or "").strip() or None
+        brand_sched = _brand_awake_status(active_brand_key, brand_cfg)
+        brand_awake = bool(brand_sched.get("awake"))
+
+    sched_line = ""
+    if isinstance(brand_sched, dict):
+        if brand_awake:
+            sched_line = f"Schedule: Awake ({brand_sched.get('timezone')} {brand_sched.get('now')}, {brand_sched.get('start')}-{brand_sched.get('end')})\n"
+        else:
+            mins = max(1, int((brand_sched.get("until_seconds") or 0) / 60))
+            sched_line = f"Schedule: Sleeping ({brand_sched.get('timezone')} {brand_sched.get('now')}, wakes in ~{mins} min)\n"
+
     info = (
         f"ℹ️ **System Info**\n\n"
         f"Status: {status} {'🟢' if status == 'active' else '🔴'}\n"
         f"Model: {model}\n"
         f"Custom Feeds: {feeds_count}\n"
-        f"Posts Published: {seen_count}\n"
-        f"Channel: {CHANNEL_ID}\n"
-        f"Group: {GROUP_ID or 'N/A'}\n\n"
+        f"Posts Published: {seen_count}\n\n"
+        f"Active brand: {active_brand_key or 'N/A'} ({brand_lang or 'n/a'})\n"
+        f"Brand channel: {brand_channel or 'None'}\n"
+        + sched_line
+        + f"Env CHANNEL_ID: {CHANNEL_ID or 'None'}\n"
+        + f"Env GROUP_ID: {GROUP_ID or 'N/A'}\n\n"
         f"Use the buttons below to manage the bot."
     )
 
     await update.message.reply_text(info, parse_mode="Markdown")
+
+
+async def admin_brands_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.message:
+        return
+
+    cfg = _load_config()
+    brands = cfg.get("brands") if isinstance(cfg.get("brands"), dict) else {}
+    if not isinstance(brands, dict) or not brands:
+        await update.message.reply_text("❌ No brands found in config.json")
+        return
+
+    try:
+        from brand_context import env_get
+        from multi_platform_publisher import MultiPlatformPublisher
+        from telegram import Bot
+    except Exception as exc:  # noqa: BLE001
+        await update.message.reply_text(f"❌ Import error: {exc}")
+        return
+
+    stats = _read_brand_stats()
+    lines: list[str] = []
+    lines.append("🤖 Brands Status")
+
+    # Keep it short to avoid Telegram 4096 limit
+    max_brands = 10
+    count = 0
+    for brand_key in sorted(brands.keys()):
+        if count >= max_brands:
+            break
+        brand_cfg = brands.get(brand_key)
+        if not isinstance(brand_cfg, dict):
+            continue
+        count += 1
+
+        display = str(brand_cfg.get("display_name") or brand_key)
+        lang = str(brand_cfg.get("language") or "").strip() or "?"
+        channel_id = str(brand_cfg.get("channel_id") or "").strip() or None
+
+        sched = _brand_awake_status(brand_key, brand_cfg)
+        awake = bool(sched.get("awake"))
+        if awake:
+            sched_txt = f"Awake ({sched.get('timezone')} {sched.get('now')})"
+        else:
+            mins = max(1, int((sched.get("until_seconds") or 0) / 60))
+            sched_txt = f"Sleeping ({sched.get('timezone')} {sched.get('now')}, ~{mins}m)"
+
+        enabled_cfg: list[str] = []
+        if isinstance(brand_cfg.get("platforms"), dict):
+            for p, v in (brand_cfg.get("platforms") or {}).items():
+                if isinstance(v, dict) and v.get("enabled") is True:
+                    enabled_cfg.append(str(p))
+
+        runtime_enabled: list[str] = []
+        try:
+            pub = MultiPlatformPublisher(brand_key=str(brand_key))
+            runtime_enabled = list(getattr(pub, "enabled_platforms", []) or [])
+        except Exception:
+            runtime_enabled = []
+
+        missing = [p for p in enabled_cfg if p not in runtime_enabled]
+
+        # Telegram connectivity check (token valid + channel access)
+        tg_ok = "n/a"
+        if "telegram" in enabled_cfg:
+            token = env_get("TELEGRAM_TOKEN", platform="telegram", brand=brand_cfg)
+            token = str(token or "").strip() or None
+            if not token:
+                tg_ok = "missing token"
+            else:
+                try:
+                    bot = Bot(token=token)
+                    me = await bot.get_me()
+                    if not me:
+                        tg_ok = "invalid token"
+                    elif channel_id:
+                        try:
+                            await bot.get_chat(chat_id=channel_id)
+                            tg_ok = "ok"
+                        except Exception as e:
+                            tg_ok = f"no access ({str(e)[:40]})"
+                    else:
+                        tg_ok = "missing channel_id"
+                except Exception as e:
+                    tg_ok = f"invalid ({str(e)[:40]})"
+
+        st_existing = stats.get(brand_key)
+        st_row = st_existing if isinstance(st_existing, dict) else {}
+        posts = int(st_row.get("posts", 0) or 0)
+        last_at = str(st_row.get("last_published_at") or "")
+
+        lines.append(
+            f"\n• {display} ({brand_key} | {lang})\n"
+            f"  - {sched_txt}\n"
+            f"  - cfg: {', '.join(enabled_cfg) if enabled_cfg else 'none'}\n"
+            f"  - runtime: {', '.join(runtime_enabled) if runtime_enabled else 'none'}\n"
+            f"  - telegram: {tg_ok}\n"
+            f"  - missing: {', '.join(missing) if missing else 'none'}\n"
+            f"  - published: {posts}{(' | last: ' + last_at) if last_at else ''}"
+        )
+
+    msg = "\n".join(lines)
+    if len(msg) > 3900:
+        msg = msg[:3900] + "\n…(truncated)"
+    await update.message.reply_text(msg)
 
 
 def _broadcast_keyboard() -> InlineKeyboardMarkup:
@@ -1509,6 +1876,11 @@ def main() -> None:
     app.add_handler(
         MessageHandler(
             admin_filter & filters.Regex(r"^ℹ️ System Info$"), admin_system_info
+        )
+    )
+    app.add_handler(
+        MessageHandler(
+            admin_filter & filters.Regex(r"^🤖 Brands Status$"), admin_brands_status
         )
     )
     app.add_handler(
