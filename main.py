@@ -595,7 +595,11 @@ def _start_brand_bots() -> None:
                     app_b.add_handler(MessageHandler(filters.User(user_id=ADMIN_USER_ID) & filters.Regex(r"^📋 Logs$"), _brand_logs))
 
                     print(f"🤖 Starting brand bot polling: {bk}")
-                    app_b.run_polling(drop_pending_updates=True)
+                    # IMPORTANT: Brand bots run in background threads (supervisor bot is in main thread).
+                    # On Linux (Render), registering signal handlers from a non-main thread crashes with:
+                    # "set_wakeup_fd only works in main thread".
+                    # Disabling stop_signals avoids signal registration inside the thread.
+                    app_b.run_polling(drop_pending_updates=True, stop_signals=None)
                 except Exception:
                     print(f"❌ Brand bot failed: {bk}")
                     traceback.print_exc()
