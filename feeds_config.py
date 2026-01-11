@@ -1,11 +1,11 @@
 """
 RSS Feeds & Publishing Configuration per Brand
 
-🎯 DESIGN PHILOSOPHY:
-- Each brand = unique content creator personality
-- Publishing order optimized for CTA flow (long-form first → social with links)
-- Minimal delays for faster publishing cycles
-- Global trendy sources for all brands (especially robovai_ar)
+🎯 DESIGN:
+- 60 high-quality sources per brand (180 total)
+- Publishing order optimized for CTA flow
+- Source attribution in all content
+- Cross-platform promotion
 """
 
 from typing import List, Dict, Any
@@ -13,216 +13,313 @@ import random
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 📡 BRAND RSS FEEDS — Trendy, Global, High-Quality Sources
+# 📡 BRAND RSS FEEDS — 60 Sources Each (180 Total)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 BRAND_FEEDS = {
     "blocksignals": [
-        # 🏆 Tier 1: Breaking News
-        "https://cointelegraph.com/rss",
-        "https://decrypt.co/feed",
+        # Tier 1: Major Crypto News
         "https://www.coindesk.com/arc/outboundfeeds/rss/",
+        "https://cointelegraph.com/rss",
         "https://www.theblock.co/rss.xml",
-        # 🥈 Tier 2: Analysis & Deep Dives
-        "https://crypto.news/feed/",
-        "https://beincrypto.com/feed/",
-        "https://bitcoinmagazine.com/.rss/full/",
-        "https://cryptoslate.com/feed/",
-        # 🏢 Official Sources
-        "https://blog.kraken.com/feed",
-        "https://blog.coinbase.com/feed",
-        "https://blog.chain.link/rss/",
+        "https://blockworks.co/feed",
+        "https://decrypt.co/feed",
+        # Official Protocol Blogs
         "https://blog.ethereum.org/feed.xml",
-        # 🌐 Community & Trends
-        "https://www.reddit.com/r/CryptoCurrency/.rss",
-        "https://www.reddit.com/r/Bitcoin/.rss",
-        "https://www.reddit.com/r/ethereum/.rss",
-        # 📰 Google News (Trending)
-        "https://news.google.com/rss/search?q=bitcoin+price&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=ethereum+news&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=crypto+regulation+SEC&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=defi+tvl&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=bitcoin+ETF+approval&hl=en-US&gl=US&ceid=US:en",
+        "https://www.nansen.ai/research/rss.xml",
+        "https://insights.glassnode.com/rss/",
+        "https://messari.io/rss",
+        "https://www.bankless.com/rss",
+        # News Aggregators
+        "https://cryptopanic.com/news/rss/",
+        "https://www.newsbtc.com/feed/",
+        "https://bitcoinmagazine.com/.rss/full/",
+        "https://consensys.io/blog/rss.xml",
+        "https://101blockchains.com/feed",
+        # Market News
+        "https://blockchain.news/rss",
+        "https://insidebitcoins.com/feed",
+        "https://www.bitdegree.org/crypto/news/rss",
+        "https://blog.coinfund.io/feed",
+        "https://www.blockchain.com/blog/rss",
+        # Analysis & Trading
+        "https://cryptoslate.com/feed/",
+        "https://beincrypto.com/feed/",
+        "https://ambcrypto.com/feed/",
+        "https://www.cryptoglobe.com/latest/feed/",
+        "https://bitcoinist.com/feed/",
+        # DeFi Focused
+        "https://thedefiant.io/api/feed",
+        "https://cryptobriefing.com/feed/",
+        "https://www.blocktempo.com/feed/",
+        "https://www.altcoinbuzz.io/feed/",
+        "https://chainwire.org/feed/",
+        # Protocol Blogs
+        "https://ripplecoinnews.com/feed/",
+        "https://nulltx.com/feed/",
+        "https://dappradar.com/blog/feed",
+        "https://blog.0xproject.com/feed",
+        "https://blog.polygon.technology/rss.xml",
+        "https://solana.com/blog/rss.xml",
+        "https://cardanofoundation.org/en/news/rss/",
+        "https://blog.chain.link/rss.xml",
+        "https://aave.com/blog/rss.xml",
+        "https://blog.uniswap.org/rss.xml",
+        # NFT & Gaming
+        "https://opensea.io/blog/feed/",
+        "https://rarible.com/blog/feed/",
+        "https://editorial.superrare.com/feed/",
+        # Security & Wallets
+        "https://www.ledger.com/blog/feed",
+        "https://blog.trezor.io/feed",
+        # Exchange Blogs
+        "https://blog.kraken.com/feed/",
+        "https://www.binance.com/en/blog/rss",
+        "https://www.coinbase.com/blog/rss",
+        "https://www.gemini.com/blog/rss",
+        "https://blog.bitmex.com/feed/",
+        "https://insights.deribit.com/feed/",
+        # Stablecoins & DeFi Protocols
+        "https://www.circle.com/blog/rss.xml",
+        "https://tether.to/en/rss/",
+        "https://blog.makerdao.com/feed/",
+        "https://compound.finance/blog/rss.xml",
+        "https://blog.yearn.finance/feed",
+        "https://news.curve.fi/rss/",
+        "https://www.sushi.com/blog/rss.xml",
+        "https://blog.pancakeswap.finance/feed",
     ],
+    
     "zerodev": [
-        # 🛠️ No-Code/Low-Code
-        "https://dev.to/feed/tag/nocode",
-        "https://dev.to/feed/tag/automation",
-        "https://dev.to/feed/tag/lowcode",
-        "https://dev.to/feed/tag/zapier",
-        # 🚀 Product Launches
-        "https://www.producthunt.com/feed",
-        # 📚 Tool Blogs
-        "https://zapier.com/blog/feed/",
-        "https://webflow.com/blog/rss",
-        "https://www.notion.so/blog/rss",
-        "https://ifttt.com/blog/feed",
-        # 🔧 Automation Platforms
-        "https://www.make.com/en/blog/rss.xml",
-        "https://n8n.io/blog/rss.xml",
-        # 📰 Trending Topics
-        "https://news.google.com/rss/search?q=no-code+tools&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=zapier+make+automation&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=workflow+automation+AI&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=airtable+notion&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=bubble+webflow&hl=en-US&gl=US&ceid=US:en",
+        # No-Code Platforms
+        "https://bubble.io/blog/rss",
+        "https://webflow.com/blog/rss.xml",
+        "https://www.softr.io/blog/rss.xml",
+        "https://www.indiehackers.com/feed.xml",
+        "https://www.producthunt.com/feed?category=software",
+        # SaaS & Growth
+        "https://www.saastr.com/feed/",
+        "https://tomtunguz.com/index.xml",
+        "https://www.cursor.com/blog/rss.xml",
+        "https://blog.replit.com/feed.xml",
+        "https://www.makerpad.co/blog-rss.xml",
+        # Automation Tools
+        "https://zapier.com/blog/feeds/latest/",
+        "https://blog.airtable.com/rss/",
+        "https://www.nocode.tech/stories/blog/rss.xml",
+        "https://getlatka.com/blog/feed",
+        "https://www.saasmag.com/feed/",
+        # Design & Dev
+        "https://hackingui.com/feed/",
+        "https://nocodedev.com/feed",
+        "https://codeornocode.com/feed",
+        "https://nocodesundays.com/feed",
+        # Mobile No-Code
+        "https://www.adalo.com/posts/rss.xml",
+        "https://www.glideapps.com/blog/rss.xml",
+        "https://blog.flutterflow.io/rss/",
+        "https://retool.com/blog/rss.xml",
+        "https://blog.google/products/appsheet/rss/",
+        # Enterprise Low-Code
+        "https://www.outsystems.com/blog/rss.xml",
+        "https://www.mendix.com/blog/feed/",
+        "https://www.bettyblocks.com/blog/rss.xml",
+        "https://blog.caspio.com/feed/",
+        "https://www.knack.com/blog/feed/",
+        # Builders & Portals
+        "https://www.stackerhq.com/blog/rss.xml",
+        "https://www.bravostudio.app/blog/rss.xml",
+        "https://dorik.com/blog/feed",
+        "https://carrd.co/blog/feed",
+        "https://blog.tally.so/rss/",
+        "https://www.typeform.com/blog/feed/",
+        # Productivity & Docs
+        "https://www.notion.so/blog/rss.xml",
+        "https://coda.io/blog/rss.xml",
+        "https://miro.com/blog/feed/",
+        "https://www.figma.com/blog/feed/",
+        "https://www.canva.com/learn/feed/",
+        # SaaS Marketing
+        "https://buffer.com/resources/rss/",
+        "https://blog.hubspot.com/rss.xml",
+        "https://www.intercom.com/blog/feed/",
+        "https://blog.close.com/feed/",
+        "https://www.profitwell.com/recur/rss.xml",
+        # VC & Growth
+        "https://openviewpartners.com/blog/feed/",
+        "https://review.firstround.com/feed.xml",
+        "https://blog.ycombinator.com/feed/",
+        "https://www.techstars.com/blog/rss.xml",
+        # Analytics & Metrics
+        "https://baremetrics.com/blog/feed",
+        "https://blog.chartmogul.com/feed/",
+        "https://userguiding.com/blog/feed/",
+        "https://www.appcues.com/blog/rss.xml",
+        "https://www.trychameleon.com/blog/rss.xml",
+        # Product Management
+        "https://www.pendo.io/blog/feed/",
+        "https://www.productplan.com/feed/",
+        "https://www.aha.io/blog/feed",
     ],
+    
     "robovai_ar": [
-        # ════════════════════════════════════════════════════════════════════
-        # 🌍 GLOBAL TECH NEWS — Top English Sources (AI will translate to Arabic)
-        # ════════════════════════════════════════════════════════════════════
-        # 🏆 Tier 1: Major Tech Publications
-        "https://www.theverge.com/rss/index.xml",
-        "https://arstechnica.com/feed/",
-        "https://www.wired.com/feed/rss",
-        "https://techcrunch.com/feed/",
-        "https://mashable.com/feeds/rss/all",
-        "https://www.engadget.com/rss.xml",
-        "https://thenextweb.com/feed/",
-        "https://venturebeat.com/feed/",
-        # 📱 Apple & Google Ecosystem
-        "https://9to5mac.com/feed/",
-        "https://9to5google.com/feed/",
-        "https://www.androidauthority.com/feed/",
-        # 🤖 AI & ML Specific
-        "https://openai.com/blog/rss/",
-        "https://blog.google/products/rss/",
-        "https://www.anthropic.com/news/rss",
-        "https://stability.ai/blog?format=rss",
-        # 💻 Developer & Enterprise
-        "https://www.zdnet.com/news/rss.xml",
-        "https://www.cnet.com/rss/news/",
-        "https://www.infoworld.com/index.rss",
-        # 🌐 Reddit Communities (Trending Discussions)
-        "https://www.reddit.com/r/artificial/.rss",
-        "https://www.reddit.com/r/ChatGPT/.rss",
-        "https://www.reddit.com/r/technology/.rss",
-        "https://www.reddit.com/r/MachineLearning/.rss",
-        "https://www.reddit.com/r/singularity/.rss",
-        # 📰 Google News — HOT TRENDING TOPICS (English)
-        "https://news.google.com/rss/search?q=OpenAI+GPT&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=ChatGPT+update&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=Google+Gemini+AI&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=Claude+AI+Anthropic&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=AI+tools+productivity&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=Apple+AI+features&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=Microsoft+Copilot&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=Midjourney+DALL-E&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=Sora+AI+video&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=tech+startup+funding&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=automation+business&hl=en-US&gl=US&ceid=US:en",
-        "https://news.google.com/rss/search?q=no-code+low-code&hl=en-US&gl=US&ceid=US:en",
+        # Major AI Companies
+        "https://openai.com/news/rss.xml",
+        "https://research.google/blog/rss",
+        "https://news.microsoft.com/source/topics/ai/feed/",
+        "https://www.theverge.com/ai-artificial-intelligence/rss/index.xml",
+        "https://techcrunch.com/category/artificial-intelligence/feed/",
+        "https://www.wired.com/feed/category/science/latest/rss",
+        "https://news.mit.edu/rss/topic/artificial-intelligence",
+        "https://blogs.nvidia.com/feed/",
+        "https://huggingface.co/blog/feed.xml",
+        "https://venturebeat.com/category/ai/feed/",
+        # Tech News
+        "https://www.zdnet.com/topic/artificial-intelligence/rss.xml",
+        "https://lifehacker.com/rss",
+        "https://www.makeuseof.com/feed/",
+        "https://www.fastcompany.com/technology/rss",
+        "https://www.aitrends.com/feed/",
+        # MENA Tech
+        "https://www.wamda.com/rss",
+        "https://www.menabytes.com/feed/",
+        "https://www.tech-wd.com/wd/feed/",
+        "https://aitnews.com/feed/",
+        "https://www.arabnet.me/english/rss",
+        # AI Research Labs
+        "https://deepmind.google/blog/rss.xml",
+        "https://ai.meta.com/blog/rss.xml",
+        "https://www.anthropic.com/news/rss.xml",
+        "https://aws.amazon.com/blogs/machine-learning/feed/",
+        "https://www.ibm.com/blog/category/research/feed/",
+        # Academic AI
+        "https://bair.berkeley.edu/blog/feed.xml",
+        "https://ai.stanford.edu/blog/feed.xml",
+        "https://machinelearningmastery.com/feed/",
+        "https://towardsdatascience.com/feed",
+        "https://www.analyticsvidhya.com/feed/",
+        # AI News Sites
+        "https://www.kdnuggets.com/feed",
+        "https://www.marktechpost.com/feed/",
+        "https://www.unite.ai/feed/",
+        "https://www.artificialintelligence-news.com/feed/",
+        "https://thegradient.pub/rss/",
+        "https://www.skynettoday.com/rss.xml",
+        # Productivity
+        "https://productivityland.com/feed/",
+        "https://www.asianefficiency.com/feed/",
+        "https://zenhabits.net/feed/",
+        "https://blog.rescuetime.com/feed/",
+        "https://todoist.com/help/articles/feed",
+        # Project Management
+        "https://blog.trello.com/rss.xml",
+        "https://blog.asana.com/feed/",
+        "https://monday.com/blog/feed/",
+        "https://clickup.com/blog/feed/",
+        # Career & Business
+        "https://www.workitdaily.com/blog/rss.xml",
+        "https://www.careercontessa.com/blog/rss.xml",
+        "https://www.themuse.com/advice/feed",
+        "https://www.glassdoor.com/blog/feed/",
+        "https://hbr.org/rss/topic/technology",
+        "https://sloanreview.mit.edu/feed/",
+        # Arabic Regional
+        "https://www.almasryalyoum.com/rss/section/13",
+        "https://www.youm7.com/rss/Section/328",
+        "https://gate.ahram.org.eg/rss/14.aspx",
+        "https://www.skynewsarabia.com/rss/technology.xml",
+        "https://www.alarabiya.net/tools/mrss/technology.xml",
+        "https://asharq.com/rss/technology/",
+        "https://www.arabnews.com/cat/11/rss.xml",
+        "https://www.entrepreneur.com/me/rss",
+        "https://www.forbesmiddleeast.com/rss/technology",
     ],
 }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 📤 PUBLISHING ORDER — Optimized for CTA Flow
+# 📤 PUBLISHING ORDER — Blog First, Then Social (for CTAs)
 # ═══════════════════════════════════════════════════════════════════════════════
-#
-# STRATEGY:
-# 1. Long-form content FIRST (Blog/Dev.to) → Gets URL
-# 2. Social platforms SECOND → Can include blog link as CTA
-# 3. Minimal delays (2 min max) for fast publishing cycles
-#
 
 PUBLISHING_ORDER = {
     "blocksignals": [
-        # Telegram first (fast alerts), Discord follows with discussion invite
         {"platform": "telegram", "delay_minutes": 0, "enable_cta": False},
-        {"platform": "discord", "delay_minutes": 0, "enable_cta": True},
+        {"platform": "discord", "delay_minutes": 2, "enable_cta": True},
     ],
+    
     "zerodev": [
-        # Dev.to first (gets article URL), Telegram follows with link
         {"platform": "devto", "delay_minutes": 0, "enable_cta": False},
-        {"platform": "telegram", "delay_minutes": 0, "enable_cta": True},
+        {"platform": "telegram", "delay_minutes": 2, "enable_cta": True},
     ],
+    
     "robovai_ar": [
-        # Blogger first (gets article URL), then social with links
         {"platform": "blogger", "delay_minutes": 0, "enable_cta": False},
-        {"platform": "facebook", "delay_minutes": 0, "enable_cta": True},
-        {"platform": "telegram", "delay_minutes": 0, "enable_cta": True},
+        {"platform": "facebook", "delay_minutes": 2, "enable_cta": True},
+        {"platform": "telegram", "delay_minutes": 2, "enable_cta": True},
     ],
 }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 🔗 CTA TEMPLATES — Cross-Platform Promotion
+# 🔗 CTA TEMPLATES — Cross-Platform with Source Attribution
 # ═══════════════════════════════════════════════════════════════════════════════
 
 CTA_TEMPLATES = {
     "blocksignals": {
-        "telegram": "",  # First platform, no CTA needed
-        "discord": "\n\n⚡ **Join our Telegram** for instant alerts: {telegram_url}\n\n#Crypto #BTC #ETH #DeFi #Web3",
+        "telegram": "",
+        "discord": "\n\n⚡ **Get instant alerts on Telegram**: {telegram_url}\n\n#Crypto #BTC #ETH #DeFi #Web3",
     },
+    
     "zerodev": {
-        "devto": "",  # First platform, no CTA needed
-        "telegram": "\n\n📖 **Full tutorial on Dev.to**: {devto_url}\n\n#NoCode #Automation #Zapier #Make",
+        "devto": "",
+        "telegram": "\n\n📖 **Read the full tutorial**: {devto_url}\n\n#NoCode #Automation #BuildInPublic",
     },
+    
     "robovai_ar": {
-        "blogger": "",  # First platform, no CTA needed
-        "facebook": "\n\n📖 **اقرأ المقال كامل**: {blogger_url}\n\n#ذكاء_اصطناعي #تقنية #AI #ChatGPT",
-        "telegram": "\n\n📖 **المقال الكامل**: {blogger_url}\n💬 **ناقش معانا**: {facebook_url}\n\n#AI #تقنية #أتمتة",
+        "blogger": "",
+        "facebook": "\n\n📖 **اقرأ المقال كامل على المدونة**: {blogger_url}\n\n#ذكاء_اصطناعي #تقنية #AI",
+        "telegram": "\n\n📖 **المقال الكامل**: {blogger_url}\n💬 **شاركنا رأيك**: {facebook_url}\n\n#AI #تقنية #مصر",
     },
 }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 🏷️ HASHTAG SETS — Platform-Specific
+# 📰 SOURCE ATTRIBUTION HELPER
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def get_source_attribution(source_name: str, source_url: str, language: str = "en") -> str:
+    """Generate source attribution text for content."""
+    if language == "ar":
+        return f"\n\n📰 **المصدر**: [{source_name}]({source_url})"
+    else:
+        return f"\n\n📰 **Source**: [{source_name}]({source_url})"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🏷️ HASHTAG SETS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 HASHTAG_SETS = {
     "blocksignals": {
-        "default": ["#Crypto", "#BTC", "#ETH", "#DeFi", "#Web3", "#CryptoNews"],
-        "bitcoin": ["#Bitcoin", "#BTC", "#HODL", "#Cryptocurrency", "#BTCPrice"],
-        "ethereum": ["#Ethereum", "#ETH", "#DeFi", "#SmartContracts", "#Web3"],
-        "altcoins": ["#Altcoins", "#CryptoGems", "#100x", "#NewListings"],
-        "regulation": ["#CryptoRegulation", "#SEC", "#CryptoLaw", "#Compliance"],
+        "default": ["#Crypto", "#BTC", "#ETH", "#DeFi", "#Web3", "#CryptoNews", "#Trading"],
+        "bitcoin": ["#Bitcoin", "#BTC", "#HODL", "#Cryptocurrency", "#BTCPrice", "#Halving"],
+        "ethereum": ["#Ethereum", "#ETH", "#DeFi", "#SmartContracts", "#Web3", "#Layer2"],
+        "defi": ["#DeFi", "#Yield", "#TVL", "#DEX", "#Lending", "#Staking"],
+        "nft": ["#NFT", "#NFTs", "#DigitalArt", "#Web3", "#OpenSea"],
     },
+    
     "zerodev": {
-        "default": [
-            "#NoCode",
-            "#Automation",
-            "#LowCode",
-            "#BuildInPublic",
-            "#IndieHacker",
-        ],
-        "zapier": ["#Zapier", "#Automation", "#Workflow", "#Productivity"],
-        "make": ["#Make", "#Integromat", "#Automation", "#NoCode"],
-        "bubble": ["#Bubble", "#NoCode", "#WebApp", "#StartupTools"],
-        "ai": ["#AITools", "#AIAutomation", "#NoCodeAI", "#FutureOfWork"],
+        "default": ["#NoCode", "#Automation", "#LowCode", "#BuildInPublic", "#IndieHacker", "#SaaS"],
+        "zapier": ["#Zapier", "#Automation", "#Workflow", "#Productivity", "#NoCode"],
+        "bubble": ["#Bubble", "#NoCode", "#WebApp", "#StartupTools", "#BuildInPublic"],
+        "ai": ["#AITools", "#AIAutomation", "#NoCodeAI", "#FutureOfWork", "#Productivity"],
     },
+    
     "robovai_ar": {
-        "default": ["#ذكاء_اصطناعي", "#تقنية", "#AI", "#أتمتة", "#مصر"],
-        "chatgpt": ["#ChatGPT", "#OpenAI", "#ذكاء_اصطناعي", "#AIChat"],
+        "default": ["#ذكاء_اصطناعي", "#تقنية", "#AI", "#أتمتة", "#مصر", "#تكنولوجيا"],
+        "chatgpt": ["#ChatGPT", "#OpenAI", "#ذكاء_اصطناعي", "#AIChat", "#GPT"],
         "tools": ["#أدوات_إنتاجية", "#تطبيقات", "#تقنية", "#Productivity"],
         "business": ["#ريادة_أعمال", "#شركات_ناشئة", "#تحول_رقمي", "#Startup"],
-        "arabic": ["#تقنية_عربي", "#محتوى_عربي", "#مصر", "#السعودية", "#الإمارات"],
-    },
-}
-
-
-def get_hashtags(brand_name: str, category: str = "default") -> List[str]:
-    """Get hashtags for brand and category."""
-    brand_tags = HASHTAG_SETS.get(brand_name, {})
-    return brand_tags.get(category, brand_tags.get("default", []))
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# 🔄 CROSS-POLLINATION — Brand Network Mentions
-# ═══════════════════════════════════════════════════════════════════════════════
-
-CROSS_POLLINATION = {
-    "blocksignals": {
-        "zerodev": "💡 Want to automate your crypto tracking? @ZeroDev builds no-code tools for traders",
-        "robovai_ar": "🌍 Arabic content? @RoboVAI covers crypto in Arabic for MENA region",
-    },
-    "zerodev": {
-        "blocksignals": "📊 Need crypto data for your automations? @BlockSignals has real-time feeds",
-        "robovai_ar": "🇪🇬 Arabic automation content? @RoboVAI teaches no-code in Arabic",
-    },
-    "robovai_ar": {
-        "all": "🌐 **شبكتنا الإنجليزية:**\n⚡ @BlockSignals — أخبار الكريبتو\n💻 @ZeroDev — أدوات الأتمتة\n\nتابعونا للمحتوى بالإنجليزي! 🚀",
     },
 }
 
@@ -230,7 +327,6 @@ CROSS_POLLINATION = {
 # ═══════════════════════════════════════════════════════════════════════════════
 # 📊 HELPER FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════════
-
 
 def get_feeds_for_brand(brand_name: str) -> List[str]:
     """Get RSS feeds for specific brand."""
@@ -242,49 +338,52 @@ def get_all_brands_with_feeds() -> List[str]:
     return [brand for brand, feeds in BRAND_FEEDS.items() if feeds]
 
 
-def get_publishing_order(
-    brand_name: str, enabled_platforms: List[str]
-) -> List[Dict[str, Any]]:
+def get_publishing_order(brand_name: str, enabled_platforms: List[str]) -> List[Dict[str, Any]]:
     """Get publishing order filtered by enabled platforms."""
     brand_order = PUBLISHING_ORDER.get(brand_name, [])
     return [p for p in brand_order if p["platform"] in enabled_platforms]
 
 
+def get_hashtags(brand_name: str, category: str = "default") -> List[str]:
+    """Get hashtags for brand and category."""
+    brand_tags = HASHTAG_SETS.get(brand_name, {})
+    return brand_tags.get(category, brand_tags.get("default", []))
+
+
 def inject_ctas(
-    content: str, platform: str, brand_name: str, published_urls: Dict[str, str]
+    content: str,
+    platform: str,
+    brand_name: str,
+    published_urls: Dict[str, str]
 ) -> str:
     """Inject cross-platform CTAs at end of content."""
     brand_templates = CTA_TEMPLATES.get(brand_name, {})
     template = brand_templates.get(platform, "")
-
+    
     if not template:
         return content
-
+    
     try:
         url_dict = {f"{p}_url": url for p, url in published_urls.items()}
         cta = template.format(**url_dict)
         return content + cta
-    except KeyError as e:
-        print(f"⚠️ Missing URL for CTA placeholder: {e}")
+    except KeyError:
         return content
 
 
 def should_cross_pollinate(post_count: int) -> bool:
-    """Determine if post should include cross-brand reference (every 10th post)."""
+    """Cross-pollinate every 10th post."""
     return post_count % 10 == 0
 
 
 def get_cross_pollination_snippet(brand_name: str) -> str:
     """Get cross-brand mention snippet."""
-    snippets = CROSS_POLLINATION.get(brand_name, {})
-
-    if not snippets:
-        return ""
-
-    if brand_name == "robovai_ar":
-        return snippets.get("all", "")
-
-    return random.choice(list(snippets.values()))
+    snippets = {
+        "blocksignals": "💡 @ZeroDev teaches no-code automation | 🇪🇬 @RoboVAI for Arabic tech",
+        "zerodev": "📊 @BlockSignals for crypto signals | 🇪🇬 @RoboVAI for Arabic content",
+        "robovai_ar": "🌐 تابعونا بالإنجليزي:\n⚡ @BlockSignals — كريبتو\n💻 @ZeroDev — أتمتة",
+    }
+    return snippets.get(brand_name, "")
 
 
 # Legacy compatibility

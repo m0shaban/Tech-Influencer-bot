@@ -50,6 +50,7 @@ from brands_config import (
 )
 
 from image_manager import get_best_image
+from ai_processor import rewrite_with_ai
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -206,11 +207,29 @@ def _split_text_chunks(text: str, limit: int) -> list[str]:
     return chunks
 
 
-def _build_source_button(*, url: str, lang: str) -> Optional[InlineKeyboardMarkup]:
+def _build_source_button(*, url: str, lang: str, label_override: str = "") -> Optional[InlineKeyboardMarkup]:
+    """
+    Builds the CTA button.
+    If 'label_override' is set, use it. Otherwise default to 'Reference'.
+    Uses 'url' which should now be the USER'S CTA URL (Blog/Channel), not the RSS source.
+    """
     u = (url or "").strip()
     if not u:
         return None
-    label = "🔗 Reference" if (lang or "").lower().startswith("en") else "🔗 المصدر"
+        
+    is_ar = (lang or "").lower().startswith("ar")
+    
+    if label_override:
+        label = label_override
+    else:
+        # Dynamic label based on URL type
+        if "t.me/" in u:
+            label = "📢 اشترك في القناة" if is_ar else "📢 Join Channel"
+        elif "blogspot" in u or "dev.to" in u:
+            label = "📝 اقرأ المزيد على المدونة" if is_ar else "📝 Read on Blog"
+        else:
+            label = "🔗 المصدر" if is_ar else "🔗 Reference"
+
     return InlineKeyboardMarkup([[InlineKeyboardButton(label, url=u)]])
 
 
@@ -273,7 +292,7 @@ class BrandWorker:
     ) -> Dict[str, Any]:
         """
         Fetch news and generate NATIVE Telegram content.
-        
+
         Args:
             context: Optional telegram context (unused in logic, kept for compat)
         """
@@ -416,10 +435,10 @@ Share your thoughts below 👇
         try:
             bot = _bot_instance or (context.bot if context else None)
             if not bot:
-                 # Fallback if no context provided (async loop case)
-                 if self.app:
-                     bot = self.app.bot
-                 else:
+                # Fallback if no context provided (async loop case)
+                if self.app:
+                    bot = self.app.bot
+                else:
                     return {"status": "error", "error": "No bot instance available"}
 
             channel_id = self.brand.channel_id
@@ -522,8 +541,8 @@ Share your thoughts below 👇
                     f"📝 {result.get('title', '')[:80]}..."
                 )
 
-                # If FUNNEL mode, also publish to external platforms
-                if self.brand.mode == PublishingMode.FUNNEL:
+                # If FUNNEL or DUAL mode, also publish to external platforms
+                if self.brand.mode in [PublishingMode.FUNNEL, PublishingMode.DUAL]:
                     await self._publish_to_external_platforms(context, result)
             else:
                 await msg.edit_text(f"❌ Publish failed: {pub_result.get('error')}")
@@ -575,30 +594,51 @@ Share your thoughts below 👇
 
             for platform in external_platforms:
                 try:
+                    # Regenerate content specifically for this platform to ensure quality
+                    # (The 'telegram' fetch might not have produced good blog/facebook content)
+                    platform_content = content_data  # Default to what we have
+                    
+                    # Try to generate platform-specific content
+                    try:
+                        self._log(f"🎨 Generating dedicated content for {platform}...")
+                        ai_result = rewrite_with_ai(
+                            feed_item.get("title", ""),
+                            feed_item.get("summary", ""),
+                            feed_item.get("link", ""),
+                            system_prompt=self.brand.system_prompt,
+                            platform=platform,
+                            brand_name=self.brand.key,
+                            brand_language=self.brand.language,
+                        )
+                        if ai_result:
+                            platform_content = ai_result
+                    except Exception as ai_e:
+                        self._log(f"⚠️ AI generation failed for {platform}, using fallback: {ai_e}")
+
                     if platform == "blogger":
-                        title = content_data.get(
+                        title = platform_content.get(
                             "blog_title", feed_item.get("title", "")
                         )
-                        content = content_data.get("blog_content_md", "")
+                        content = platform_content.get("blog_content_md", "")
                         await publisher.publish_to_blogger(
                             title=title,
                             content=content,
                         )
                     elif platform == "facebook":
-                        fb_content = content_data.get("facebook_post", "")
+                        fb_content = platform_content.get("facebook_post", "")
                         await publisher.publish_to_facebook(
                             message=fb_content,
                         )
                     elif platform == "discord":
-                        discord_content = content_data.get("discord_msg", "")
+                        discord_content = platform_content.get("discord_msg", "")
                         await publisher.publish_to_discord(
                             message=discord_content,
                         )
                     elif platform == "devto":
-                        title = content_data.get(
+                        title = platform_content.get(
                             "blog_title", feed_item.get("title", "")
                         )
-                        content = content_data.get("blog_content_md", "")
+                        content = platform_content.get("blog_content_md", "")
                         await publisher.publish_to_devto(
                             title=title,
                             content=content,
@@ -763,7 +803,7 @@ Use the keyboard below to control this brand.
                     await self._check_schedule_and_post()
                 except Exception as e:
                     self._log(f"Scheduler error: {e}")
-                
+
                 await asyncio.sleep(60)
         finally:
             await app.stop()
@@ -775,14 +815,14 @@ Use the keyboard below to control this brand.
             local_tz = pytz.timezone(tz_name)
         except:
             local_tz = pytz.UTC
-            
+
         now_aware = datetime.now(local_tz)
         current_hour = now_aware.hour
-        
+
         wake = self.brand.schedule.get("wake_hour", 9)
         sleep = self.brand.schedule.get("sleep_hour", 22)
         limit = self.brand.schedule.get("posts_per_day", 8)
-        
+
         # Check Business Hours
         if not (wake <= current_hour < sleep):
             return
@@ -795,7 +835,7 @@ Use the keyboard below to control this brand.
         # e.g. 14 hours / 8 posts = ~1.75 hours = 105 minutes
         active_hours = max(1, sleep - wake)
         interval_minutes = (active_hours * 60) / max(1, limit)
-        
+
         should_post = False
         if not self.last_post_time:
             # First run: start straight away (or maybe slight delay?)
@@ -805,24 +845,26 @@ Use the keyboard below to control this brand.
             delta = datetime.now() - self.last_post_time
             if delta.total_seconds() > (interval_minutes * 60):
                 should_post = True
-        
+
         if should_post:
-            self._log(f"⏰ Scheduled post triggering (Interval: {interval_minutes:.0f}m)")
-            
+            self._log(
+                f"⏰ Scheduled post triggering (Interval: {interval_minutes:.0f}m)"
+            )
+
             # Fetch & Publish
             res = await self._fetch_and_generate_native_content(None)
-            
+
             if res.get("status") == "success":
                 title = str(res.get("title", "") or "")
                 link = str(res.get("link", "") or "")
                 content = res.get("content", "")
-                
+
                 await self._publish_to_channel(
-                    None, 
-                    content, 
-                    title=title, 
-                    source_url=link, 
-                    _bot_instance=self.app.bot
+                    None,
+                    content,
+                    title=title,
+                    source_url=link,
+                    _bot_instance=self.app.bot,
                 )
             elif res.get("status") == "no_news":
                 self._log("No news found for scheduled post.")

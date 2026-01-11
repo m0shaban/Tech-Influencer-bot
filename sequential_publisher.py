@@ -9,6 +9,8 @@ import json
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 import os
+import re
+from urllib.parse import urlparse
 
 from ai_processor import rewrite_with_ai
 from feeds_config import (
@@ -17,6 +19,78 @@ from feeds_config import (
     should_cross_pollinate,
     get_cross_pollination_snippet,
 )
+
+
+def _extract_source_name(url: str) -> str:
+    """Extract readable source name from URL."""
+    if not url:
+        return "المصدر" if True else "Source"  # Placeholder
+    
+    try:
+        parsed = urlparse(url)
+        domain = parsed.netloc.lower()
+        
+        # Remove common prefixes
+        domain = re.sub(r'^(www\.|blog\.|news\.)', '', domain)
+        
+        # Known source mappings
+        source_names = {
+            "coindesk.com": "CoinDesk",
+            "cointelegraph.com": "Cointelegraph",
+            "theblock.co": "The Block",
+            "decrypt.co": "Decrypt",
+            "blockworks.co": "Blockworks",
+            "bitcoinmagazine.com": "Bitcoin Magazine",
+            "theverge.com": "The Verge",
+            "techcrunch.com": "TechCrunch",
+            "wired.com": "Wired",
+            "arstechnica.com": "Ars Technica",
+            "engadget.com": "Engadget",
+            "zdnet.com": "ZDNet",
+            "cnet.com": "CNET",
+            "mashable.com": "Mashable",
+            "venturebeat.com": "VentureBeat",
+            "thenextweb.com": "The Next Web",
+            "openai.com": "OpenAI",
+            "google.com": "Google",
+            "microsoft.com": "Microsoft",
+            "nvidia.com": "NVIDIA",
+            "huggingface.co": "Hugging Face",
+            "deepmind.google": "DeepMind",
+            "anthropic.com": "Anthropic",
+            "aitnews.com": "AI Tech News (عربي)",
+            "wamda.com": "Wamda",
+            "menabytes.com": "MENABytes",
+            "arabnet.me": "ArabNet",
+            "zapier.com": "Zapier",
+            "bubble.io": "Bubble",
+            "webflow.com": "Webflow",
+            "producthunt.com": "Product Hunt",
+            "indiehackers.com": "Indie Hackers",
+            "dev.to": "Dev.to",
+            "medium.com": "Medium",
+            "reddit.com": "Reddit",
+        }
+        
+        # Check for known sources
+        for key, name in source_names.items():
+            if key in domain:
+                return name
+        
+        # Fallback: capitalize domain name
+        name = domain.split('.')[0].replace('-', ' ').title()
+        return name
+        
+    except Exception:
+        return "Source"
+
+
+def _format_source_attribution(source_name: str, source_url: str, language: str) -> str:
+    """Format source attribution text."""
+    if language == "ar":
+        return f"\n\n📰 المصدر: {source_name}"
+    else:
+        return f"\n\n📰 Source: {source_name}"
 
 
 class SequentialPublisher:
@@ -174,6 +248,13 @@ class SequentialPublisher:
                         feed_item=feed_item,
                         content_data=content_data,
                     )
+
+                # Add source attribution (CRITICAL: always cite the original source)
+                source_url = str(feed_item.get("link", "") or "").strip()
+                if source_url:
+                    source_name = _extract_source_name(source_url)
+                    source_text = _format_source_attribution(source_name, source_url, brand_language)
+                    content = content + source_text
 
                 # Inject CTAs if enabled and we have URLs
                 if enable_cta and any(v for v in published_urls.values()):

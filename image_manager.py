@@ -305,4 +305,9 @@ def get_best_image(
     except Exception as e:
         _safe_print(f"[image_manager] placeholder fallback failed: {e}")
 
-    return {"url": None, "source": "none", "uploaded_to_imgbb": False, "error": "no_image"}
+    return {
+        "url": None,
+        "source": "none",
+        "uploaded_to_imgbb": False,
+        "error": "no_image",
+    }
