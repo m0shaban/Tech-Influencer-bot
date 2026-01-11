@@ -771,79 +771,13 @@ Use the keyboard below to control this brand.
             )
         await app.updater.start_polling(drop_pending_updates=True)
 
-        # Keep running
+        # Keep running (Scheduler is now handled externally by auto_publisher.py)
         try:
             while self.is_running:
-                # --- SCHEDULER LOGIC ---
-                try:
-                    await self._check_schedule_and_post()
-                except Exception as e:
-                    self._log(f"Scheduler error: {e}")
-
-                await asyncio.sleep(60)
+                await asyncio.sleep(3600)  # Sleeping giant 💤 where the scheduler pokes it
         finally:
             await app.stop()
 
-    async def _check_schedule_and_post(self) -> None:
-        """Check if it's time to post and execute if so."""
-        tz_name = self.brand.schedule.get("timezone", "UTC")
-        try:
-            local_tz = pytz.timezone(tz_name)
-        except:
-            local_tz = pytz.UTC
-
-        now_aware = datetime.now(local_tz)
-        current_hour = now_aware.hour
-
-        wake = self.brand.schedule.get("wake_hour", 9)
-        sleep = self.brand.schedule.get("sleep_hour", 22)
-        limit = self.brand.schedule.get("posts_per_day", 8)
-
-        # Check Business Hours
-        if not (wake <= current_hour < sleep):
-            return
-
-        # Check Daily Limit
-        if self.posts_today >= limit:
-            return
-
-        # Check Interval (Spread posts evenly)
-        # e.g. 14 hours / 8 posts = ~1.75 hours = 105 minutes
-        active_hours = max(1, sleep - wake)
-        interval_minutes = (active_hours * 60) / max(1, limit)
-
-        should_post = False
-        if not self.last_post_time:
-            # First run: start straight away (or maybe slight delay?)
-            should_post = True
-        else:
-            # Compare with system time (self.last_post_time is system time)
-            delta = datetime.now() - self.last_post_time
-            if delta.total_seconds() > (interval_minutes * 60):
-                should_post = True
-
-        if should_post:
-            self._log(
-                f"⏰ Scheduled post triggering (Interval: {interval_minutes:.0f}m)"
-            )
-
-            # Fetch & Generate content
-            res = await self._fetch_and_generate_native_content(None)
-
-            if res.get("status") == "success":
-                # Use SequentialPublisher for ALL platforms (including Telegram)
-                # This ensures proper CTA flow:
-                # - BlockSignals: Telegram → Discord (with CTA to Telegram)
-                # - ZeroDev: Dev.to → Telegram (with CTA to Dev.to)
-                # - RoboVAI: Blogger → Facebook → Telegram (with CTAs)
-                await self._publish_to_external_platforms(
-                    context=None,
-                    result=res,
-                )
-            elif res.get("status") == "no_news":
-                self._log("No news found for scheduled post.")
-            else:
-                self._log(f"Scheduled generation failed: {res.get('error')}")
 
     async def stop(self) -> None:
         """Stop the worker bot."""
