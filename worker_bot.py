@@ -562,92 +562,59 @@ Share your thoughts below 👇
 
     async def _publish_to_external_platforms(
         self,
-        context: ContextTypes.DEFAULT_TYPE,
+        context: Optional[ContextTypes.DEFAULT_TYPE],
         result: Dict[str, Any],
     ) -> None:
         """
-        For FUNNEL mode: Also publish to Blogger, Facebook, etc.
-        This runs AFTER the native Telegram post.
+        Publish to ALL platforms sequentially with CTAs.
+        Uses SequentialPublisher to ensure proper CTA injection between platforms.
+        
+        Strategy:
+        - BlockSignals: Telegram first (HUB) → Discord with CTA to Telegram
+        - ZeroDev: Dev.to first (HUB) → Telegram with CTA to Dev.to
+        - RoboVAI_AR: Blogger first (HUB) → Facebook with CTA → Telegram with CTA
         """
-        from multi_platform_publisher import MultiPlatformPublisher
         from sequential_publisher import SequentialPublisher
+        from multi_platform_publisher import MultiPlatformPublisher
 
         try:
             feed_item = result.get("feed_item", {})
-            content_data = result.get("content_data", {})
+            if not feed_item:
+                feed_item = {
+                    "title": result.get("title", ""),
+                    "summary": result.get("summary", ""),
+                    "link": result.get("link", ""),
+                }
 
-            # Get platforms config
-            platforms = self.brand.platforms
-            external_platforms = [
-                p
-                for p in platforms.keys()
-                if p != "telegram" and platforms[p].get("enabled")
-            ]
+            # Load full config for SequentialPublisher
+            config_path = Path(__file__).parent / "config.json"
+            config = json.loads(config_path.read_text(encoding="utf-8"))
 
-            if not external_platforms:
-                return
+            # Initialize publishers
+            seq_publisher = SequentialPublisher(config)
+            multi_publisher = MultiPlatformPublisher()
 
-            self._log(f"Publishing to external: {external_platforms}")
+            self._log(f"📤 Starting sequential publish for {self.brand.display_name}")
+            
+            # Use sequential publisher for proper CTA flow
+            published = await seq_publisher.publish_item(
+                brand_name=self.brand.key,
+                feed_item=feed_item,
+                platform_publisher=multi_publisher,
+                telegram_context=context,
+                fast_mode=False,  # Use delays for proper CTA injection
+            )
 
-            # Use existing sequential publisher for external platforms
-            publisher = MultiPlatformPublisher()
-
-            for platform in external_platforms:
-                try:
-                    # Regenerate content specifically for this platform to ensure quality
-                    # (The 'telegram' fetch might not have produced good blog/facebook content)
-                    platform_content = content_data  # Default to what we have
-                    
-                    # Try to generate platform-specific content
-                    try:
-                        self._log(f"🎨 Generating dedicated content for {platform}...")
-                        ai_result = rewrite_with_ai(
-                            feed_item.get("title", ""),
-                            feed_item.get("summary", ""),
-                            feed_item.get("link", ""),
-                            system_prompt=self.brand.system_prompt,
-                            platform=platform,
-                            brand_name=self.brand.key,
-                            brand_language=self.brand.language,
-                        )
-                        if ai_result:
-                            platform_content = ai_result
-                    except Exception as ai_e:
-                        self._log(f"⚠️ AI generation failed for {platform}, using fallback: {ai_e}")
-
-                    if platform == "blogger":
-                        title = platform_content.get(
-                            "blog_title", feed_item.get("title", "")
-                        )
-                        content = platform_content.get("blog_content_md", "")
-                        await publisher.publish_to_blogger(
-                            title=title,
-                            content=content,
-                        )
-                    elif platform == "facebook":
-                        fb_content = platform_content.get("facebook_post", "")
-                        await publisher.publish_to_facebook(
-                            message=fb_content,
-                        )
-                    elif platform == "discord":
-                        discord_content = platform_content.get("discord_msg", "")
-                        await publisher.publish_to_discord(
-                            message=discord_content,
-                        )
-                    elif platform == "devto":
-                        title = platform_content.get(
-                            "blog_title", feed_item.get("title", "")
-                        )
-                        content = platform_content.get("blog_content_md", "")
-                        await publisher.publish_to_devto(
-                            title=title,
-                            content=content,
-                        )
-                except Exception as e:
-                    self._log(f"External publish error ({platform}): {e}")
+            if published:
+                platforms_str = ", ".join(published.keys())
+                self._log(f"✅ Published to: {platforms_str}")
+            else:
+                self._log("⚠️ No platforms published successfully")
 
         except Exception as e:
             self._log(f"External platforms error: {e}")
+            tb = traceback.format_exc()
+            await send_alert_to_admin(self.brand.key, f"External publish failed: {e}", tb)
 
     async def show_stats(
         self,
@@ -851,20 +818,18 @@ Use the keyboard below to control this brand.
                 f"⏰ Scheduled post triggering (Interval: {interval_minutes:.0f}m)"
             )
 
-            # Fetch & Publish
+            # Fetch & Generate content
             res = await self._fetch_and_generate_native_content(None)
 
             if res.get("status") == "success":
-                title = str(res.get("title", "") or "")
-                link = str(res.get("link", "") or "")
-                content = res.get("content", "")
-
-                await self._publish_to_channel(
-                    None,
-                    content,
-                    title=title,
-                    source_url=link,
-                    _bot_instance=self.app.bot,
+                # Use SequentialPublisher for ALL platforms (including Telegram)
+                # This ensures proper CTA flow:
+                # - BlockSignals: Telegram → Discord (with CTA to Telegram)
+                # - ZeroDev: Dev.to → Telegram (with CTA to Dev.to)  
+                # - RoboVAI: Blogger → Facebook → Telegram (with CTAs)
+                await self._publish_to_external_platforms(
+                    context=None,
+                    result=res,
                 )
             elif res.get("status") == "no_news":
                 self._log("No news found for scheduled post.")
