@@ -1,12 +1,10 @@
 services:
-  # Web Service - Telegram Bot (polling) + Keep-Alive HTTP endpoint
-  # NOTE: For zero Telegram conflicts, keep exactly ONE instance running.
-  # Uses Flask health endpoint to prevent free-tier sleep.
+  # Web Service - Unified RoboVAI SuperBot
   - type: web
     name: robovai-bot
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python launcher.py --async
+    startCommand: python unified_bot.py
     healthCheckPath: /health
     envVars:
       - key: TELEGRAM_TOKEN
@@ -15,9 +13,8 @@ services:
         sync: false
       - key: CHANNEL_ID
         sync: false
-      - key: GROUP_ID
-        sync: false
       - key: GROQ_API_KEY
+
         sync: false
       - key: DISCORD_WEBHOOK_URL
         sync: false
