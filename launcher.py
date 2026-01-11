@@ -32,6 +32,14 @@ sys.path.insert(0, str(BASE_DIR))
 # Load environment variables early (before check_environment)
 load_dotenv(dotenv_path=BASE_DIR / ".env")
 
+# Start keep-alive HTTP server (for Render web service)
+try:
+    from keep_alive import keep_alive
+
+    keep_alive()
+except ImportError:
+    print("[LAUNCHER] Warning: keep_alive not available (OK for local dev)")
+
 
 def _log(message: str) -> None:
     """Safe logging for Windows console."""

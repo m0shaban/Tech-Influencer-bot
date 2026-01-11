@@ -6,7 +6,7 @@ services:
     name: robovai-bot
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
+    startCommand: python launcher.py --async
     healthCheckPath: /health
     envVars:
       - key: TELEGRAM_TOKEN

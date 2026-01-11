@@ -19,6 +19,7 @@ import random
 import re
 import threading
 import traceback
+import pytz
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, Callable
@@ -135,7 +136,9 @@ async def send_success_report_to_admin(
             "——————————————————\n"
             "<i>🚀 Post is live on channel.</i>"
         )
-        await master_bot.send_message(chat_id=ADMIN_USER_ID, text=text, parse_mode="HTML")
+        await master_bot.send_message(
+            chat_id=ADMIN_USER_ID, text=text, parse_mode="HTML"
+        )
     except Exception:
         return
 
@@ -266,15 +269,13 @@ class BrandWorker:
             print(f"[{self.brand.key}] {safe_msg}")
 
     async def _fetch_and_generate_native_content(
-        self, context: ContextTypes.DEFAULT_TYPE
+        self, context: Optional[ContextTypes.DEFAULT_TYPE] = None
     ) -> Dict[str, Any]:
         """
         Fetch news and generate NATIVE Telegram content.
-
-        This is the key difference from the old system:
-        - Content is generated specifically for Telegram
-        - Full value is delivered in the post
-        - No "read more" links - the post IS the product
+        
+        Args:
+            context: Optional telegram context (unused in logic, kept for compat)
         """
         from feed_manager import fetch_random_new_post
         from ai_processor import rewrite_with_ai
@@ -399,26 +400,34 @@ Share your thoughts below 👇
 
     async def _publish_to_channel(
         self,
-        context: ContextTypes.DEFAULT_TYPE,
+        context: Optional[ContextTypes.DEFAULT_TYPE],
         content: str,
         *,
         title: str = "",
         source_url: str = "",
+        _bot_instance: Optional[Bot] = None,
     ) -> Dict[str, Any]:
         """Publish native content to the brand's Telegram channel.
 
         Requirements:
         - EVERY post must include an image (ImgBB URL preferred).
         - Publish via send_photo() with caption.
-        - If caption exceeds Telegram limit (1024), send remaining text as follow-up messages.
-        - Link is provided as a footer reference via an inline button.
         """
         try:
-            bot = context.bot
+            bot = _bot_instance or (context.bot if context else None)
+            if not bot:
+                 # Fallback if no context provided (async loop case)
+                 if self.app:
+                     bot = self.app.bot
+                 else:
+                    return {"status": "error", "error": "No bot instance available"}
+
             channel_id = self.brand.channel_id
 
             # Always resolve an image (best effort) and prefer ImgBB URL
-            img = get_best_image(title or "RoboVAI", source_url or "", brand_key=self.brand.key)
+            img = get_best_image(
+                title or "RoboVAI", source_url or "", brand_key=self.brand.key
+            )
             image_url = str((img or {}).get("url") or "").strip()
             if not image_url:
                 return {"status": "error", "error": "ImageManager returned no image"}
@@ -429,7 +438,9 @@ Share your thoughts below 👇
             caption = caption_chunks[0] if caption_chunks else ""
             remainder = caption_chunks[1:] if len(caption_chunks) > 1 else []
 
-            reply_markup = _build_source_button(url=source_url, lang=self.brand.language)
+            reply_markup = _build_source_button(
+                url=source_url, lang=self.brand.language
+            )
 
             # Send photo with caption (no parse_mode to avoid formatting failures)
             await bot.send_photo(
@@ -747,9 +758,76 @@ Use the keyboard below to control this brand.
         # Keep running
         try:
             while self.is_running:
-                await asyncio.sleep(1)
+                # --- SCHEDULER LOGIC ---
+                try:
+                    await self._check_schedule_and_post()
+                except Exception as e:
+                    self._log(f"Scheduler error: {e}")
+                
+                await asyncio.sleep(60)
         finally:
             await app.stop()
+
+    async def _check_schedule_and_post(self) -> None:
+        """Check if it's time to post and execute if so."""
+        tz_name = self.brand.schedule.get("timezone", "UTC")
+        try:
+            local_tz = pytz.timezone(tz_name)
+        except:
+            local_tz = pytz.UTC
+            
+        now_aware = datetime.now(local_tz)
+        current_hour = now_aware.hour
+        
+        wake = self.brand.schedule.get("wake_hour", 9)
+        sleep = self.brand.schedule.get("sleep_hour", 22)
+        limit = self.brand.schedule.get("posts_per_day", 8)
+        
+        # Check Business Hours
+        if not (wake <= current_hour < sleep):
+            return
+
+        # Check Daily Limit
+        if self.posts_today >= limit:
+            return
+
+        # Check Interval (Spread posts evenly)
+        # e.g. 14 hours / 8 posts = ~1.75 hours = 105 minutes
+        active_hours = max(1, sleep - wake)
+        interval_minutes = (active_hours * 60) / max(1, limit)
+        
+        should_post = False
+        if not self.last_post_time:
+            # First run: start straight away (or maybe slight delay?)
+            should_post = True
+        else:
+            # Compare with system time (self.last_post_time is system time)
+            delta = datetime.now() - self.last_post_time
+            if delta.total_seconds() > (interval_minutes * 60):
+                should_post = True
+        
+        if should_post:
+            self._log(f"⏰ Scheduled post triggering (Interval: {interval_minutes:.0f}m)")
+            
+            # Fetch & Publish
+            res = await self._fetch_and_generate_native_content(None)
+            
+            if res.get("status") == "success":
+                title = str(res.get("title", "") or "")
+                link = str(res.get("link", "") or "")
+                content = res.get("content", "")
+                
+                await self._publish_to_channel(
+                    None, 
+                    content, 
+                    title=title, 
+                    source_url=link, 
+                    _bot_instance=self.app.bot
+                )
+            elif res.get("status") == "no_news":
+                self._log("No news found for scheduled post.")
+            else:
+                self._log(f"Scheduled generation failed: {res.get('error')}")
 
     async def stop(self) -> None:
         """Stop the worker bot."""
