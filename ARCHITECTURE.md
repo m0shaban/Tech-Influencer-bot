@@ -1,127 +1,122 @@
-# ARCHITECTURE.md — RoboVAI v2.0 Ecosystem
+# ARCHITECTURE.md — RoboVAI v2.1 Ecosystem (Production Ready)
 
-## 1. High-Level Overview (The Big Picture)
+## 1. High-Level Overview
 
-RoboVAI v2.0 is an asynchronous, multi-agent content orchestration system using a **Hub-and-Spoke** topology. Responsibilities are strictly separated:
+RoboVAI v2.1 is an asynchronous, multi-agent content orchestration system designed for high-volume, multi-brand publishing. It uses a **Hub-and-Spoke** content strategy where each brand has a designated "Source of Truth" (Hub) platform, and other platforms serve as spokes driving traffic back to the hub via Smart CTAs.
 
-- **Master Controller (Orchestrator):** Admin UI, health monitoring, control commands, alert fan-out. It never posts content.
-- **Brand Workers (Execution Agents):** One per brand (BlockSignals, RoboVAI Arabic, ZeroDev Stack). Each runs its own bot token, persona prompt, feeds, schedule, and publishing mode.
+- **Orchestration:** Independent Worker Bots per brand (BlockSignals, ZeroDev, RoboVAI_AR).
+- **Content:** 180+ High-quality RSS sources (60 per brand) processed by Llama 3.3/NVIDIA.
+- **Scheduling:** Independent, timezone-aware schedules per brand with business hours awareness.
+- **Publishing:** Sequential publishing engine that ensures proper flow and CTA injection.
 
 ## 2. System Diagram (Mermaid TD)
 
 ```mermaid
-
     subgraph AdminPlane[Admin & Control Plane]
         Master[Master Controller (Admin UI)]
     end
 
     subgraph Workers[Worker Bots]
         BS[BlockSignals Worker]
-        ARB[RoboVAI Arabic Worker]
         ZDS[ZeroDev Stack Worker]
+        ARB[RoboVAI Arabic Worker]
     end
 
-    subgraph External[External Services]
-        TG[Telegram API]
-        AI[AI Models (Groq / NVIDIA)]
-        FEEDS[Data Sources / RSS / Scrapers]
+    subgraph Engine[Core Engine]
+        SP[Sequential Publisher]
+        AP[Auto Publisher]
+        AI[AI Processor (Llama 3.3)]
+        IMG[Image Generator (OGImage)]
     end
 
-    Master -->|Commands / Force / Status| BS
-    Master -->|Commands / Force / Status| ARB
-    Master -->|Commands / Force / Status| ZDS
+    subgraph External[External Platforms]
+        TG[Telegram]
+        WEB[Blogger / Dev.to]
+        SOC[Facebook / Discord]
+        RSS[180+ RSS Feeds]
+    end
 
-    BS -->|Alerts / Logs| Master
-    ARB -->|Alerts / Logs| Master
-    ZDS -->|Alerts / Logs| Master
-
-    BS -->|Publish| TG
-    ARB -->|Publish| TG
-    ZDS -->|Publish| TG
-
-    BS -->|Fetch| FEEDS
-    ARB -->|Fetch| FEEDS
-    ZDS -->|Fetch| FEEDS
-
-    BS -->|LLM Calls| AI
-    ARB -->|LLM Calls| AI
-    ZDS -->|LLM Calls| AI
+    Master -->|Control| Workers
+    Workers -->|Alerts| Master
+    
+    Workers -->|Trigger| AP
+    AP -->|Schedule Check| Workers
+    
+    Workers -->|Execute| SP
+    SP -->|Generate| AI
+    SP -->|Visuals| IMG
+    SP -->|Fetch| RSS
+    
+    SP -->|Step 1: Hub| WEB
+    SP -->|Step 2: CTA| SOC
+    SP -->|Step 3: Alert| TG
 ```
 
-## 3. Core Components Deep Dive
+## 3. Brand Strategies (The "Source of Truth" Model)
 
-### `launcher.py` — Entry Point & Event Loop
+Each brand acts as the primary source. External RSS feeds are consumed to generate fresh, unique content, but the audience is directed to the brand's own platforms.
 
-- Boots the ecosystem using `asyncio.gather` to run Master + all Workers concurrently.
-- Loads environment (`dotenv`) before env checks.
-- Offers dual modes: async (preferred) and threading fallback.
-- Guards against multi-instance token conflicts by ensuring single orchestrated startup.
+| Brand | Hub (Source) | Spokes (Traffic Drivers) | Content Strategy |
+|-------|--------------|--------------------------|------------------|
+| **BlockSignals** | **Telegram** | Discord | **Crypto Alpha:** Breaking news and signals live on Telegram. Discord serves as a community lounge alerting members to check Telegram. |
+| **ZeroDev** | **Dev.to** | Telegram | **Educational Tutorials:** Full, deep-dive articles on Dev.to. Telegram posts "Quick Tips" with a CTA to read the full code/guide on Dev.to. |
+| **RoboVAI (AR)** | **Blogger** | Facebook, Telegram | **Tech Blog (Arabic):** Main articles on Blogger. Facebook and Telegram post engaging summaries/teasers with links driving traffic to the Blog. |
 
-### `master_controller.py` — Admin's Cockpit
+## 4. Core Components Deep Dive
 
-- Exposes admin commands (`/start`, `/brands`, `/force`, `/status`) without blocking worker execution.
-- Renders inline dashboards for per-brand control (force fetch, stats, feeds, pause/resume).
-- Acts as observer: receives crash alerts from workers and surfaces them to ADMIN_USER_ID.
+### `worker_bot.py` — The Agent
+- Represents the brand's identity.
+- Manages the lifecycle of the bot.
+- delegated the actual publishing task to `SequentialPublisher`.
+- Reports health and errors to the Master Controller.
 
-### `worker_bot.py` — Generic Worker Class (instantiated per brand)
+### `sequential_publisher.py` — The Publishing Engine
+- **Responsibility:** Orchestrates the multi-step publishing process.
+- **CTA Logic:** Captures the URL from the "Hub" platform and dynamically injects it into the "Spoke" platforms.
+- **Source Attribution:** Ensures internal attribution (You are the source) rather than external links.
+- **Delays:** Manages micro-delays (e.g., 2 mins) between platforms to behave naturally.
 
-- **Scheduling:** Runs periodic/scheduled fetch-and-publish cycles (and on-demand force fetch).
-- **Content Generation:** Calls AI with brand-specific persona prompt; enforces native-value delivery (no outbound links unless funnel mode demands external platforms).
-- **Publishing Logic:**
-  - **Native Mode:** Full value on Telegram.
-  - **Funnel Mode:** TG teaser + external platforms (e.g., Blogger/Facebook).
-  - **Dual Mode:** Native TG plus long-form on another platform (e.g., Dev.to).
-- **Resilience:** Catches exceptions, reports alerts to Master (DM to admin), and logs locally with brand prefix.
+### `auto_publisher.py` — The Heartbeat
+- **Smart Scheduling:** Checks `posts_per_day` and `min_interval_minutes` defined in `config.json`.
+- **Time Awareness:** Respects brand-specific timezones (e.g., Cairo for RoboVAI, NY for ZeroDev) and business hours.
+- **Persistence:** Saves state to `autopublisher_status.json` to survive restarts.
 
-### `brands_config.py` — Configuration Singleton
+### `feeds_config.py` & `config.json` — The Brain
+- **Feeds:** Holds the curated list of 180 RSS sources.
+- **Prompts:** Contains the "System Prompts" that define the unique voice and "You are the Source" rule for each brand.
+- **Routing:** Defines the `PUBLISHING_ORDER` (Hub → Spoke 1 → Spoke 2).
 
-- Central source of truth for:
-  - Tokens, channel IDs, schedules, feeds, platforms per brand.
-  - Persona prompts (strict “no external links” for native value delivery).
-  - Publishing mode enum (NATIVE/FUNNEL/DUAL).
-- Acts like a factory input: workers are created from this config mapping.
+## 5. Data Flow Pipeline (The Journey of a Post)
 
-## 4. Data Flow Pipeline (The Journey of a Post)
+1.  **Trigger:** `auto_publisher` wakes up the Worker based on the schedule.
+2.  **Fetch:** Worker fetches fresh news from the brand's 60 RSS feeds.
+3.  **Analysis:** AI selects the most relevant/high-impact story.
+4.  **Hub Generation:** Content is generated for the Hub platform (e.g., Blogger for RoboVAI).
+5.  **Hub Publish:** Content is published. **URL is captured.**
+6.  **Spoke Generation:** Content is generated for Spoke platforms (e.g., Facebook).
+7.  **CTA Injection:** The Hub URL is injected into the Spoke content (e.g., "Read full article: [Blogger URL]").
+8.  **Spoke Publish:** Spoke content is published.
+9.  **Report:** Success stats sent to Master Admin.
 
-1. **Trigger:** Scheduler or force command wakes the Worker.
-2. **Sourcing:** Worker pulls a fresh item from RSS/feeds (`feed_manager`).
-3. **Processing:** Worker injects the brand persona prompt from `brands_config.py`.
-4. **Generation:** LLM (Groq/NVIDIA) produces platform-specific content (native TG or long-form for funnel/dual).
-5. **Publishing:** Worker posts to the Telegram channel (and optional external platforms per mode).
-6. **Reporting:** Success/failure logged; on errors, the Worker alerts the Master (admin DM) with traceback.
-
-## 5. Tech Stack & Design Patterns
-
-- **Tech Stack:** Python 3.11+, asyncio, Telegram client (python-telegram-bot; aiogram 3.x compatible design), Groq/NVIDIA LLM APIs, optional SQLite for persistence.
-- **Design Patterns:**
-  - **Factory Pattern:** `launcher.py` instantiates workers from `brands_config` mappings.
-  - **Observer Pattern:** Workers notify Master of crashes/errors; Master monitors and commands workers.
-  - **Singleton:** `brands_config.py` acts as the singular configuration source for all agents.
-
-## File Topology (Key Files)
+## 6. File Topology
 
 ```
-launcher.py          # Async entrypoint, orchestrates master + workers
-master_controller.py # Admin UI, dashboards, commands, observer
-worker_bot.py        # Generic worker implementation per brand
-brands_config.py     # Brand registry: tokens, prompts, feeds, modes
-feed_manager.py      # RSS/HTML fetch and dedup
-ai_processor.py      # LLM invocation, parsing, prompt enforcement
+f:\robobot\
+├── launcher.py              # Entry point
+├── worker_bot.py            # Brand Agent Logic
+├── sequential_publisher.py  # Multi-platform & CTA Engine
+├── auto_publisher.py        # Scheduling Logic
+├── feeds_config.py          # RSS Feeds & Publishing Rules
+├── config.json              # Dynamic Configuration
+├── image_manager.py         # Image Generation (Arabic support)
+├── master_controller.py     # Admin UI
+└── brands_config.py         # Brand Definitions
 ```
 
-## Operating Modes (per Brand)
+## 7. Production Readiness Checklist
 
-- **NATIVE:** Full value inside Telegram (BlockSignals).
-- **FUNNEL:** TG teaser driving to external platforms (RoboVAI Arabic).
-- **DUAL:** Native TG plus long-form external (ZeroDev Stack).
-
-## Concurrency Model
-
-- Preferred: `python launcher.py --async` → `asyncio.gather` runs Master + all Workers.
-- Fallback: threading mode for environments where async polling is constrained.
-
-## Reliability & Alerts
-
-- Workers wrap critical paths with exception handling; on failure, they DM admin via Master token.
-- Strict single-instance per bot token to avoid `getUpdates` conflicts.
-  FACEBOOK_PAGE_ACCESS_TOKEN_ARB=...
+- [x] **Independence:** Brands run as isolated agents.
+- [x] **Scheduling:** Per-brand timezones and intervals working.
+- [x] **Sources:** 180 curated feeds ensuring constant stream of news.
+- [x] **Attribution:** Internal linking strategy implemented.
+- [x] **Reliability:** Error trapping and Admin alerting system active.
