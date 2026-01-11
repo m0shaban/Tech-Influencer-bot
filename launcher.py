@@ -159,7 +159,7 @@ async def run_full_system_async():
     tasks.append(asyncio.create_task(run_master_async(), name="Master"))
 
     # Give master a moment to initialize
-    await asyncio.sleep(1)
+    await asyncio.sleep(5)  # Increased startup buffer
 
     # Tasks 2-N: Brand Workers
     brands = get_brand_configs()
@@ -172,7 +172,8 @@ async def run_full_system_async():
             run_worker_async(brand_key), name=f"Worker-{brand_key}"
         )
         tasks.append(task)
-        await asyncio.sleep(0.5)  # Stagger starts slightly
+        _log(f"Launching {brand.display_name}...")
+        await asyncio.sleep(5)  # Significant stagger to prevent Rate Limits/Connection Pool errors
 
     _log(f"All {len(tasks)} bots launched with asyncio.gather. Press Ctrl+C to stop.")
 
