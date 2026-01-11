@@ -44,6 +44,8 @@ from brands_config import (
     PublishingMode,
 )
 
+from bot_registry import BotRegistry
+
 
 BASE_DIR = Path(__file__).resolve().parent
 LOG_PATH = BASE_DIR / "bot.log"
@@ -132,19 +134,73 @@ def get_brand_control_keyboard(brand_key: str) -> InlineKeyboardMarkup:
 # ============================================================
 
 
+
+WELCOME_LEAD = """🌟 **مرحباً بك في RoboVAI Ecosystem**
+
+نصمم حلولاً ذكية تعمل بالذكاء الاصطناعي 🤖
+
+━━━━━━━━━━━━━━━━━━━
+
+✨ **خدماتنا:**
+   🔹 شات بوتات ذكية 24/7
+   🔹 أتمتة العمليات التجارية
+   🔹 تحليل البيانات الذكي
+   🔹 محتوى تقني احترافي
+
+اختر من الخيارات أدناه للبدء 👇"""
+
+
+SALES_COPY = """👋 أهلاً بك في RoboVAI Ecosystem
+
+أنت تتحدث الآن مع المساعد الذكي لـ *م. محمد شعبان*. 💡 نحن لا نكتب الكود، نحن نصمم حلولاً للأعمال.
+
+*هل تبحث عن:*
+🤖 *Smart Chatbots*: خدمة عملاء آلية 24/7
+⚙️ *Business Automation*: تقليل التكاليف وأتمتة العمليات
+📊 *Data Solutions*: قرارات مبنية على البيانات
+
+*ابدأ رحلتك الآن:*
+📢 تابع أحدث التقنيات: @nextlevelegypt
+💬 انضم لمجتمع المناقشة: @nextlevelegyptt
+
+💼 *لطلب استشارة أو تصميم بوت خاص*:
+تواصل مباشرة: @mohamedshabanai
+
+_RoboVAI Solutions - Automating Your Success_"""
+
+
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Main entry point - show dashboard."""
+    """Main entry point - show dashboard or lead welcome."""
     if not update.message:
         return
 
     if not _is_admin(update):
+        # Public Facing Logic (Lead Gen)
+        keyboard = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "🤖 Chatbots", url="https://t.me/nextlevelegypt"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "⚙️ Automation", url="https://t.me/nextlevelegyptt"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "💬 Contact", url="https://t.me/mohamedshabanai"
+                    )
+                ],
+            ]
+        )
         await update.message.reply_text(
-            "🤖 RoboVAI System\n\n"
-            "This is the admin control panel.\n"
-            "Contact @mohamedshabanai for access."
+            WELCOME_LEAD, reply_markup=keyboard, parse_mode="Markdown"
         )
         return
 
+    # Admin Logic
     brands = get_brand_configs()
 
     dashboard_text = f"""🎛️ **RoboVAI Master Controller**
@@ -356,12 +412,28 @@ async def handle_force_dispatch(query, brand_key: str) -> None:
         await query.edit_message_text(f"❌ Brand not found: {brand_key}")
         return
 
+    # Get running worker instance
+    worker = BotRegistry.get_worker(brand_key)
+    if not worker:
+        await query.edit_message_text(f"⚠️ Worker for {brand.display_name} is not running!")
+        return
+
+    # Trigger fetch task
+    # We use create_task to not block the UI
+    try:
+        # Assuming worker has a method that doesn't require Update/Context objects
+        # Or we call the internal method used by scheduler
+        asyncio.create_task(worker._fetch_and_generate_native_content(None))
+        status_msg = "✅ Command sent to worker"
+    except Exception as e:
+        status_msg = f"❌ Error dispatching: {e}"
+
     text = f"""⚡ **Force Fetch Dispatched**
 ═══════════════════════════
 
 🎯 Brand: {brand.display_name}
 📺 Channel: {brand.channel_id}
-🔄 Status: Processing...
+🔄 Status: {status_msg}
 
 💡 The worker bot is now fetching content.
 Check the brand's bot for real-time updates.
@@ -423,8 +495,20 @@ async def show_brand_stats(query, brand_key: str) -> None:
         await query.edit_message_text(f"❌ Brand not found: {brand_key}")
         return
 
+    # Get runtime stats from worker
+    worker = BotRegistry.get_worker(brand_key)
+    posts_today = getattr(worker, "posts_today", 0) if worker else 0
+    last_post = getattr(worker, "last_post_time", None) if worker else None
+    
+    last_post_str = last_post.strftime("%H:%M") if last_post else "Never"
+    status_icon = "🟢 Online" if worker and getattr(worker, "is_running", False) else "🔴 Offline"
+
     text = f"""📊 **{brand.display_name} Stats**
 ═══════════════════════════
+
+🔌 **Status:** {status_icon}
+📈 **Posts Today:** {posts_today}
+🕒 **Last Post:** {last_post_str}
 
 📚 **Feeds:** {len(brand.feeds)}
 📱 **Platforms:** {len(brand.platforms)}
@@ -501,10 +585,35 @@ def build_master_application() -> Application:
     app.add_handler(CommandHandler("force", cmd_force))
     app.add_handler(CommandHandler("status", cmd_status))
 
+    # Generic Message Handler (for non-admin Chat/leads)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
     # Callback handler for inline buttons
     app.add_handler(CallbackQueryHandler(handle_callback))
 
     return app
+
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle text messages (Leads for non-admins)."""
+    if not update.message:
+        return
+
+    if _is_admin(update):
+        # Admins can chat freely or used for debugging
+        return
+
+    # Reply with Sales Copy for leads
+    keyboard = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("🤖 Chatbots", url="https://t.me/nextlevelegypt")],
+            [InlineKeyboardButton("⚙️ Automation", url="https://t.me/nextlevelegyptt")],
+            [InlineKeyboardButton("💬 Contact", url="https://t.me/mohamedshabanai")],
+        ]
+    )
+    await update.message.reply_text(
+        SALES_COPY, reply_markup=keyboard, parse_mode="Markdown"
+    )
 
 
 async def run_master_controller() -> None:

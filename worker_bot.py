@@ -51,6 +51,7 @@ from brands_config import (
 
 from image_manager import get_best_image
 from ai_processor import rewrite_with_ai
+from bot_registry import BotRegistry
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -207,7 +208,9 @@ def _split_text_chunks(text: str, limit: int) -> list[str]:
     return chunks
 
 
-def _build_source_button(*, url: str, lang: str, label_override: str = "") -> Optional[InlineKeyboardMarkup]:
+def _build_source_button(
+    *, url: str, lang: str, label_override: str = ""
+) -> Optional[InlineKeyboardMarkup]:
     """
     Builds the CTA button.
     If 'label_override' is set, use it. Otherwise default to 'Reference'.
@@ -216,9 +219,9 @@ def _build_source_button(*, url: str, lang: str, label_override: str = "") -> Op
     u = (url or "").strip()
     if not u:
         return None
-        
+
     is_ar = (lang or "").lower().startswith("ar")
-    
+
     if label_override:
         label = label_override
     else:
@@ -275,6 +278,10 @@ class BrandWorker:
         self.brand = brand
         self.app: Optional[Application] = None
         self.is_running = False
+        
+        # Register in central registry
+        BotRegistry.register_worker(self.brand.key, self)
+
         self.posts_today = 0
         self.last_post_time: Optional[datetime] = None
 
@@ -568,7 +575,7 @@ Share your thoughts below 👇
         """
         Publish to ALL platforms sequentially with CTAs.
         Uses SequentialPublisher to ensure proper CTA injection between platforms.
-        
+
         Strategy:
         - BlockSignals: Telegram first (HUB) → Discord with CTA to Telegram
         - ZeroDev: Dev.to first (HUB) → Telegram with CTA to Dev.to
@@ -595,7 +602,7 @@ Share your thoughts below 👇
             multi_publisher = MultiPlatformPublisher()
 
             self._log(f"📤 Starting sequential publish for {self.brand.display_name}")
-            
+
             # Use sequential publisher for proper CTA flow
             published = await seq_publisher.publish_item(
                 brand_name=self.brand.key,
@@ -614,7 +621,9 @@ Share your thoughts below 👇
         except Exception as e:
             self._log(f"External platforms error: {e}")
             tb = traceback.format_exc()
-            await send_alert_to_admin(self.brand.key, f"External publish failed: {e}", tb)
+            await send_alert_to_admin(
+                self.brand.key, f"External publish failed: {e}", tb
+            )
 
     async def show_stats(
         self,
@@ -825,7 +834,7 @@ Use the keyboard below to control this brand.
                 # Use SequentialPublisher for ALL platforms (including Telegram)
                 # This ensures proper CTA flow:
                 # - BlockSignals: Telegram → Discord (with CTA to Telegram)
-                # - ZeroDev: Dev.to → Telegram (with CTA to Dev.to)  
+                # - ZeroDev: Dev.to → Telegram (with CTA to Dev.to)
                 # - RoboVAI: Blogger → Facebook → Telegram (with CTAs)
                 await self._publish_to_external_platforms(
                     context=None,

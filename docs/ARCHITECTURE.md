@@ -38,15 +38,15 @@ RoboVAI v2.1 is an asynchronous, multi-agent content orchestration system design
 
     Master -->|Control| Workers
     Workers -->|Alerts| Master
-    
+
     Workers -->|Trigger| AP
     AP -->|Schedule Check| Workers
-    
+
     Workers -->|Execute| SP
     SP -->|Generate| AI
     SP -->|Visuals| IMG
     SP -->|Fetch| RSS
-    
+
     SP -->|Step 1: Hub| WEB
     SP -->|Step 2: CTA| SOC
     SP -->|Step 3: Alert| TG
@@ -56,32 +56,36 @@ RoboVAI v2.1 is an asynchronous, multi-agent content orchestration system design
 
 Each brand acts as the primary source. External RSS feeds are consumed to generate fresh, unique content, but the audience is directed to the brand's own platforms.
 
-| Brand | Hub (Source) | Spokes (Traffic Drivers) | Content Strategy |
-|-------|--------------|--------------------------|------------------|
-| **BlockSignals** | **Telegram** | Discord | **Crypto Alpha:** Breaking news and signals live on Telegram. Discord serves as a community lounge alerting members to check Telegram. |
-| **ZeroDev** | **Dev.to** | Telegram | **Educational Tutorials:** Full, deep-dive articles on Dev.to. Telegram posts "Quick Tips" with a CTA to read the full code/guide on Dev.to. |
-| **RoboVAI (AR)** | **Blogger** | Facebook, Telegram | **Tech Blog (Arabic):** Main articles on Blogger. Facebook and Telegram post engaging summaries/teasers with links driving traffic to the Blog. |
+| Brand            | Hub (Source) | Spokes (Traffic Drivers) | Content Strategy                                                                                                                                |
+| ---------------- | ------------ | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **BlockSignals** | **Telegram** | Discord                  | **Crypto Alpha:** Breaking news and signals live on Telegram. Discord serves as a community lounge alerting members to check Telegram.          |
+| **ZeroDev**      | **Dev.to**   | Telegram                 | **Educational Tutorials:** Full, deep-dive articles on Dev.to. Telegram posts "Quick Tips" with a CTA to read the full code/guide on Dev.to.    |
+| **RoboVAI (AR)** | **Blogger**  | Facebook, Telegram       | **Tech Blog (Arabic):** Main articles on Blogger. Facebook and Telegram post engaging summaries/teasers with links driving traffic to the Blog. |
 
 ## 4. Core Components Deep Dive
 
 ### `worker_bot.py` — The Agent
+
 - Represents the brand's identity.
 - Manages the lifecycle of the bot.
 - delegated the actual publishing task to `SequentialPublisher`.
 - Reports health and errors to the Master Controller.
 
 ### `sequential_publisher.py` — The Publishing Engine
+
 - **Responsibility:** Orchestrates the multi-step publishing process.
 - **CTA Logic:** Captures the URL from the "Hub" platform and dynamically injects it into the "Spoke" platforms.
 - **Source Attribution:** Ensures internal attribution (You are the source) rather than external links.
 - **Delays:** Manages micro-delays (e.g., 2 mins) between platforms to behave naturally.
 
 ### `auto_publisher.py` — The Heartbeat
+
 - **Smart Scheduling:** Checks `posts_per_day` and `min_interval_minutes` defined in `config.json`.
 - **Time Awareness:** Respects brand-specific timezones (e.g., Cairo for RoboVAI, NY for ZeroDev) and business hours.
 - **Persistence:** Saves state to `autopublisher_status.json` to survive restarts.
 
 ### `feeds_config.py` & `config.json` — The Brain
+
 - **Feeds:** Holds the curated list of 180 RSS sources.
 - **Prompts:** Contains the "System Prompts" that define the unique voice and "You are the Source" rule for each brand.
 - **Routing:** Defines the `PUBLISHING_ORDER` (Hub → Spoke 1 → Spoke 2).

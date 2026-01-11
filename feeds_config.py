@@ -89,7 +89,6 @@ BRAND_FEEDS = {
         "https://www.sushi.com/blog/rss.xml",
         "https://blog.pancakeswap.finance/feed",
     ],
-    
     "zerodev": [
         # No-Code Platforms
         "https://bubble.io/blog/rss",
@@ -161,7 +160,6 @@ BRAND_FEEDS = {
         "https://www.productplan.com/feed/",
         "https://www.aha.io/blog/feed",
     ],
-    
     "robovai_ar": [
         # Major AI Companies
         "https://openai.com/news/rss.xml",
@@ -246,12 +244,10 @@ PUBLISHING_ORDER = {
         {"platform": "telegram", "delay_minutes": 0, "enable_cta": False},
         {"platform": "discord", "delay_minutes": 2, "enable_cta": True},
     ],
-    
     "zerodev": [
         {"platform": "devto", "delay_minutes": 0, "enable_cta": False},
         {"platform": "telegram", "delay_minutes": 2, "enable_cta": True},
     ],
-    
     "robovai_ar": [
         {"platform": "blogger", "delay_minutes": 0, "enable_cta": False},
         {"platform": "facebook", "delay_minutes": 2, "enable_cta": True},
@@ -263,7 +259,7 @@ PUBLISHING_ORDER = {
 # ═══════════════════════════════════════════════════════════════════════════════
 # 🔗 CTA TEMPLATES — Point to YOUR OWN Platforms (You are the source!)
 # ═══════════════════════════════════════════════════════════════════════════════
-# 
+#
 # STRATEGY:
 # - BlockSignals: Telegram is the HUB → Discord points to Telegram
 # - ZeroDev: Dev.to is the HUB (full articles) → Telegram points to Dev.to
@@ -279,13 +275,11 @@ CTA_TEMPLATES = {
         "telegram": "",  # Source - no CTA needed
         "discord": "\n\n━━━━━━━━━━━━━━━━\n⚡ **Join our Telegram for instant signals**: {telegram_url}\n🔔 Never miss a move!\n\n#Crypto #BTC #ETH #DeFi #Web3",
     },
-    
     # ZeroDev: Dev.to (full tutorials) → Telegram (alerts)
     "zerodev": {
         "devto": "",  # Source - full article lives here
         "telegram": "\n\n━━━━━━━━━━━━━━━━\n📖 **Full Tutorial on Dev.to**: {devto_url}\n\n👆 Step-by-step guide with code snippets!\n\n#NoCode #Automation #BuildInPublic #IndieHacker",
     },
-    
     # RoboVAI_AR: Blogger (المدونة) → Facebook → Telegram
     "robovai_ar": {
         "blogger": "",  # المصدر الرئيسي - المقال الكامل هنا
@@ -301,20 +295,53 @@ CTA_TEMPLATES = {
 
 HASHTAG_SETS = {
     "blocksignals": {
-        "default": ["#Crypto", "#BTC", "#ETH", "#DeFi", "#Web3", "#CryptoNews", "#Trading"],
-        "bitcoin": ["#Bitcoin", "#BTC", "#HODL", "#Cryptocurrency", "#BTCPrice", "#Halving"],
-        "ethereum": ["#Ethereum", "#ETH", "#DeFi", "#SmartContracts", "#Web3", "#Layer2"],
+        "default": [
+            "#Crypto",
+            "#BTC",
+            "#ETH",
+            "#DeFi",
+            "#Web3",
+            "#CryptoNews",
+            "#Trading",
+        ],
+        "bitcoin": [
+            "#Bitcoin",
+            "#BTC",
+            "#HODL",
+            "#Cryptocurrency",
+            "#BTCPrice",
+            "#Halving",
+        ],
+        "ethereum": [
+            "#Ethereum",
+            "#ETH",
+            "#DeFi",
+            "#SmartContracts",
+            "#Web3",
+            "#Layer2",
+        ],
         "defi": ["#DeFi", "#Yield", "#TVL", "#DEX", "#Lending", "#Staking"],
         "nft": ["#NFT", "#NFTs", "#DigitalArt", "#Web3", "#OpenSea"],
     },
-    
     "zerodev": {
-        "default": ["#NoCode", "#Automation", "#LowCode", "#BuildInPublic", "#IndieHacker", "#SaaS"],
+        "default": [
+            "#NoCode",
+            "#Automation",
+            "#LowCode",
+            "#BuildInPublic",
+            "#IndieHacker",
+            "#SaaS",
+        ],
         "zapier": ["#Zapier", "#Automation", "#Workflow", "#Productivity", "#NoCode"],
         "bubble": ["#Bubble", "#NoCode", "#WebApp", "#StartupTools", "#BuildInPublic"],
-        "ai": ["#AITools", "#AIAutomation", "#NoCodeAI", "#FutureOfWork", "#Productivity"],
+        "ai": [
+            "#AITools",
+            "#AIAutomation",
+            "#NoCodeAI",
+            "#FutureOfWork",
+            "#Productivity",
+        ],
     },
-    
     "robovai_ar": {
         "default": ["#ذكاء_اصطناعي", "#تقنية", "#AI", "#أتمتة", "#مصر", "#تكنولوجيا"],
         "chatgpt": ["#ChatGPT", "#OpenAI", "#ذكاء_اصطناعي", "#AIChat", "#GPT"],
@@ -328,6 +355,7 @@ HASHTAG_SETS = {
 # 📊 HELPER FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def get_feeds_for_brand(brand_name: str) -> List[str]:
     """Get RSS feeds for specific brand."""
     return BRAND_FEEDS.get(brand_name, [])
@@ -338,7 +366,9 @@ def get_all_brands_with_feeds() -> List[str]:
     return [brand for brand, feeds in BRAND_FEEDS.items() if feeds]
 
 
-def get_publishing_order(brand_name: str, enabled_platforms: List[str]) -> List[Dict[str, Any]]:
+def get_publishing_order(
+    brand_name: str, enabled_platforms: List[str]
+) -> List[Dict[str, Any]]:
     """Get publishing order filtered by enabled platforms."""
     brand_order = PUBLISHING_ORDER.get(brand_name, [])
     return [p for p in brand_order if p["platform"] in enabled_platforms]
@@ -351,18 +381,15 @@ def get_hashtags(brand_name: str, category: str = "default") -> List[str]:
 
 
 def inject_ctas(
-    content: str,
-    platform: str,
-    brand_name: str,
-    published_urls: Dict[str, str]
+    content: str, platform: str, brand_name: str, published_urls: Dict[str, str]
 ) -> str:
     """Inject cross-platform CTAs at end of content."""
     brand_templates = CTA_TEMPLATES.get(brand_name, {})
     template = brand_templates.get(platform, "")
-    
+
     if not template:
         return content
-    
+
     try:
         url_dict = {f"{p}_url": url for p, url in published_urls.items()}
         cta = template.format(**url_dict)

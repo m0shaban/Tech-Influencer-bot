@@ -148,8 +148,12 @@ async def alert_admin_startup_error(component: str, error: str, tb: str):
 async def run_full_system_async():
     """Run Master + all Workers concurrently using asyncio.gather."""
     from brands_config import get_brand_configs
+    from auto_publisher import start_scheduler_loop
 
     tasks = []
+
+    # Task 0: Auto Scheduler Loop
+    tasks.append(asyncio.create_task(start_scheduler_loop(), name="AutoScheduler"))
 
     # Task 1: Master Controller
     tasks.append(asyncio.create_task(run_master_async(), name="Master"))
@@ -184,8 +188,13 @@ async def run_full_system_async():
 async def run_workers_only_async():
     """Run only brand workers with asyncio.gather."""
     from brands_config import get_brand_configs
+    from auto_publisher import start_scheduler_loop
 
     tasks = []
+    
+    # Task 0: Auto Scheduler
+    tasks.append(asyncio.create_task(start_scheduler_loop(), name="AutoScheduler"))
+    
     brands = get_brand_configs()
 
     for brand_key, brand in brands.items():
