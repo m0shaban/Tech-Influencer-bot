@@ -261,38 +261,38 @@ PUBLISHING_ORDER = {
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# 🔗 CTA TEMPLATES — Cross-Platform with Source Attribution
+# 🔗 CTA TEMPLATES — Point to YOUR OWN Platforms (You are the source!)
+# ═══════════════════════════════════════════════════════════════════════════════
+# 
+# STRATEGY:
+# - BlockSignals: Telegram is the HUB → Discord points to Telegram
+# - ZeroDev: Dev.to is the HUB (full articles) → Telegram points to Dev.to
+# - RoboVAI_AR: Blogger is the HUB (المدونة الرئيسية) → Facebook & Telegram point to Blogger
+#
+# The first platform in order gets NO CTA (it's the source)
+# Later platforms get CTAs pointing BACK to the source
 # ═══════════════════════════════════════════════════════════════════════════════
 
 CTA_TEMPLATES = {
+    # BlockSignals: Telegram → Discord
     "blocksignals": {
-        "telegram": "",
-        "discord": "\n\n⚡ **Get instant alerts on Telegram**: {telegram_url}\n\n#Crypto #BTC #ETH #DeFi #Web3",
+        "telegram": "",  # Source - no CTA needed
+        "discord": "\n\n━━━━━━━━━━━━━━━━\n⚡ **Join our Telegram for instant signals**: {telegram_url}\n🔔 Never miss a move!\n\n#Crypto #BTC #ETH #DeFi #Web3",
     },
     
+    # ZeroDev: Dev.to (full tutorials) → Telegram (alerts)
     "zerodev": {
-        "devto": "",
-        "telegram": "\n\n📖 **Read the full tutorial**: {devto_url}\n\n#NoCode #Automation #BuildInPublic",
+        "devto": "",  # Source - full article lives here
+        "telegram": "\n\n━━━━━━━━━━━━━━━━\n📖 **Full Tutorial on Dev.to**: {devto_url}\n\n👆 Step-by-step guide with code snippets!\n\n#NoCode #Automation #BuildInPublic #IndieHacker",
     },
     
+    # RoboVAI_AR: Blogger (المدونة) → Facebook → Telegram
     "robovai_ar": {
-        "blogger": "",
-        "facebook": "\n\n📖 **اقرأ المقال كامل على المدونة**: {blogger_url}\n\n#ذكاء_اصطناعي #تقنية #AI",
-        "telegram": "\n\n📖 **المقال الكامل**: {blogger_url}\n💬 **شاركنا رأيك**: {facebook_url}\n\n#AI #تقنية #مصر",
+        "blogger": "",  # المصدر الرئيسي - المقال الكامل هنا
+        "facebook": "\n\n━━━━━━━━━━━━━━━━\n📖 **اقرأ المقال الكامل على المدونة**:\n{blogger_url}\n\n👆 شرح تفصيلي مع صور وأمثلة عملية!\n\n#ذكاء_اصطناعي #تقنية #AI #أتمتة",
+        "telegram": "\n\n━━━━━━━━━━━━━━━━\n📖 **المقال الكامل**: {blogger_url}\n💬 **ناقشنا على فيسبوك**: {facebook_url}\n\n👆 تفاصيل أكتر وشرح عملي!\n\n#AI #تقنية #ذكاء_اصطناعي",
     },
 }
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# 📰 SOURCE ATTRIBUTION HELPER
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def get_source_attribution(source_name: str, source_url: str, language: str = "en") -> str:
-    """Generate source attribution text for content."""
-    if language == "ar":
-        return f"\n\n📰 **المصدر**: [{source_name}]({source_url})"
-    else:
-        return f"\n\n📰 **Source**: [{source_name}]({source_url})"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
