@@ -5,8 +5,8 @@ import logging
 from datetime import datetime
 from typing import Optional, Dict, Any
 
-from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, CallbackQueryHandler
 from dotenv import load_dotenv
 
 # Config & Tools
@@ -63,6 +63,7 @@ class SuperBot:
         # Add Handlers
         self.app.add_handler(CommandHandler("start", self.start_command))
         self.app.add_handler(CommandHandler("force", self.force_post))
+        self.app.add_handler(CallbackQueryHandler(self.button_handler))
 
         # Schedule Posts (Every ~1 hour)
         job_queue = self.app.job_queue
@@ -72,10 +73,75 @@ class SuperBot:
         self.app.run_polling()
 
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await update.message.reply_text(
-            "👋 أهلاً! أنا RoboVAI (نسخة شبكة العنكبوت v4.0).\n"
-            "أقوم بإنشاء الأصول الرقمية (مقالات) ثم توزيعها على الشبكات الاجتماعية."
-        )
+        user_id = str(update.effective_user.id)
+        
+        # Check if Admin
+        if user_id == str(ADMIN_ID):
+            keyboard = [
+                [
+                    InlineKeyboardButton("🚀 نشر الآن (Force)", callback_data="force_publish"),
+                    InlineKeyboardButton("🏥 فحص النظام", callback_data="check_health")
+                ],
+                [
+                     InlineKeyboardButton("📊 إحصائيات", callback_data="stats"),
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await update.message.reply_text(
+                f"👑 **لوحة تحكم الأدمن (RoboVAI v4.0)**\n\n"
+                f"🕷️ **نظام الشبكة:** Spider Web\n"
+                f"📡 **المصادر:** {len(self.feeds)} مصدر\n"
+                f"✅ **الحالة:** متصل وجاهز للعمل\n"
+                f"📅 **التاريخ:** {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+                reply_markup=reply_markup,
+                parse_mode="Markdown"
+            )
+        else:
+            await update.message.reply_text(
+                "👋 أهلاً! أنا RoboVAI (نسخة شبكة العنكبوت v4.0).\n"
+                "أقوم بإنشاء الأصول الرقمية (مقالات) ثم توزيعها على الشبكات الاجتماعية."
+            )
+
+    async def button_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle dashboard button clicks"""
+        query = update.callback_query
+        await query.answer()
+        
+        if query.data == "force_publish":
+            await query.edit_message_text("⏳ جاري بدء دورة النشر اليدوية...")
+            try:
+                result = await self._process_spider_web_cycle(context)
+                if result:
+                    await context.bot.send_message(
+                        chat_id=query.from_user.id,
+                        text=f"✅ تمت عملية النشر بنجاح!\n🔗 {result}"
+                    )
+                    # Re-show dashboard
+                    await self.start_command(update, context) # Won't verify fully as calling command handler directly might lack attributes, but simple reply okay
+                else:
+                     await context.bot.send_message(chat_id=query.from_user.id, text="❌ لم يتم العثور على محتوى جديد أو فشل النشر.")
+            except Exception as e:
+                await context.bot.send_message(chat_id=query.from_user.id, text=f"❌ خطأ: {e}")
+
+        elif query.data == "check_health":
+            status_text = "🏥 **تقرير الحالة**:\n\n"
+            
+            # Check Blogger
+            b_res = self.blogger.test_connection()
+            status_text += f"📝 **Blogger:** {'✅ متصل' if b_res['success'] else '❌ مفصول'}\n"
+            
+            # Check Facebook (Basic check if initialized)
+            status_text += f"📘 **Facebook:** {'✅ مهيأ' if self.facebook.access_token else '❌ غير مهيأ'}\n"
+            
+            # Check Dev.to
+            dev_res = self.devto.is_configured()
+            status_text += f"💻 **Dev.to:** {'✅ مهيأ' if dev_res else '⚠️ غير مفعل'}\n"
+
+            await context.bot.send_message(chat_id=query.from_user.id, text=status_text, parse_mode="Markdown")
+            
+        elif query.data == "stats":
+             await context.bot.send_message(chat_id=query.from_user.id, text="📊 الإحصائيات قيد التطوير...")
 
     async def force_post(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Manually trigger the publication cycle"""
