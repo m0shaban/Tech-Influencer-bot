@@ -592,6 +592,16 @@ CRITICAL RULES:
     ):
         effective_system_prompt += json_schema_instructions
 
+    # FORCE ARABIC & HIGH QUALITY
+    effective_system_prompt += """
+    
+    IMPORTANT CONTENT RULES:
+    1. Language: STRICTLY ARABIC (اللغة العربية الفصحى المبسطة).
+    2. Blog Post: MUST be a full article (Introduction, Body H2/H3, Conclusion). Minimum 600 words. Format as Markdown.
+    3. Formatting: Use <b>bold</b>, <i>italics</i>, lists, and emojis.
+    4. NO placeholder text like "Here is the article". Write the actual article.
+    """
+
     user_content = (
         f"Title: {title}\n"
         f"Summary: {summary}\n"

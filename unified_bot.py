@@ -117,8 +117,11 @@ class SuperBot:
                         chat_id=query.from_user.id,
                         text=f"✅ تمت عملية النشر بنجاح!\n🔗 {result}"
                     )
-                    # Re-show dashboard
-                    await self.start_command(update, context) # Won't verify fully as calling command handler directly might lack attributes, but simple reply okay
+                    # Don't call start_command recursively to avoid NoneType error
+                    await context.bot.send_message(
+                        chat_id=query.from_user.id,
+                        text="🔙 اضغط /start للعودة للقائمة الرئيسية"
+                    )
                 else:
                      await context.bot.send_message(chat_id=query.from_user.id, text="❌ لم يتم العثور على محتوى جديد أو فشل النشر.")
             except Exception as e:
@@ -288,9 +291,13 @@ class SuperBot:
             image_url = post.get("image") or post.get("image_local_path")
 
             if image_url:
-                await context.bot.send_photo(
-                    chat_id=CHANNEL_ID, photo=image_url, caption=tg_msg
-                )
+                try:
+                    await context.bot.send_photo(
+                        chat_id=CHANNEL_ID, photo=image_url, caption=tg_msg
+                    )
+                except Exception as img_err:
+                    print(f"⚠️ Telegram Image Failed: {img_err}. Sending text only.")
+                    await context.bot.send_message(chat_id=CHANNEL_ID, text=tg_msg)
             else:
                 await context.bot.send_message(chat_id=CHANNEL_ID, text=tg_msg)
             print("✅ Telegram Published")
