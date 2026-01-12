@@ -158,8 +158,14 @@ def _load_feeds_from_config(*, brand: str | None = None) -> list[str]:
         return []
 
 
-def fetch_random_new_post(*, brand: str | None = None) -> Optional[Dict[str, Any]]:
-    feeds = _load_feeds_from_config(brand=brand) or list(RSS_FEEDS)
+def fetch_random_new_post(
+    *, brand: str | None = None, forced_feeds: list[str] | None = None
+) -> Optional[Dict[str, Any]]:
+    if forced_feeds:
+        feeds = list(forced_feeds)
+    else:
+        feeds = _load_feeds_from_config(brand=brand) or list(RSS_FEEDS)
+    
     random.shuffle(feeds)
     seen = _read_seen_posts()
 

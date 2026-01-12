@@ -11,9 +11,8 @@ from dotenv import load_dotenv
 
 # استيراد الأدوات الموجودة
 from unified_config import ALL_FEEDS, SYSTEM_PROMPT
-from feed_manager import parse_feed, is_post_seen, mark_post_seen
+from feed_manager import fetch_random_new_post
 from ai_processor import rewrite_with_ai
-from image_manager import get_best_image
 # (اختياري) النشر على منصات أخرى
 try:
     from sequential_publisher import SequentialPublisher
@@ -71,33 +70,22 @@ class SuperBot:
 
     async def _process_one_post(self, context: ContextTypes.DEFAULT_TYPE):
         """المنطق الرئيسي: جلب - تحليل - نشر"""
-        # 1. اختيار مصدر عشوائي لضمان التنوع
-        random.shuffle(self.feeds)
-        selected_feed = None
-        target_entry = None
-        
         print("🔍 Scanning feeds...")
-        for feed_url in self.feeds:
-            entries = parse_feed(feed_url)
-            for entry in entries:
-                if not is_post_seen(entry['link']):
-                    selected_feed = feed_url
-                    target_entry = entry
-                    break
-            if target_entry:
-                break
         
-        if not target_entry:
+        # 1. جلب خبر جديد (يقوم بالخلط - التحليل - والتحقق من التكرار تلقائياً)
+        post = fetch_random_new_post(forced_feeds=self.feeds)
+        
+        if not post:
             print("💤 No new content found in any feed.")
             return
 
-        print(f"✅ Found news: {target_entry['title']}")
+        print(f"✅ Found news: {post['title']}")
         
         # 2. المعالجة بالذكاء الاصطناعي
         ai_content = rewrite_with_ai(
-            title=target_entry['title'],
-            summary=target_entry['summary'],
-            link=target_entry['link'],
+            title=post['title'],
+            summary=post['summary'],
+            link=post['link'],
             system_prompt=SYSTEM_PROMPT, # استخدام البرومبت العربي الموحد
             brand_name="RoboVAI"
         )
@@ -106,13 +94,13 @@ class SuperBot:
             print("❌ AI Generation failed.")
             return
 
-        # 3. تجهيز الصورة
-        image_url = get_best_image(target_entry)
+        # 3. الصورة
+        image_url = post.get('image') or post.get('image_local_path')
         
         # 4. النشر على تيليجرام
         caption = ai_content.get("telegram_post", "")
         # تنظيف النص وتنسيقه
-        final_msg = f"{caption}\n\n🔗 {target_entry['link']}"
+        final_msg = f"{caption}\n\n🔗 {post['link']}"
 
         try:
             if image_url:
@@ -120,8 +108,6 @@ class SuperBot:
             else:
                 await context.bot.send_message(chat_id=CHANNEL_ID, text=final_msg)
             
-            # تسجيل أن الخبر تم نشره
-            mark_post_seen(target_entry['link'])
             print("✅ Posted to Telegram successfully.")
 
             # 5. النشر على المنصات الأخرى (إذا وجدت)
@@ -129,9 +115,9 @@ class SuperBot:
                 # محاكاة كائن النتيجة للنشر المتسلسل
                 result_obj = {
                     "content_data": ai_content,
-                    "title": target_entry['title'],
-                    "link": target_entry['link'],
-                    "feed_item": target_entry
+                    "title": post['title'],
+                    "link": post['link'],
+                    "feed_item": post # يحتوي على البيانات الخام
                 }
                 # تشغيل النشر الخارجي في الخلفية (Fire and Forget)
                 asyncio.create_task(self.publisher.publish_all(None, result_obj))
