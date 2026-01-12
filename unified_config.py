@@ -8,13 +8,11 @@ ALL_FEEDS = [
     "https://venturebeat.com/category/ai/feed/",
     "https://www.theverge.com/rss/index.xml",
     "https://www.wired.com/feed/category/science/latest/rss",
-    
     # --- Blockchain & Crypto ---
     "https://cointelegraph.com/rss",
     "https://decrypt.co/feed",
     "https://cryptoslate.com/feed/",
     "https://news.bitcoin.com/feed/",
-    
     # --- Software Development ---
     "https://dev.to/feed",
     "https://stackoverflow.blog/feed/",

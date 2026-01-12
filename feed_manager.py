@@ -9,7 +9,14 @@ import feedparser
 import requests
 from bs4 import BeautifulSoup
 
-from feeds_config import RSS_FEEDS, get_feeds_for_brand
+# from feeds_config import RSS_FEEDS, get_feeds_for_brand
+# Fallback if config files are missing
+RSS_FEEDS = []
+
+
+def get_feeds_for_brand(b):
+    return []
+
 
 BASE_DIR = Path(__file__).resolve().parent
 SEEN_POSTS_PATH = BASE_DIR / "data" / "seen_posts.json"
@@ -165,7 +172,7 @@ def fetch_random_new_post(
         feeds = list(forced_feeds)
     else:
         feeds = _load_feeds_from_config(brand=brand) or list(RSS_FEEDS)
-    
+
     random.shuffle(feeds)
     seen = _read_seen_posts()
 

@@ -63,3 +63,7 @@ images/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Archives
+archive/
+legacy/
