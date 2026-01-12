@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from unified_config import ALL_FEEDS
 from feed_manager import fetch_random_new_post
 from ai_processor import rewrite_with_ai
+from keep_alive import keep_alive  # For Render deployment
 
 # Publishers
 from blogger_publisher import BloggerPublisher
@@ -52,6 +53,12 @@ class SuperBot:
     def run(self):
         """Start the bot polling"""
         print("🚀 Starting RoboVAI SuperBot (Spider Web v4.0)...")
+
+        # Start Keep-Alive Server (For Render)
+        try:
+            keep_alive()
+        except Exception as e:
+            logger.warning(f"Keep-alive failed to start: {e}")
 
         # Add Handlers
         self.app.add_handler(CommandHandler("start", self.start_command))
